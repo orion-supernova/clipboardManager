@@ -15,9 +15,8 @@
 		5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */; };
 		5434D12229C1CB60009DF037 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 5434D12129C1CB60009DF037 /* HotKey */; };
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
-		54D74EDB29C240FE004769D2 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDA29C240FE004769D2 /* MenuBarView.swift */; };
 		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
-		54D74EE029C25D90004769D2 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* Storage.swift */; };
+		54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* StorageHelper.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,9 +29,8 @@
 		5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = clipboardManager.xcdatamodel; sourceTree = "<group>"; };
 		5434D11A29C1C433009DF037 /* clipboardManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = clipboardManager.entitlements; sourceTree = "<group>"; };
 		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
-		54D74EDA29C240FE004769D2 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
-		54D74EDF29C25D90004769D2 /* Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Storage.swift; sourceTree = "<group>"; };
+		54D74EDF29C25D90004769D2 /* StorageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageHelper.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,9 +67,8 @@
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
 				5434D10E29C1C433009DF037 /* ContentView.swift */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
-				54D74EDA29C240FE004769D2 /* MenuBarView.swift */,
 				54D74EDC29C24183004769D2 /* ClipboardItem.swift */,
-				54D74EDF29C25D90004769D2 /* Storage.swift */,
+				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
 				5434D11029C1C433009DF037 /* Assets.xcassets */,
 				5434D11529C1C433009DF037 /* Persistence.swift */,
 				5434D11A29C1C433009DF037 /* clipboardManager.entitlements */,
@@ -169,8 +166,7 @@
 				5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */,
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
 				5434D11629C1C433009DF037 /* Persistence.swift in Sources */,
-				54D74EDB29C240FE004769D2 /* MenuBarView.swift in Sources */,
-				54D74EE029C25D90004769D2 /* Storage.swift in Sources */,
+				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
 				5434D10F29C1C433009DF037 /* ContentView.swift in Sources */,
 				5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */,
 			);
@@ -313,7 +309,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -342,7 +338,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;

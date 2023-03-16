@@ -13,26 +13,14 @@ protocol ApplicationMenuDelegate: AnyObject {
 }
 
 class ApplicationMenu: NSObject {
+    // MARK: - Public Properties
     @AppStorage("textArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
     weak var delegate: ApplicationMenuDelegate?
     var textArray: [String] = []
     @State var menuItemsArray: [NSMenuItem] = []
 
+    // MARK: - Public Methods
     func createMenu() -> NSMenu {
-//        let menuBarView = VStack {
-//            List(menuItemsArray, id: \.self) { item in
-//                Menu("hm") {
-//                    Text("hede")
-//                }.frame(width: 200, height: 200, alignment: .center)
-//            }
-//        }
-//        let topView = NSHostingController(rootView: menuBarView)
-//        topView.view.frame.size = CGSize(width: 225, height: 225)
-//        customMenuItem.view = topView.view
-//        let customMenuItem = NSMenuItem()
-//        menu.addItem(customMenuItem)
-
-
         let menu = NSMenu()
         handleEmptyButton(with: menu)
         loadClipboardStrings(to: menu)
@@ -41,8 +29,9 @@ class ApplicationMenu: NSObject {
         return menu
     }
 
+    // MARK: - Private Methods
     private func loadClipboardStrings(to menu: NSMenu) {
-        let stringArray = self.textArray //Storage.loadStringArray(data: appStorageArrayData)
+        let stringArray = self.textArray //StorageHelper.loadStringArray(data: appStorageArrayData)
         for item in stringArray.reversed() {
             let clearAllMenuItem = NSMenuItem(title: "\(item)",
                                               action: #selector(copyToClipboardAction),
@@ -79,6 +68,14 @@ class ApplicationMenu: NSObject {
         menu.addItem(quitMenuItem)
     }
 
+    private func handleEmptyButton(with menu: NSMenu) {
+        let array = textArray//StorageHelper.loadStringArray(data: appStorageArrayData)
+        guard !array.isEmpty else { menu.addItem(NSMenuItem(title: "<None>", action: nil, keyEquivalent: "")); return }
+        guard array.count < 2 else { return }
+        menu.items.removeAll(where: { $0.action == nil })
+    }
+
+    // MARK: - Actions
     @objc func copyToClipboardAction(sender: NSMenuItem) {
         let pasteBoard = NSPasteboard.general
         pasteBoard.clearContents()
@@ -95,7 +92,7 @@ class ApplicationMenu: NSObject {
     }
 
     @objc func clearAction(sender: NSMenuItem) {
-        appStorageArrayData = Storage.archiveStringArray(object: [])
+        appStorageArrayData = StorageHelper.archiveStringArray(object: [])
         delegate?.didTapClearAllButton()
     }
 
@@ -113,10 +110,5 @@ class ApplicationMenu: NSObject {
         NSApp.terminate(self)
     }
 
-    private func handleEmptyButton(with menu: NSMenu) {
-        let array = textArray//Storage.loadStringArray(data: appStorageArrayData)
-        guard !array.isEmpty else { menu.addItem(NSMenuItem(title: "<None>", action: nil, keyEquivalent: "")); return }
-        guard array.count < 2 else { return }
-        menu.items.removeAll(where: { $0.action == nil })
-    }
+
 }

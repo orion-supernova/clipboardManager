@@ -11,6 +11,7 @@ import HotKey
 @main
 struct clipboardManagerApp: App {
 
+    // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     public var hotkeyForApp = HotKey(key: .return, modifiers: [.command, .control, .option])
 
@@ -18,10 +19,12 @@ struct clipboardManagerApp: App {
     @State var currentNumber: String = "1"
     @State var isShowingAppOnScreen = false
 
+    // MARK: - Lifecycle
     init() {
         hotkeyForApp.keyDownHandler = appDelegate.handleAppShortcut
     }
 
+    // MARK: - Body
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -31,6 +34,7 @@ struct clipboardManagerApp: App {
     }
 }
 
+// MARK: - AppDelegate
 class AppDelegate: NSObject, NSApplicationDelegate {
     var timer: Timer!
     let pasteboard: NSPasteboard = .general
@@ -58,20 +62,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.window.contentView = windowController
             self.window.close()
         }
+        NotificationCenter.default.addObserver(self, selector: #selector(makeAppHidden), name: NSApplication.willResignActiveNotification, object: nil)
     }
 
-    func getAllStringsFromClipboard() {
-        self.tempTextArray = Storage.loadStringArray(data: appStorageArray)
-        self.menu.textArray = self.tempTextArray
-        setMenuBarText(count: self.tempTextArray.count)
-    }
-
+    // MARK: - Public Methods
     func handleAppShortcut() {
         if self.window.isVisible {
-            self.window.close()
+            makeAppHidden()
         } else {
-            self.window.makeKeyAndOrderFront(nil)
+            makeAppVisible()
         }
+    }
+
+    // MARK: - Private Methods
+    private func getAllStringsFromClipboard() {
+        self.tempTextArray = StorageHelper.loadStringArray(data: appStorageArray)
+        self.menu.textArray = self.tempTextArray
+        setMenuBarText(count: self.tempTextArray.count)
     }
 
     private func setupTimer() {
@@ -85,7 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             changeCount = pasteboard.changeCount
 
             self.tempTextArray.append(copiedString)
-            self.appStorageArray = Storage.archiveStringArray(object: self.tempTextArray)
+            self.appStorageArray = StorageHelper.archiveStringArray(object: self.tempTextArray)
             print("\(changeCount), \(copiedString)")
             for item in self.tempTextArray {
                 print(item)
@@ -100,8 +107,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func setMenuBarText(count: Int) {
         statusBarItem.button?.title = "Count: \(count)"
     }
+
+    private func makeAppVisible() {
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        self.window.makeKeyAndOrderFront(nil)
+        self.window.orderFrontRegardless()
+    }
+
+    // MARK: - Private Actions
+    @objc private func makeAppHidden() {
+        self.window.close()
+    }
 }
 
+// MARK: - Extension ApplicationMenu Delegate
 extension AppDelegate: ApplicationMenuDelegate {
     func didTapClearAllButton() {
         self.tempTextArray.removeAll()

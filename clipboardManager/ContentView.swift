@@ -8,12 +8,14 @@
 import SwiftUI
 import CoreData
 
+// MARK: - ContentView
 struct ContentView: View {
     @State var tempArray: [String] = []
     @AppStorage("textArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
     @StateObject var viewModel = ContentViewViewModel()
     let publisher = NotificationCenter.default.publisher(for: NSNotification.Name("tempArrayChanged"))
 
+    // MARK: - Body
     var body: some View {
         ZStack {
             if tempArray.isEmpty {
@@ -37,7 +39,7 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            tempArray = Storage.loadStringArray(data: appStorageArrayData)
+            tempArray = StorageHelper.loadStringArray(data: appStorageArrayData)
         }
         .onReceive(publisher, perform: { output in
             print(output)
@@ -47,6 +49,7 @@ struct ContentView: View {
     }
 }
 
+// MARK: - ContentView ViewModel
 class ContentViewViewModel: ObservableObject {
     @Published var stringArray = [String]()
     @objc func tempArrayChanged(_ sender: NSNotification) {
