@@ -36,6 +36,7 @@ struct ContentView: View {
                                     let pasteBoard = NSPasteboard.general
                                     pasteBoard.clearContents()
                                     pasteBoard.setString(tempArray[index],forType :.string)
+                                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
                                 }
                             Color.purple
                                 .frame(width: CGFloat.greatestFiniteMagnitude, height: 3, alignment: .center)

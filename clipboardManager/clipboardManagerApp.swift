@@ -53,6 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         getAllStringsFromClipboard()
         setupTimer()
         statusBarItem.menu = menu.createMenu()
+        addObservers()
 
         let windowController = NSHostingView(rootView: ContentView())
         if let window = NSApplication.shared.windows.first {
@@ -70,23 +71,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.window.backgroundColor = .clear
             self.window.close()
         }
-        NotificationCenter.default.addObserver(self, selector: #selector(makeAppHidden), name: NSApplication.willResignActiveNotification, object: nil)
     }
 
     // MARK: - Public Methods
     func handleAppShortcut() {
         if self.window.isVisible {
-            makeAppHidden()
+            makeAppHiddenAction()
         } else {
-            makeAppVisible()
+            makeAppVisibleAction()
         }
     }
 
     func handleEscapeCharacter() {
-        makeAppHidden()
+        makeAppHiddenAction()
     }
 
     // MARK: - Private Methods
+    private func addObservers() {
+        NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction), name: .textSelectedFromClipboardNotification, object: nil)
+    }
+
     private func getAllStringsFromClipboard() {
         self.tempTextArray = StorageHelper.loadStringArray(data: appStorageArray)
         self.menu.textArray = self.tempTextArray
@@ -120,17 +125,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarItem.button?.title = "Count: \(count)"
     }
 
-    private func makeAppVisible() {
+    // MARK: - Private Actions
+    private func makeAppVisibleAction() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.window.orderFrontRegardless()
         NotificationCenter.default.post(name: .scrollToLastIndexNotification, object: nil)
     }
 
-    // MARK: - Private Actions
-    @objc private func makeAppHidden() {
+    @objc private func makeAppHiddenAction() {
         self.window.close()
         NSApplication.shared.deactivate()
         NSApplication.shared.hide(self)
+    }
+
+    @objc private func textSelectedFromClipboardAction() {
+        makeAppHiddenAction()
+        let eventSource = CGEventSource(stateID: .combinedSessionState)
+        let eventDown = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: true)!
+        let eventUp = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: false)!
+
+        eventDown.flags = CGEventFlags.maskCommand
+        eventDown.post(tap: .cgAnnotatedSessionEventTap)
+        eventUp.post(tap: .cgAnnotatedSessionEventTap)
     }
 }
 
