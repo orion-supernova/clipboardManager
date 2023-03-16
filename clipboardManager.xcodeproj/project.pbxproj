@@ -13,10 +13,15 @@
 		5434D11429C1C433009DF037 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5434D11329C1C433009DF037 /* Preview Assets.xcassets */; };
 		5434D11629C1C433009DF037 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11529C1C433009DF037 /* Persistence.swift */; };
 		5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */; };
+		5434D12229C1CB60009DF037 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 5434D12129C1CB60009DF037 /* HotKey */; };
+		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
+		54D74EDB29C240FE004769D2 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDA29C240FE004769D2 /* MenuBarView.swift */; };
+		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
+		54D74EE029C25D90004769D2 /* Storage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* Storage.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		5434D10929C1C433009DF037 /* clipboardManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = clipboardManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5434D10929C1C433009DF037 /* Mahmut Clipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mahmut Clipboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = clipboardManagerApp.swift; sourceTree = "<group>"; };
 		5434D10E29C1C433009DF037 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		5434D11029C1C433009DF037 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -24,6 +29,10 @@
 		5434D11529C1C433009DF037 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = clipboardManager.xcdatamodel; sourceTree = "<group>"; };
 		5434D11A29C1C433009DF037 /* clipboardManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = clipboardManager.entitlements; sourceTree = "<group>"; };
+		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
+		54D74EDA29C240FE004769D2 /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
+		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
+		54D74EDF29C25D90004769D2 /* Storage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Storage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -31,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5434D12229C1CB60009DF037 /* HotKey in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -48,7 +58,7 @@
 		5434D10A29C1C433009DF037 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5434D10929C1C433009DF037 /* clipboardManager.app */,
+				5434D10929C1C433009DF037 /* Mahmut Clipboard.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -58,6 +68,10 @@
 			children = (
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
 				5434D10E29C1C433009DF037 /* ContentView.swift */,
+				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
+				54D74EDA29C240FE004769D2 /* MenuBarView.swift */,
+				54D74EDC29C24183004769D2 /* ClipboardItem.swift */,
+				54D74EDF29C25D90004769D2 /* Storage.swift */,
 				5434D11029C1C433009DF037 /* Assets.xcassets */,
 				5434D11529C1C433009DF037 /* Persistence.swift */,
 				5434D11A29C1C433009DF037 /* clipboardManager.entitlements */,
@@ -91,8 +105,11 @@
 			dependencies = (
 			);
 			name = clipboardManager;
+			packageProductDependencies = (
+				5434D12129C1CB60009DF037 /* HotKey */,
+			);
 			productName = clipboardManager;
-			productReference = 5434D10929C1C433009DF037 /* clipboardManager.app */;
+			productReference = 5434D10929C1C433009DF037 /* Mahmut Clipboard.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -119,6 +136,9 @@
 				Base,
 			);
 			mainGroup = 5434D10029C1C433009DF037;
+			packageReferences = (
+				5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */,
+			);
 			productRefGroup = 5434D10A29C1C433009DF037 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -145,8 +165,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */,
 				5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */,
+				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
 				5434D11629C1C433009DF037 /* Persistence.swift in Sources */,
+				54D74EDB29C240FE004769D2 /* MenuBarView.swift in Sources */,
+				54D74EE029C25D90004769D2 /* Storage.swift in Sources */,
 				5434D10F29C1C433009DF037 /* ContentView.swift in Sources */,
 				5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */,
 			);
@@ -273,6 +297,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -282,6 +307,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -289,7 +315,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -300,6 +326,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -309,6 +336,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -316,7 +344,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -344,6 +372,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/soffes/HotKey.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5434D12129C1CB60009DF037 /* HotKey */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */;
+			productName = HotKey;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */ = {
