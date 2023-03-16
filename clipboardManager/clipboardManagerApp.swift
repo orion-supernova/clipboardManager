@@ -19,7 +19,7 @@ struct clipboardManagerApp: App {
     @State var isShowingAppOnScreen = false
 
     init() {
-        hotkeyForApp.keyDownHandler = appDelegate.openAppAction
+        hotkeyForApp.keyDownHandler = appDelegate.handleAppShortcut
     }
 
     var body: some Scene {
@@ -66,8 +66,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setMenuBarText(count: self.tempTextArray.count)
     }
 
-    func openAppAction() {
-        self.window.makeKeyAndOrderFront(nil)
+    func handleAppShortcut() {
+        if self.window.isVisible {
+            self.window.close()
+        } else {
+            self.window.makeKeyAndOrderFront(nil)
+        }
     }
 
     private func setupTimer() {
@@ -89,6 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.menu.textArray = self.tempTextArray
             self.statusBarItem.menu = self.menu.createMenu()
             self.setMenuBarText(count: self.tempTextArray.count)
+            NotificationCenter.default.post(name: NSNotification.Name.init("tempArrayChanged"), object: self.tempTextArray)
         }
     }
 
@@ -103,5 +108,6 @@ extension AppDelegate: ApplicationMenuDelegate {
         self.menu.textArray = []
         self.statusBarItem.menu = self.menu.createMenu()
         setMenuBarText(count: 0)
+        NotificationCenter.default.post(name: NSNotification.Name.init("tempArrayChanged"), object: self.tempTextArray)
     }
 }
