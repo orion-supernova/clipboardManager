@@ -8,78 +8,76 @@
 import SwiftUI
 import CoreData
 
+// MARK: - ContentView
 struct ContentView: View {
-    @Environment(\.managedObjectContext) private var viewContext
+    @State var tempArray: [String] = []
+    @AppStorage("textArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
+    @StateObject var viewModel = ContentViewViewModel()
+    let publisherFortempArrayChanged  = NotificationCenter.default.publisher(for: .clipboardArrayChangedNotification)
+    let publisherForScrollToLastIndex = NotificationCenter.default.publisher(for: .scrollToLastIndexNotification)
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \Item.timestamp, ascending: true)],
-        animation: .default)
-    private var items: FetchedResults<Item>
-
+    // MARK: - Body
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp!, formatter: itemFormatter)")
-                    } label: {
-                        Text(item.timestamp!, formatter: itemFormatter)
+        ZStack {
+            // MARK: - EmptyView
+            if tempArray.isEmpty {
+                Text("No Content")
+                    .frame(width: screenWidth, height: screenHeight, alignment: .center)
+
+            } else {
+                ZStack {
+                    // MARK: - ScrollView Start
+                    ScrollViewReader { proxy in
+                        List(tempArray.indices, id: \.self) { index in
+                            Text("\(index+1)")
+                            Text(tempArray[index])
+                                .id(index)
+                                .onTapGesture {
+                                    let pasteBoard = NSPasteboard.general
+                                    pasteBoard.clearContents()
+                                    pasteBoard.setString(tempArray[index],forType :.string)
+                                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
+                                }
+                            Color.purple
+                                .frame(width: CGFloat.greatestFiniteMagnitude, height: 3, alignment: .center)
+                        }
+                        .onReceive(publisherForScrollToLastIndex, perform: { output in
+                            proxy.scrollTo(tempArray.count-1, anchor: .top)
+                        })
+                        .scrollIndicators(.hidden)
                     }
+                    // MARK: - ScrollView End
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-            Text("Select an item")
-        }
-    }
-
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(context: viewContext)
-            newItem.timestamp = Date()
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+                .frame(width: screenWidth, height: screenHeight, alignment: .center)
             }
         }
-    }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            offsets.map { items[$0] }.forEach(viewContext.delete)
-
-            do {
-                try viewContext.save()
-            } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
-            }
+        .cornerRadius(30)
+        .onAppear {
+            tempArray = StorageHelper.loadStringArray(data: appStorageArrayData)
         }
+        .onReceive(publisherFortempArrayChanged, perform: { output in
+            print(output)
+            tempArray = output.object as? [String] ?? []
+        })
+        .navigationTitle(tempArray.isEmpty ? "Zuhahahaha" : "Haydarinna rinna rinanay")
     }
 }
 
-private let itemFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .short
-    formatter.timeStyle = .medium
-    return formatter
-}()
+// MARK: - ContentView ViewModel
+class ContentViewViewModel: ObservableObject {
+
+    // MARK: - Public Properties
+    @Published var stringArray = [String]()
+
+    // MARK: - Public Actions
+    @objc func tempArrayChanged(_ sender: NSNotification) {
+        guard let array = sender.object as? [String] else { return }
+        stringArray = array
+    }
+}
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView().environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
+        ContentView()
     }
 }
