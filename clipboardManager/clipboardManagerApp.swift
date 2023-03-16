@@ -13,7 +13,8 @@ struct clipboardManagerApp: App {
 
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    public var hotkeyForApp = HotKey(key: .return, modifiers: [.command, .control, .option])
+    let hotkeyForInterfaceVisibility = HotKey(key: .return, modifiers: [.command, .control, .option])
+    let hotkeyForEscapeCharacter     = HotKey(key: .escape, modifiers: [])
 
     let persistenceController = PersistenceController.shared
     @State var currentNumber: String = "1"
@@ -21,7 +22,8 @@ struct clipboardManagerApp: App {
 
     // MARK: - Lifecycle
     init() {
-        hotkeyForApp.keyDownHandler = appDelegate.handleAppShortcut
+        hotkeyForInterfaceVisibility.keyDownHandler = appDelegate.handleAppShortcut
+        hotkeyForEscapeCharacter.keyDownHandler     = appDelegate.handleEscapeCharacter
     }
 
     // MARK: - Body
@@ -29,7 +31,6 @@ struct clipboardManagerApp: App {
         WindowGroup {
             ContentView()
                 .fixedSize()
-                .frame(minWidth: 785, maxWidth: 785, minHeight: 212, maxHeight: 212)
         }.windowResizability(.contentSize)
     }
 }
@@ -49,17 +50,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         menu.delegate = self
-        statusBarItem.button?.imagePosition = .imageLeading
-        statusBarItem.button?.imageScaling = .scaleProportionallyDown
-        statusBarItem.button?.title = "Count: 22"
         getAllStringsFromClipboard()
         setupTimer()
         statusBarItem.menu = menu.createMenu()
 
         let windowController = NSHostingView(rootView: ContentView())
         if let window = NSApplication.shared.windows.first {
+            let width = (NSScreen.main?.frame.width)!
+            let heigth = (NSScreen.main?.frame.height)!
+            let resWidth: CGFloat = (width / 2) - (screenWidth / 2)
+            let resHeigt: CGFloat = (heigth / 2) - (screenHeight / 2)
+
             self.window = window
+            self.window.setFrameOrigin(NSPoint(x: resWidth, y: resHeigt))
             self.window.contentView = windowController
+            self.window.styleMask = [.borderless]
+            self.window.titlebarAppearsTransparent = true
+            self.window.titleVisibility = .hidden
+            self.window.backgroundColor = .clear
             self.window.close()
         }
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHidden), name: NSApplication.willResignActiveNotification, object: nil)
@@ -72,6 +80,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             makeAppVisible()
         }
+    }
+
+    func handleEscapeCharacter() {
+        makeAppHidden()
     }
 
     // MARK: - Private Methods
@@ -100,7 +112,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.menu.textArray = self.tempTextArray
             self.statusBarItem.menu = self.menu.createMenu()
             self.setMenuBarText(count: self.tempTextArray.count)
-            NotificationCenter.default.post(name: NSNotification.Name.init("tempArrayChanged"), object: self.tempTextArray)
+            NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: self.tempTextArray)
         }
     }
 
@@ -110,13 +122,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func makeAppVisible() {
         NSApplication.shared.activate(ignoringOtherApps: true)
-        self.window.makeKeyAndOrderFront(nil)
         self.window.orderFrontRegardless()
+        NotificationCenter.default.post(name: .scrollToLastIndexNotification, object: nil)
     }
 
     // MARK: - Private Actions
     @objc private func makeAppHidden() {
         self.window.close()
+        NSApplication.shared.deactivate()
+        NSApplication.shared.hide(self)
     }
 }
 
@@ -127,6 +141,6 @@ extension AppDelegate: ApplicationMenuDelegate {
         self.menu.textArray = []
         self.statusBarItem.menu = self.menu.createMenu()
         setMenuBarText(count: 0)
-        NotificationCenter.default.post(name: NSNotification.Name.init("tempArrayChanged"), object: self.tempTextArray)
+        NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: self.tempTextArray)
     }
 }

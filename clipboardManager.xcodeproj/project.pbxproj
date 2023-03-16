@@ -14,6 +14,7 @@
 		5434D11629C1C433009DF037 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11529C1C433009DF037 /* Persistence.swift */; };
 		5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */; };
 		5434D12229C1CB60009DF037 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 5434D12129C1CB60009DF037 /* HotKey */; };
+		54B953F029C3B5F300990FAC /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B953EF29C3B5F300990FAC /* Constants.swift */; };
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
 		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
 		54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* StorageHelper.swift */; };
@@ -28,6 +29,7 @@
 		5434D11529C1C433009DF037 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = clipboardManager.xcdatamodel; sourceTree = "<group>"; };
 		5434D11A29C1C433009DF037 /* clipboardManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = clipboardManager.entitlements; sourceTree = "<group>"; };
+		54B953EF29C3B5F300990FAC /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
 		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		54D74EDF29C25D90004769D2 /* StorageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageHelper.swift; sourceTree = "<group>"; };
@@ -67,12 +69,9 @@
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
 				5434D10E29C1C433009DF037 /* ContentView.swift */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
-				54D74EDC29C24183004769D2 /* ClipboardItem.swift */,
-				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
-				5434D11029C1C433009DF037 /* Assets.xcassets */,
-				5434D11529C1C433009DF037 /* Persistence.swift */,
-				5434D11A29C1C433009DF037 /* clipboardManager.entitlements */,
-				5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */,
+				54B953F129C3B6F300990FAC /* Models */,
+				54B953F229C3B6FB00990FAC /* Helpers */,
+				54B953F329C3B71000990FAC /* Resources */,
 				5434D11229C1C433009DF037 /* Preview Content */,
 			);
 			path = clipboardManager;
@@ -84,6 +83,34 @@
 				5434D11329C1C433009DF037 /* Preview Assets.xcassets */,
 			);
 			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		54B953F129C3B6F300990FAC /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				54D74EDC29C24183004769D2 /* ClipboardItem.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		54B953F229C3B6FB00990FAC /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
+				54B953EF29C3B5F300990FAC /* Constants.swift */,
+				5434D11529C1C433009DF037 /* Persistence.swift */,
+			);
+			path = Helpers;
+			sourceTree = "<group>";
+		};
+		54B953F329C3B71000990FAC /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5434D11029C1C433009DF037 /* Assets.xcassets */,
+				5434D11A29C1C433009DF037 /* clipboardManager.entitlements */,
+				5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -169,6 +196,7 @@
 				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
 				5434D10F29C1C433009DF037 /* ContentView.swift in Sources */,
 				5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */,
+				54B953F029C3B5F300990FAC /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -294,7 +322,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = clipboardManager/clipboardManager.entitlements;
+				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -309,7 +337,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -323,7 +351,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CODE_SIGN_ENTITLEMENTS = clipboardManager/clipboardManager.entitlements;
+				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -338,7 +366,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
