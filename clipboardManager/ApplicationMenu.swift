@@ -80,6 +80,14 @@ class ApplicationMenu: NSObject {
         let pasteBoard = NSPasteboard.general
         pasteBoard.clearContents()
         pasteBoard.setString(sender.title,forType :.string)
+
+        let eventSource = CGEventSource(stateID: .combinedSessionState)
+        let eventDown = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: true)!
+        let eventUp = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: false)!
+
+        eventDown.flags = CGEventFlags.maskCommand
+        eventDown.post(tap: .cgAnnotatedSessionEventTap)
+        eventUp.post(tap: .cgAnnotatedSessionEventTap)
     }
 
     @objc func comingSoonAction(sender: NSMenuItem) {
