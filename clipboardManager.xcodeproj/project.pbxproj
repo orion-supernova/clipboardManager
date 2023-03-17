@@ -18,6 +18,11 @@
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
 		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
 		54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* StorageHelper.swift */; };
+		54E32CB829C4DBC3004772B5 /* Color+HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */; };
+		54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CB929C4E507004772B5 /* VisualEffectView.swift */; };
+		54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CBB29C4E743004772B5 /* ClipboardItemBox.swift */; };
+		54E32CBE29C4ED5C004772B5 /* CopiedAppLogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CBD29C4ED5C004772B5 /* CopiedAppLogoView.swift */; };
+		54E32CC029C4F1C3004772B5 /* Color+Random.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CBF29C4F1C3004772B5 /* Color+Random.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +38,11 @@
 		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
 		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		54D74EDF29C25D90004769D2 /* StorageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageHelper.swift; sourceTree = "<group>"; };
+		54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+HexColor.swift"; sourceTree = "<group>"; };
+		54E32CB929C4E507004772B5 /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
+		54E32CBB29C4E743004772B5 /* ClipboardItemBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItemBox.swift; sourceTree = "<group>"; };
+		54E32CBD29C4ED5C004772B5 /* CopiedAppLogoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopiedAppLogoView.swift; sourceTree = "<group>"; };
+		54E32CBF29C4F1C3004772B5 /* Color+Random.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Random.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,8 +77,8 @@
 			isa = PBXGroup;
 			children = (
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
-				54E32CB629C4CCCF004772B5 /* MainView */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
+				54E32CB629C4CCCF004772B5 /* MainView */,
 				54B953F129C3B6F300990FAC /* Models */,
 				54B953F229C3B6FB00990FAC /* Helpers */,
 				54B953F329C3B71000990FAC /* Resources */,
@@ -99,6 +109,9 @@
 				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
 				54B953EF29C3B5F300990FAC /* Constants.swift */,
 				5434D11529C1C433009DF037 /* Persistence.swift */,
+				54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */,
+				54E32CBF29C4F1C3004772B5 /* Color+Random.swift */,
+				54E32CB929C4E507004772B5 /* VisualEffectView.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -117,6 +130,8 @@
 			isa = PBXGroup;
 			children = (
 				5434D10E29C1C433009DF037 /* MainView.swift */,
+				54E32CBB29C4E743004772B5 /* ClipboardItemBox.swift */,
+				54E32CBD29C4ED5C004772B5 /* CopiedAppLogoView.swift */,
 			);
 			path = MainView;
 			sourceTree = "<group>";
@@ -202,7 +217,12 @@
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
 				5434D11629C1C433009DF037 /* Persistence.swift in Sources */,
 				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
+				54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */,
+				54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */,
+				54E32CBE29C4ED5C004772B5 /* CopiedAppLogoView.swift in Sources */,
+				54E32CB829C4DBC3004772B5 /* Color+HexColor.swift in Sources */,
 				5434D10F29C1C433009DF037 /* MainView.swift in Sources */,
+				54E32CC029C4F1C3004772B5 /* Color+Random.swift in Sources */,
 				5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */,
 				54B953F029C3B5F300990FAC /* Constants.swift in Sources */,
 			);
@@ -345,7 +365,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -374,7 +394,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;

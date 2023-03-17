@@ -23,7 +23,13 @@ class ApplicationMenu: NSObject {
     func createMenu() -> NSMenu {
         let menu = NSMenu()
         handleEmptyButton(with: menu)
-        loadClipboardStrings(to: menu)
+//        loadClipboardStrings(to: menu)
+        let preferencesMenuItem = NSMenuItem(title: "Open App Interface",
+                                             action: #selector(openAppInterfaceAction),
+                                             keyEquivalent: "")
+        preferencesMenuItem.target = self
+        menu.addItem(preferencesMenuItem)
+
         menu.addItem(NSMenuItem.separator())
         loadOtherButtons(to: menu)
         return menu
@@ -112,6 +118,10 @@ class ApplicationMenu: NSObject {
         let link = sender.representedObject as! String
         guard let url = URL(string: link) else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    @objc func openAppInterfaceAction() {
+        NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
     }
 
     @objc func quitAction(sender: NSMenuItem) {

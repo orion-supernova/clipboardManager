@@ -85,6 +85,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func addObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction), name: .textSelectedFromClipboardNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: .makeAppHiddenNotification, object: nil)
     }
 
     private func getAllStringsFromClipboard() {
@@ -109,6 +111,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             for item in self.tempTextArray {
                 print(item)
             }
+
             self.menu.textArray = self.tempTextArray
             self.statusBarItem.menu = self.menu.createMenu()
             self.setMenuBarText(count: self.tempTextArray.count)
@@ -121,7 +124,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Private Actions
-    private func makeAppVisibleAction() {
+    @objc private func makeAppVisibleAction() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.window.orderFrontRegardless()
         NotificationCenter.default.post(name: .scrollToLastIndexNotification, object: nil)
