@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */; };
-		5434D10F29C1C433009DF037 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D10E29C1C433009DF037 /* ContentView.swift */; };
+		5434D10F29C1C433009DF037 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D10E29C1C433009DF037 /* MainView.swift */; };
 		5434D11129C1C433009DF037 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5434D11029C1C433009DF037 /* Assets.xcassets */; };
 		5434D11429C1C433009DF037 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5434D11329C1C433009DF037 /* Preview Assets.xcassets */; };
 		5434D11629C1C433009DF037 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11529C1C433009DF037 /* Persistence.swift */; };
@@ -23,7 +23,7 @@
 /* Begin PBXFileReference section */
 		5434D10929C1C433009DF037 /* Mahmut Clipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mahmut Clipboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = clipboardManagerApp.swift; sourceTree = "<group>"; };
-		5434D10E29C1C433009DF037 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		5434D10E29C1C433009DF037 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		5434D11029C1C433009DF037 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5434D11329C1C433009DF037 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		5434D11529C1C433009DF037 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
@@ -67,7 +67,7 @@
 			isa = PBXGroup;
 			children = (
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
-				5434D10E29C1C433009DF037 /* ContentView.swift */,
+				54E32CB629C4CCCF004772B5 /* MainView */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
 				54B953F129C3B6F300990FAC /* Models */,
 				54B953F229C3B6FB00990FAC /* Helpers */,
@@ -111,6 +111,14 @@
 				5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		54E32CB629C4CCCF004772B5 /* MainView */ = {
+			isa = PBXGroup;
+			children = (
+				5434D10E29C1C433009DF037 /* MainView.swift */,
+			);
+			path = MainView;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -194,7 +202,7 @@
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
 				5434D11629C1C433009DF037 /* Persistence.swift in Sources */,
 				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
-				5434D10F29C1C433009DF037 /* ContentView.swift in Sources */,
+				5434D10F29C1C433009DF037 /* MainView.swift in Sources */,
 				5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */,
 				54B953F029C3B5F300990FAC /* Constants.swift in Sources */,
 			);

@@ -5,11 +5,11 @@
 //  Created by Murat Can KOÇ on 16.03.2023.
 //
 
-import Foundation
+import AppKit
 
 // MARK: - Global Variables
-let screenWidth: CGFloat = 500
-let screenHeight: CGFloat = 500
+let screenWidth: CGFloat = NSScreen.main!.visibleFrame.width
+let screenHeight: CGFloat = 400
 
 // MARK: - Notification Name
 extension Notification.Name {

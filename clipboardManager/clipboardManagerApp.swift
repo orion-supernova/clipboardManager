@@ -13,7 +13,7 @@ struct clipboardManagerApp: App {
 
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    let hotkeyForInterfaceVisibility = HotKey(key: .return, modifiers: [.command, .control, .option])
+    let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
     let hotkeyForEscapeCharacter     = HotKey(key: .escape, modifiers: [])
 
     let persistenceController = PersistenceController.shared
@@ -29,7 +29,7 @@ struct clipboardManagerApp: App {
     // MARK: - Body
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainView()
                 .fixedSize()
         }.windowResizability(.contentSize)
     }
@@ -55,15 +55,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarItem.menu = menu.createMenu()
         addObservers()
 
-        let windowController = NSHostingView(rootView: ContentView())
+        let windowController = NSHostingView(rootView: MainView())
         if let window = NSApplication.shared.windows.first {
-            let width = (NSScreen.main?.frame.width)!
-            let heigth = (NSScreen.main?.frame.height)!
-            let resWidth: CGFloat = (width / 2) - (screenWidth / 2)
-            let resHeigt: CGFloat = (heigth / 2) - (screenHeight / 2)
-
             self.window = window
-            self.window.setFrameOrigin(NSPoint(x: resWidth, y: resHeigt))
+            self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.visibleFrame.minY))
             self.window.contentView = windowController
             self.window.styleMask = [.borderless]
             self.window.titlebarAppearsTransparent = true
