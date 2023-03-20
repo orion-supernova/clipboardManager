@@ -29,13 +29,14 @@ struct MainView: View {
                             HStack(spacing: 10) {
                                 Spacer()
                                 ForEach(viewModel.clipboardItemArray.isEmpty ? viewModel.emptyArray : viewModel.clipboardItemArray.reversed(), id: \.id) { item in
-                                    HStack {
+                                    LazyHStack {
                                         ClipboardItemBox(item: item)
                                             .onTapGesture {
                                                 if !viewModel.clipboardItemArray.isEmpty {
                                                     let pasteBoard = NSPasteboard.general
                                                     pasteBoard.clearContents()
                                                     pasteBoard.setString(item.text,forType :.string)
+
                                                     NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
                                                 }
                                             }

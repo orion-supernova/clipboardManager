@@ -5,7 +5,7 @@
 //  Created by Murat Can KOÇ on 15.03.2023.
 //
 
-import Foundation
+import AppKit
 
 class StorageHelper: NSObject {
     static func archiveStringArray(object : [ClipboardItem]) -> Data {
@@ -29,5 +29,47 @@ class StorageHelper: NSObject {
         } catch {
             fatalError("loadWStringArray - Can't encode data: \(error)")
         }
+    }
+
+    static func saveImageToDisk(image: NSImage, appName: String) {
+
+        // Convert to Data
+        if let data = image.tiffRepresentation {
+            // Create URL
+            let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            let url = documents.appendingPathComponent("\(appName).png")
+            getImageFromDisk(for: appName) { alreayExists, image in
+                if alreayExists {
+                    // Do Nothing...
+                } else {
+                    do {
+                        // Write to Disk
+                        try data.write(to: url)
+
+                    } catch {
+                        print("Unable to Write Data to Disk (\(error))")
+                    }
+                }
+            }
+        }
+
+    }
+
+    static func getImageFromDisk(for appName: String, completion: @escaping ((alreadyExist: Bool, image: NSImage?)) -> Void ) {
+        guard !appName.isEmpty else { return }
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let url = documents.appending(component: "\(appName).png")
+        var urlString = url.absoluteString
+        for _ in 1..<8 {
+            let hm = urlString.dropFirst()
+            urlString = String(hm)
+        }
+        let image = NSImage(contentsOfFile: urlString)
+        if let image {
+            completion((true, image))
+        } else {
+            completion((false, nil))
+        }
+
     }
 }

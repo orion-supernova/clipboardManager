@@ -16,17 +16,13 @@ struct ClipboardItem: Identifiable, Codable {
 
 struct CopiedFromApplication: Codable {
     let applicationTitle: String?
-    let applicationIcon: CustomImage?
     let applicationProcessIdentifier: pid_t?
 
     init(withApplication application: NSRunningApplication) {
         self.applicationTitle = application.localizedName
         self.applicationProcessIdentifier = application.processIdentifier
         if let image = application.icon {
-            self.applicationIcon  = CustomImage(withImage: image)
-        } else {
-            let image = NSImage(systemSymbolName: "folder", accessibilityDescription: "")!
-            self.applicationIcon = CustomImage(withImage: image)
+            StorageHelper.saveImageToDisk(image: image, appName: application.localizedName ?? "")
         }
     }
 
