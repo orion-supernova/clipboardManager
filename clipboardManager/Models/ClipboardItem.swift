@@ -7,7 +7,8 @@
 
 import Foundation
 
-struct ClipboardItem: Codable {
+struct ClipboardItem: Identifiable, Codable {
+    var id: UUID
     let text: String
     //TODO: - Images, Links
 }

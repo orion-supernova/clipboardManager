@@ -10,10 +10,10 @@ import CoreData
 
 // MARK: - MainView
 struct MainView: View {
-    @State var tempArray: [String] = []
-    @AppStorage("textArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
-    @StateObject var viewModel = MainViewViewModel()
+    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
+    @ObservedObject var viewModel = MainViewViewModel()
     let publisherFortempArrayChanged  = NotificationCenter.default.publisher(for: .clipboardArrayChangedNotification)
+    let publisherForClipBoardCleared  = NotificationCenter.default.publisher(for: .clipboardArrayClearedNotification)
     let publisherForScrollToLastIndex = NotificationCenter.default.publisher(for: .scrollToLastIndexNotification)
     let publisherForAppBecomeActive   = NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)
 
@@ -29,25 +29,25 @@ struct MainView: View {
                         ScrollView(.horizontal) {
                             HStack(spacing: 10) {
                                 Spacer()
-                                ForEach(tempArray.isEmpty ? 0..<1 : tempArray.reversed().indices, id: \.self) { index in
+                                ForEach(viewModel.clipboardItemArray.isEmpty ? viewModel.emptyArray : viewModel.clipboardItemArray.reversed(), id: \.id) { item in
                                     HStack {
-                                        ClipboardItemBox(stringArray: tempArray.reversed(), itemIndex: index)
+                                        ClipboardItemBox(item: item)
                                             .onTapGesture {
-                                                if !tempArray.isEmpty {
+                                                if !viewModel.clipboardItemArray.isEmpty {
                                                     let pasteBoard = NSPasteboard.general
                                                     pasteBoard.clearContents()
-                                                    pasteBoard.setString(tempArray.reversed()[index],forType :.string)
+                                                    pasteBoard.setString(item.text,forType :.string)
                                                     NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
                                                 }
                                             }
                                             .frame(width: 270, height: 280)
-                                            .id(index)
+                                            .id(item.id)
                                     }
                                 }
                             }
                         }
                         .onReceive(publisherForAppBecomeActive, perform: { output in
-                            proxy.scrollTo(0, anchor: .trailing)
+                            proxy.scrollTo(viewModel.clipboardItemArray.last?.id, anchor: .leading)
                         })
                         .scrollIndicators(.hidden)
                     }
@@ -61,26 +61,27 @@ struct MainView: View {
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
         .onAppear {
-            tempArray = StorageHelper.loadStringArray(data: appStorageArrayData)
+            viewModel.clipboardItemArray = StorageHelper.loadStringArray(data: appStorageArrayData)
         }
         .onReceive(publisherFortempArrayChanged, perform: { output in
-            print(output)
-            tempArray = output.object as? [String] ?? []
+            let newString = output.object as? String ?? ""
+            viewModel.clipboardItemArray.append(ClipboardItem(id: UUID(), text: newString))
+            print("[DEBUG] added String -> \(newString)")
+        })
+        .onReceive(publisherForClipBoardCleared, perform: { output in
+            viewModel.clipboardItemArray = []
+            print("[DEBUG] All Items Deleted!")
         })
     }
 }
 
+
+
 // MARK: - MainView ViewModel
 class MainViewViewModel: ObservableObject {
-
     // MARK: - Public Properties
-    @Published var stringArray = [String]()
-
-    // MARK: - Public Actions
-    @objc func tempArrayChanged(_ sender: NSNotification) {
-        guard let array = sender.object as? [String] else { return }
-        stringArray = array
-    }
+    @Published var clipboardItemArray = [ClipboardItem]()
+    var emptyArray = [ClipboardItem(id: UUID(), text: "")]
 }
 
 struct MainView_Previews: PreviewProvider {

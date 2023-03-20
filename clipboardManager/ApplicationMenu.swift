@@ -14,16 +14,14 @@ protocol ApplicationMenuDelegate: AnyObject {
 
 class ApplicationMenu: NSObject {
     // MARK: - Public Properties
-    @AppStorage("textArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
+    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
     weak var delegate: ApplicationMenuDelegate?
-    var textArray: [String] = []
+    var clipboardItemArray: [ClipboardItem] = []
     @State var menuItemsArray: [NSMenuItem] = []
 
     // MARK: - Public Methods
     func createMenu() -> NSMenu {
         let menu = NSMenu()
-        handleEmptyButton(with: menu)
-//        loadClipboardStrings(to: menu)
         let preferencesMenuItem = NSMenuItem(title: "Open App Interface",
                                              action: #selector(openAppInterfaceAction),
                                              keyEquivalent: "")
@@ -37,7 +35,7 @@ class ApplicationMenu: NSObject {
 
     // MARK: - Private Methods
     private func loadClipboardStrings(to menu: NSMenu) {
-        let stringArray = self.textArray //StorageHelper.loadStringArray(data: appStorageArrayData)
+        let stringArray = self.clipboardItemArray //StorageHelper.loadStringArray(data: appStorageArrayData)
         for item in stringArray.reversed() {
             let clearAllMenuItem = NSMenuItem(title: "\(item)",
                                               action: #selector(copyToClipboardAction),
@@ -75,7 +73,7 @@ class ApplicationMenu: NSObject {
     }
 
     private func handleEmptyButton(with menu: NSMenu) {
-        let array = textArray//StorageHelper.loadStringArray(data: appStorageArrayData)
+        let array = clipboardItemArray//StorageHelper.loadStringArray(data: appStorageArrayData)
         guard !array.isEmpty else { menu.addItem(NSMenuItem(title: "<None>", action: nil, keyEquivalent: "")); return }
         guard array.count < 2 else { return }
         menu.items.removeAll(where: { $0.action == nil })

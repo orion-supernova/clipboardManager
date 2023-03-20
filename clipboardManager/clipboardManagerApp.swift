@@ -14,16 +14,12 @@ struct clipboardManagerApp: App {
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
-    let hotkeyForEscapeCharacter     = HotKey(key: .escape, modifiers: [])
 
     let persistenceController = PersistenceController.shared
-    @State var currentNumber: String = "1"
-    @State var isShowingAppOnScreen = false
 
     // MARK: - Lifecycle
     init() {
         hotkeyForInterfaceVisibility.keyDownHandler = appDelegate.handleAppShortcut
-        hotkeyForEscapeCharacter.keyDownHandler     = appDelegate.handleEscapeCharacter
     }
 
     // MARK: - Body
@@ -39,8 +35,8 @@ struct clipboardManagerApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var timer: Timer!
     let pasteboard: NSPasteboard = .general
-    var tempTextArray: [String] = []
-    @AppStorage("textArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArray: Data = Data()
+    var tempClipboardItemArray: [ClipboardItem] = []
+    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArray: Data = Data()
     var window: NSWindow!
 
     static private(set) var instance: AppDelegate!
@@ -54,18 +50,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupTimer()
         statusBarItem.menu = menu.createMenu()
         addObservers()
-
-        let windowController = NSHostingView(rootView: MainView())
-        if let window = NSApplication.shared.windows.first {
-            self.window = window
-            self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.visibleFrame.minY))
-            self.window.contentView = windowController
-            self.window.styleMask = [.borderless]
-            self.window.titlebarAppearsTransparent = true
-            self.window.titleVisibility = .hidden
-            self.window.backgroundColor = .clear
-            self.window.close()
-        }
+        setupWindow()
     }
 
     // MARK: - Public Methods
@@ -82,6 +67,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Private Methods
+    private func setupWindow() {
+        let windowController = NSHostingView(rootView: MainView())
+        if let window = NSApplication.shared.windows.first {
+            self.window = window
+            self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.visibleFrame.minY))
+            self.window.contentView = windowController
+            self.window.styleMask = [.borderless]
+            self.window.titlebarAppearsTransparent = true
+            self.window.titleVisibility = .hidden
+            self.window.backgroundColor = .clear
+            self.window.close()
+        }
+    }
+
     private func addObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction), name: .textSelectedFromClipboardNotification, object: nil)
@@ -90,32 +89,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func getAllStringsFromClipboard() {
-        self.tempTextArray = StorageHelper.loadStringArray(data: appStorageArray)
-        self.menu.textArray = self.tempTextArray
-        setMenuBarText(count: self.tempTextArray.count)
+        self.tempClipboardItemArray = StorageHelper.loadStringArray(data: appStorageArray)
+        self.menu.clipboardItemArray = self.tempClipboardItemArray
+        setMenuBarText(count: self.tempClipboardItemArray.count)
     }
 
     private func setupTimer() {
         let pasteboard = NSPasteboard.general
         var changeCount = NSPasteboard.general.changeCount
 
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
             guard let copiedString = pasteboard.string(forType: .string), pasteboard.changeCount != changeCount else { return }
-            guard copiedString != self.tempTextArray.last else { return }
+            guard copiedString != self.tempClipboardItemArray.last?.text else { return }
 
             changeCount = pasteboard.changeCount
 
-            self.tempTextArray.append(copiedString)
-            self.appStorageArray = StorageHelper.archiveStringArray(object: self.tempTextArray)
-            print("\(changeCount), \(copiedString)")
-            for item in self.tempTextArray {
-                print(item)
-            }
+            guard !copiedString.isEmpty else { return }
 
-            self.menu.textArray = self.tempTextArray
+            let newItem = ClipboardItem(id: UUID(), text: copiedString)
+
+            self.tempClipboardItemArray.append(newItem)
+            self.appStorageArray = StorageHelper.archiveStringArray(object: self.tempClipboardItemArray)
+            print("\(changeCount), \(copiedString)")
+
+            self.menu.clipboardItemArray = self.tempClipboardItemArray
             self.statusBarItem.menu = self.menu.createMenu()
-            self.setMenuBarText(count: self.tempTextArray.count)
-            NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: self.tempTextArray)
+            self.setMenuBarText(count: self.tempClipboardItemArray.count)
+            NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: copiedString)
+            // TODO: - Buranın değişmesi lazım ↓
+            self.makeAppVisibleAction()
+//            self.setupWindow()
+//            self.makeAppHiddenAction()
+
         }
     }
 
@@ -151,10 +157,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - Extension ApplicationMenu Delegate
 extension AppDelegate: ApplicationMenuDelegate {
     func didTapClearAllButton() {
-        self.tempTextArray.removeAll()
-        self.menu.textArray = []
+        self.tempClipboardItemArray.removeAll()
+        self.menu.clipboardItemArray = []
         self.statusBarItem.menu = self.menu.createMenu()
         setMenuBarText(count: 0)
-        NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: self.tempTextArray)
+        NotificationCenter.default.post(name: .clipboardArrayClearedNotification, object: nil)
     }
 }
