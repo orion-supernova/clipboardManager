@@ -51,6 +51,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarItem.menu = menu.createMenu()
         addObservers()
         setupWindow()
+        makeAppVisibleAction()
     }
 
     // MARK: - Public Methods
@@ -67,7 +68,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Private Methods
-    private func setupWindow() {
+    @objc private func setupWindow() {
         let windowController = NSHostingView(rootView: MainView())
         if let window = NSApplication.shared.windows.first {
             self.window = window
@@ -77,7 +78,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.window.titlebarAppearsTransparent = true
             self.window.titleVisibility = .hidden
             self.window.backgroundColor = .clear
-            self.window.close()
         }
     }
 
@@ -86,6 +86,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction), name: .textSelectedFromClipboardNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: .makeAppHiddenNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(setupWindow), name: NSApplication.willBecomeActiveNotification, object: nil)
     }
 
     private func getAllStringsFromClipboard() {
@@ -117,8 +118,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.statusBarItem.menu = self.menu.createMenu()
             self.setMenuBarText(count: self.tempClipboardItemArray.count)
             NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: copiedString)
-            // TODO: - Buranın değişmesi lazım ↓
-            self.makeAppVisibleAction()
+            // TODO: - Danger Zone, be careful with setupWindow, may decrease performance ↓
+            self.setupWindow()
+
+//            self.makeAppVisibleAction()
 //            self.setupWindow()
 //            self.makeAppHiddenAction()
 
@@ -162,5 +165,6 @@ extension AppDelegate: ApplicationMenuDelegate {
         self.statusBarItem.menu = self.menu.createMenu()
         setMenuBarText(count: 0)
         NotificationCenter.default.post(name: .clipboardArrayClearedNotification, object: nil)
+        self.setupWindow()
     }
 }

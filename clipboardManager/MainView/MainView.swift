@@ -47,7 +47,7 @@ struct MainView: View {
                             }
                         }
                         .onReceive(publisherForAppBecomeActive, perform: { output in
-                            proxy.scrollTo(viewModel.clipboardItemArray.last?.id, anchor: .leading)
+                            proxy.scrollTo(viewModel.clipboardItemArray.last?.id, anchor: .trailing)
                         })
                         .scrollIndicators(.hidden)
                     }
