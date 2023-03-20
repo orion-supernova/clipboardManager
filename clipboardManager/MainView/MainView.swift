@@ -14,7 +14,6 @@ struct MainView: View {
     @ObservedObject var viewModel = MainViewViewModel()
     let publisherFortempArrayChanged  = NotificationCenter.default.publisher(for: .clipboardArrayChangedNotification)
     let publisherForClipBoardCleared  = NotificationCenter.default.publisher(for: .clipboardArrayClearedNotification)
-    let publisherForScrollToLastIndex = NotificationCenter.default.publisher(for: .scrollToLastIndexNotification)
     let publisherForAppBecomeActive   = NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)
 
     // MARK: - Body
@@ -64,9 +63,9 @@ struct MainView: View {
             viewModel.clipboardItemArray = StorageHelper.loadStringArray(data: appStorageArrayData)
         }
         .onReceive(publisherFortempArrayChanged, perform: { output in
-            let newString = output.object as? String ?? ""
-            viewModel.clipboardItemArray.append(ClipboardItem(id: UUID(), text: newString))
-            print("[DEBUG] added String -> \(newString)")
+            guard let newItem = output.object as? ClipboardItem else { return }
+            viewModel.clipboardItemArray.append(newItem)
+            print("[DEBUG] added Item -> \(newItem)")
         })
         .onReceive(publisherForClipBoardCleared, perform: { output in
             viewModel.clipboardItemArray = []
@@ -81,7 +80,7 @@ struct MainView: View {
 class MainViewViewModel: ObservableObject {
     // MARK: - Public Properties
     @Published var clipboardItemArray = [ClipboardItem]()
-    var emptyArray = [ClipboardItem(id: UUID(), text: "")]
+    var emptyArray = [ClipboardItem(id: UUID(), text: "", copiedFromApplication: CopiedFromApplication(withApplication: NSRunningApplication()))]
 }
 
 struct MainView_Previews: PreviewProvider {

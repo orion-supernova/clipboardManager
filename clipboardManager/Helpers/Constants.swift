@@ -16,7 +16,6 @@ extension Notification.Name {
     static let appBecomeActiveNotification       = Notification.Name("appBecomeActive")
     static let clipboardArrayChangedNotification = Notification.Name("clipboardArrayChanged")
     static let clipboardArrayClearedNotification = Notification.Name("clipboardArrayCleared")
-    static let scrollToLastIndexNotification     = Notification.Name("scrollToLastIndex")
     static let makeAppVisibleNotification        = Notification.Name("makeAppVisible")
     static let makeAppHiddenNotification         = Notification.Name("makeAppHiddenNotification")
     static let textSelectedFromClipboardNotification = Notification.Name("textSelectedFromClipboard")

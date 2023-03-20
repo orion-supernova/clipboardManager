@@ -19,6 +19,7 @@ class StorageHelper: NSObject {
     }
     static func loadStringArray(data: Data) -> [ClipboardItem] {
         guard !data.isEmpty else { return []}
+//        UserDefaults.standard.removePersistentDomain(forName: "com.walhallaa.clipboardManager") // USE WHEN ADDING NEW KEY :)
         do {
             let array = try JSONDecoder().decode([ClipboardItem].self, from: data)
 //            guard let array = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data) as? [ClipboardItem] else {

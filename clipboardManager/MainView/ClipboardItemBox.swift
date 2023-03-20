@@ -16,7 +16,7 @@ struct ClipboardItemBox: View {
         GeometryReader { geometryProxy in
             ZStack {
                 VStack {
-                    CopiedAppLogoView()
+                    CopiedAppLogoView(app: item.copiedFromApplication)
                         .frame(width: geometryProxy.size.width, height: 50, alignment: .center)
 //                    Spacer()
 //                        .frame(width: geometryProxy.size.width, height: 20, alignment: .center)
@@ -39,7 +39,7 @@ struct ClipboardItemBox: View {
 struct ClipboardItemBox_Previews: PreviewProvider {
     static var previews: some View {
         GeometryReader { proxy in
-            ClipboardItemBox(item: ClipboardItem(id: UUID(), text: "hmm"))
+            ClipboardItemBox(item: ClipboardItem(id: UUID(), text: "hmm", copiedFromApplication: CopiedFromApplication(withApplication: NSRunningApplication())))
         }
     }
 }

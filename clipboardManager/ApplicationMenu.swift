@@ -35,7 +35,7 @@ class ApplicationMenu: NSObject {
 
     // MARK: - Private Methods
     private func loadClipboardStrings(to menu: NSMenu) {
-        let stringArray = self.clipboardItemArray //StorageHelper.loadStringArray(data: appStorageArrayData)
+        let stringArray = self.clipboardItemArray
         for item in stringArray.reversed() {
             let clearAllMenuItem = NSMenuItem(title: "\(item)",
                                               action: #selector(copyToClipboardAction),
@@ -73,7 +73,7 @@ class ApplicationMenu: NSObject {
     }
 
     private func handleEmptyButton(with menu: NSMenu) {
-        let array = clipboardItemArray//StorageHelper.loadStringArray(data: appStorageArrayData)
+        let array = clipboardItemArray
         guard !array.isEmpty else { menu.addItem(NSMenuItem(title: "<None>", action: nil, keyEquivalent: "")); return }
         guard array.count < 2 else { return }
         menu.items.removeAll(where: { $0.action == nil })

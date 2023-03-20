@@ -69,6 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Private Methods
     @objc private func setupWindow() {
+        print("[DEBUG] setup window start")
         let windowController = NSHostingView(rootView: MainView())
         if let window = NSApplication.shared.windows.first {
             self.window = window
@@ -79,6 +80,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.window.titleVisibility = .hidden
             self.window.backgroundColor = .clear
         }
+        print("[DEBUG] setup window end")
+    }
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     private func addObservers() {
@@ -105,10 +110,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard copiedString != self.tempClipboardItemArray.last?.text else { return }
 
             changeCount = pasteboard.changeCount
-
             guard !copiedString.isEmpty else { return }
 
-            let newItem = ClipboardItem(id: UUID(), text: copiedString)
+            let newItem = ClipboardItem(id: UUID(), text: copiedString, copiedFromApplication: self.getCopiedFromApplication())
 
             self.tempClipboardItemArray.append(newItem)
             self.appStorageArray = StorageHelper.archiveStringArray(object: self.tempClipboardItemArray)
@@ -117,7 +121,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self.menu.clipboardItemArray = self.tempClipboardItemArray
             self.statusBarItem.menu = self.menu.createMenu()
             self.setMenuBarText(count: self.tempClipboardItemArray.count)
-            NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: copiedString)
+            NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: newItem)
             // TODO: - Danger Zone, be careful with setupWindow, may decrease performance ↓
             self.setupWindow()
 
@@ -128,6 +132,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func getCopiedFromApplication() -> CopiedFromApplication {
+        guard let tempApplication = NSWorkspace().frontmostApplication else {
+            let emptyApp = NSRunningApplication()
+            return CopiedFromApplication(withApplication: emptyApp)
+        }
+        let application = CopiedFromApplication(withApplication: tempApplication)
+        print("[DEBUG] copied from \(application.applicationTitle ?? "Unknown"))")
+        return application
+    }
+
     private func setMenuBarText(count: Int) {
         statusBarItem.button?.title = "Count: \(count)"
     }
@@ -136,7 +150,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func makeAppVisibleAction() {
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.window.orderFrontRegardless()
-        NotificationCenter.default.post(name: .scrollToLastIndexNotification, object: nil)
     }
 
     @objc private func makeAppHiddenAction() {

@@ -8,17 +8,38 @@
 import SwiftUI
 
 struct CopiedAppLogoView: View {
+
+    // MARK: - Public Properties
+    let app: CopiedFromApplication
+
+    // MARK: - Lifecycle
+    init(app: CopiedFromApplication) {
+        self.app = app
+    }
+
+    // MARK: - Body
     var body: some View {
-        ZStack {
-            Color(hex: "#1F1045")
-            Text("App Unknown")
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
+        GeometryReader { proxy in
+            ZStack {
+                Color(hex: "#1F1045")
+                VStack {
+                    Spacer()
+                    Image(nsImage: NSImage(data: (app.applicationIcon?.imageData)!)!)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: proxy.size.width, height: 40, alignment: .center)
+
+                    Text(app.applicationTitle ?? "Unknown")
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    Spacer()
+                }
+            }
         }
     }
 }
 
 struct CopiedAppLogoView_Previews: PreviewProvider {
     static var previews: some View {
-        CopiedAppLogoView()
+        CopiedAppLogoView(app: CopiedFromApplication(withApplication: NSRunningApplication()))
     }
 }
