@@ -25,19 +25,26 @@ struct CopiedAppLogoView: View {
                 Color(hex: "#1F1045")
                 VStack {
                     Spacer()
-                    Image(nsImage: viewModel.getImage(for: app.applicationTitle ?? ""))
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: proxy.size.width, height: 40)
-                        .clipped()
-
-                    if app.applicationTitle?.isEmpty == false {
-                        Text(app.applicationTitle ?? "")
+                        .frame(width: proxy.size.width, height: 5)
+                    HStack {
+                        Spacer()
+                            .frame(width: 10, height: proxy.size.height)
+                        Text("From: \(app.applicationTitle ?? "Mahmut Clipboard")")
                             .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        Spacer()
+//                            .frame(width: 30, height: proxy.size.height)
+                        Image(nsImage: viewModel.getImage(for: app.applicationTitle ?? ""))
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: proxy.size.height)
+                            .clipped()
+                        Spacer()
+                            .frame(width: 10, height: proxy.size.height)
                     }
-                    Spacer()
                 }
+                .frame(width: proxy.size.width, height: proxy.size.height)
             }
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
     }
 }
