@@ -37,11 +37,11 @@ class ApplicationMenu: NSObject {
     private func loadClipboardStrings(to menu: NSMenu) {
         let stringArray = self.clipboardItemArray
         for item in stringArray.reversed() {
-            let clearAllMenuItem = NSMenuItem(title: "\(item)",
+            let item = NSMenuItem(title: "\(item)",
                                               action: #selector(copyToClipboardAction),
                                               keyEquivalent: "")
-            clearAllMenuItem.target = self
-            menu.addItem(clearAllMenuItem)
+            item.target = self
+            menu.addItem(item)
         }
     }
 
@@ -84,14 +84,7 @@ class ApplicationMenu: NSObject {
         let pasteBoard = NSPasteboard.general
         pasteBoard.clearContents()
         pasteBoard.setString(sender.title,forType :.string)
-
-        let eventSource = CGEventSource(stateID: .combinedSessionState)
-        let eventDown = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: true)!
-        let eventUp = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: false)!
-
-        eventDown.flags = CGEventFlags.maskCommand
-        eventDown.post(tap: .cgAnnotatedSessionEventTap)
-        eventUp.post(tap: .cgAnnotatedSessionEventTap)
+        KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
 
     @objc func comingSoonAction(sender: NSMenuItem) {

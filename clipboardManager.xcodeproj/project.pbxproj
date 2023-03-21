@@ -14,6 +14,8 @@
 		5434D11629C1C433009DF037 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11529C1C433009DF037 /* Persistence.swift */; };
 		5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */; };
 		5434D12229C1CB60009DF037 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 5434D12129C1CB60009DF037 /* HotKey */; };
+		54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238129CA369800F3E2F3 /* KeyCodes.swift */; };
+		54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */; };
 		54B953F029C3B5F300990FAC /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B953EF29C3B5F300990FAC /* Constants.swift */; };
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
 		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
@@ -34,6 +36,8 @@
 		5434D11529C1C433009DF037 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = clipboardManager.xcdatamodel; sourceTree = "<group>"; };
 		5434D11A29C1C433009DF037 /* clipboardManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = clipboardManager.entitlements; sourceTree = "<group>"; };
+		54A3238129CA369800F3E2F3 /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
+		54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPressHelper.swift; sourceTree = "<group>"; };
 		54B953EF29C3B5F300990FAC /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
 		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
@@ -112,6 +116,8 @@
 				54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */,
 				54E32CBF29C4F1C3004772B5 /* Color+Random.swift */,
 				54E32CB929C4E507004772B5 /* VisualEffectView.swift */,
+				54A3238129CA369800F3E2F3 /* KeyCodes.swift */,
+				54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -220,6 +226,8 @@
 				54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */,
 				54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */,
 				54E32CBE29C4ED5C004772B5 /* CopiedAppLogoView.swift in Sources */,
+				54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */,
+				54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */,
 				54E32CB829C4DBC3004772B5 /* Color+HexColor.swift in Sources */,
 				5434D10F29C1C433009DF037 /* MainView.swift in Sources */,
 				54E32CC029C4F1C3004772B5 /* Color+Random.swift in Sources */,
@@ -355,7 +363,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
-				DEVELOPMENT_TEAM = U292D5ZH7V;
+				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -384,7 +392,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
-				DEVELOPMENT_TEAM = U292D5ZH7V;
+				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

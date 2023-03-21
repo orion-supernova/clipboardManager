@@ -160,13 +160,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func textSelectedFromClipboardAction() {
         makeAppHiddenAction()
-        let eventSource = CGEventSource(stateID: .combinedSessionState)
-        let eventDown = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: true)!
-        let eventUp = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(9), keyDown: false)!
-
-        eventDown.flags = CGEventFlags.maskCommand
-        eventDown.post(tap: .cgAnnotatedSessionEventTap)
-        eventUp.post(tap: .cgAnnotatedSessionEventTap)
+        KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
 }
 
