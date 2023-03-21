@@ -60,9 +60,12 @@ class StorageHelper: NSObject {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = documents.appending(component: "\(appName).png")
         var urlString = url.absoluteString
-        for _ in 1..<8 {
-            let hm = urlString.dropFirst()
-            urlString = String(hm)
+        let prefix = "file://"
+        if urlString.localizedStandardContains(prefix) {
+            for _ in 1..<8 {
+                let hm = urlString.dropFirst()
+                urlString = String(hm)
+            }
         }
         let image = NSImage(contentsOfFile: urlString)
         if let image {
