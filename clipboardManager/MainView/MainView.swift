@@ -37,7 +37,7 @@ struct MainView: View {
                                                     pasteBoard.clearContents()
                                                     pasteBoard.setString(item.text,forType :.string)
 
-                                                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
+                                                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
                                                 }
                                             }
                                             .frame(width: 270, height: 280)

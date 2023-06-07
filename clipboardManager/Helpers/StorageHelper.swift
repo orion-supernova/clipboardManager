@@ -52,7 +52,6 @@ class StorageHelper: NSObject {
                 }
             }
         }
-
     }
 
     static func getImageFromDisk(for appName: String, completion: @escaping ((alreadyExist: Bool, image: NSImage?)) -> Void ) {
@@ -73,6 +72,5 @@ class StorageHelper: NSObject {
         } else {
             completion((false, nil))
         }
-
     }
 }

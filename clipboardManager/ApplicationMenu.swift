@@ -22,11 +22,11 @@ class ApplicationMenu: NSObject {
     // MARK: - Public Methods
     func createMenu() -> NSMenu {
         let menu = NSMenu()
-        let preferencesMenuItem = NSMenuItem(title: "Open App Interface",
+        let openAppMenuItem = NSMenuItem(title: "Open App Interface",
                                              action: #selector(openAppInterfaceAction),
                                              keyEquivalent: "")
-        preferencesMenuItem.target = self
-        menu.addItem(preferencesMenuItem)
+        openAppMenuItem.target = self
+        menu.addItem(openAppMenuItem)
 
         menu.addItem(NSMenuItem.separator())
         loadOtherButtons(to: menu)
@@ -52,11 +52,11 @@ class ApplicationMenu: NSObject {
         clearAllMenuItem.target = self
         menu.addItem(clearAllMenuItem)
 
-        let preferencesMenuItem = NSMenuItem(title: "Preferences",
-                                             action: #selector(comingSoonAction),
-                                             keyEquivalent: "")
-        preferencesMenuItem.target = self
-        menu.addItem(preferencesMenuItem)
+//        let preferencesMenuItem = NSMenuItem(title: "Preferences",
+//                                             action: #selector(comingSoonAction),
+//                                             keyEquivalent: "")
+//        preferencesMenuItem.target = self
+//        menu.addItem(preferencesMenuItem)
 
         let aboutMenuItem = NSMenuItem(title: "About",
                                        action: #selector(aboutAction),

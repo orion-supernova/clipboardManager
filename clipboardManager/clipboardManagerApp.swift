@@ -16,16 +16,18 @@ struct clipboardManagerApp: App {
     let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
 
     let persistenceController = PersistenceController.shared
+    var mainView: MainView!
 
     // MARK: - Lifecycle
     init() {
         hotkeyForInterfaceVisibility.keyDownHandler = appDelegate.handleAppShortcut
+        self.mainView = appDelegate.mainView
     }
 
     // MARK: - Body
     var body: some Scene {
         WindowGroup {
-            MainView()
+            self.mainView
                 .fixedSize()
         }.windowResizability(.contentSize)
     }
@@ -33,15 +35,19 @@ struct clipboardManagerApp: App {
 
 // MARK: - AppDelegate
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var timer: Timer!
-    let pasteboard: NSPasteboard = .general
-    var tempClipboardItemArray: [ClipboardItem] = []
+    // MARK: - Public Properties
     @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArray: Data = Data()
-    var window: NSWindow!
+    var mainView = MainView()
+
+    // MARK: - Private Properties
+    private var timer: Timer!
+    private let pasteboard: NSPasteboard = .general
+    private var tempClipboardItemArray: [ClipboardItem] = []
+    private var window: NSWindow!
 
     static private(set) var instance: AppDelegate!
-    lazy var statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-    let menu = ApplicationMenu()
+    private lazy var statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let menu = ApplicationMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
@@ -70,7 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Private Methods
     @objc private func setupWindow() {
         print("[DEBUG] setup window start")
-        let windowController = NSHostingView(rootView: MainView())
+        let windowController = NSHostingView(rootView: mainView)
         if let window = NSApplication.shared.windows.first {
             self.window = window
             self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.visibleFrame.minY))
@@ -88,7 +94,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func addObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction), name: .textSelectedFromClipboardNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction(_:)), name: .textSelectedFromClipboardNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: .makeAppHiddenNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(setupWindow), name: NSApplication.willBecomeActiveNotification, object: nil)
@@ -109,6 +115,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard let copiedString = pasteboard.string(forType: .string), pasteboard.changeCount != changeCount else { return }
             guard copiedString != self.tempClipboardItemArray.last?.text else { return }
 
+            for item in self.tempClipboardItemArray {
+                if item.text == copiedString {
+                    self.tempClipboardItemArray.removeAll(where: { $0.text == item.text })
+                }
+            }
+
             changeCount = pasteboard.changeCount
             guard !copiedString.isEmpty else { return }
 
@@ -125,9 +137,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // TODO: - Danger Zone, be careful with setupWindow, may decrease performance ↓
             self.setupWindow()
 
-//            self.makeAppVisibleAction()
-//            self.setupWindow()
-//            self.makeAppHiddenAction()
+            //            self.makeAppVisibleAction()
+            //            self.setupWindow()
+            //            self.makeAppHiddenAction()
 
         }
     }
@@ -158,7 +170,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.hide(self)
     }
 
-    @objc private func textSelectedFromClipboardAction() {
+    @objc private func textSelectedFromClipboardAction(_ notification: NSNotification) {
+//        guard let item = notification.object as? ClipboardItem else { return }
+//        let id = item.id
+//        let app = item.copiedFromApplication
+//        let text = item.text
         makeAppHiddenAction()
         KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
