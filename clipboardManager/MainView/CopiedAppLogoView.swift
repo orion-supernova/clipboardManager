@@ -24,27 +24,22 @@ struct CopiedAppLogoView: View {
             ZStack {
                 Color(hex: "#1F1045")
                 VStack {
-                    Spacer()
-                        .frame(width: proxy.size.width, height: 5)
+//                    Spacer()
                     HStack {
                         Spacer()
-                            .frame(width: 10, height: proxy.size.height)
+                            .frame(width: 5)
                         Text("From: \(app.applicationTitle ?? "Mahmut Clipboard")")
                             .font(.system(size: 15, weight: .bold, design: .monospaced))
                         Spacer()
-//                            .frame(width: 30, height: proxy.size.height)
                         Image(nsImage: viewModel.getImage(for: app.applicationTitle ?? ""))
                             .resizable()
                             .scaledToFit()
-                            .frame(height: proxy.size.height)
-                            .clipped()
                         Spacer()
-                            .frame(width: 10, height: proxy.size.height)
+                            .frame(width: 5)
                     }
+//                    Spacer()
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
             }
-            .frame(width: proxy.size.width, height: proxy.size.height)
         }
     }
 }

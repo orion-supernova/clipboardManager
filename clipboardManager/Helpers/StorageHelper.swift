@@ -54,17 +54,15 @@ class StorageHelper: NSObject {
         }
     }
 
-    static func getImageFromDisk(for appName: String, completion: @escaping ((alreadyExist: Bool, image: NSImage?)) -> Void ) {
+    static func getImageFromDisk(for appName: String, completion: @escaping ((alreadyExist: Bool, image: NSImage?)) -> Void) {
         guard !appName.isEmpty else { return }
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let url = documents.appending(component: "\(appName).png")
+        let url = documents.appendingPathComponent("\(appName).png")
         var urlString = url.absoluteString
-        let prefix = "file://"
-        if urlString.localizedStandardContains(prefix) {
-            for _ in 1..<8 {
-                let hm = urlString.dropFirst()
-                urlString = String(hm)
-            }
+
+        // Remove the "file://" prefix
+        if urlString.localizedStandardContains("file://") {
+            urlString = String(urlString.dropFirst(7))
         }
         let image = NSImage(contentsOfFile: urlString)
         if let image {

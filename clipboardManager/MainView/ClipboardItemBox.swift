@@ -15,17 +15,19 @@ struct ClipboardItemBox: View {
     var body: some View {
         GeometryReader { geometryProxy in
             ZStack {
-                VStack(spacing: 0) {
+                Color.black
+                VStack {
                     CopiedAppLogoView(app: item.copiedFromApplication)
-                        .frame(width: geometryProxy.size.width, height: 50, alignment: .center)
-                    Text(item.text.isEmpty ? "No Content" : item.text)
-                        .frame(width: geometryProxy.size.width, height: geometryProxy.size.height-50)
-                        .foregroundColor(Color.random())
-                        .font(item.text.isEmpty ? .system(size: 30, weight: .bold, design: .monospaced) : .system(size: 13))
+                        .frame(width: geometryProxy.size.width,
+                               height: 50)
                     Spacer()
-                }
-                .background {
-                    Color.black
+                    Text(item.text.isEmpty ? "No Content" : item.text)
+                        .foregroundColor(Color.random())
+                        .font(item.text.isEmpty ? .system(
+                            size: 30,
+                            weight: .bold,
+                            design: .monospaced) : .system(size: 13))
+                    Spacer()
                 }
             }
             .cornerRadius(5)

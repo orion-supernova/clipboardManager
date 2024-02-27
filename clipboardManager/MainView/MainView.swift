@@ -20,9 +20,12 @@ struct MainView: View {
     var body: some View {
         GeometryReader { reader in
             ZStack {
+                VisualEffectView(material: .popover, blendingMode: .withinWindow)
+                    .ignoresSafeArea()
                 VStack {
                     Spacer()
-                        .frame(width: reader.size.width, height: 17, alignment: .center)
+                        .frame(width: reader.size.width,
+                               height: 0)
                     // MARK: - ScrollView Start
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal) {
@@ -40,7 +43,7 @@ struct MainView: View {
                                                     NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
                                                 }
                                             }
-                                            .frame(width: 270, height: 280)
+                                            .frame(width: 280, height: 300)
                                             .id(item.id)
                                     }
                                 }
@@ -49,15 +52,13 @@ struct MainView: View {
                         .onReceive(publisherForAppBecomeActive, perform: { output in
                             proxy.scrollTo(viewModel.clipboardItemArray.last?.id, anchor: .trailing)
                         })
-                        .scrollIndicators(.hidden)
                     }
                     // MARK: - ScrollView End
+                    Spacer()
+                        .frame(width: reader.size.width,
+                               height: 0)
                 }
             }
-        }
-        .background {
-            VisualEffectView(material: .popover, blendingMode: .withinWindow)
-                .ignoresSafeArea()
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
         .onAppear {

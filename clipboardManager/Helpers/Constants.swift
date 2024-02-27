@@ -9,7 +9,7 @@ import AppKit
 
 // MARK: - Global Variables
 let screenWidth: CGFloat = NSScreen.main!.visibleFrame.width
-let screenHeight: CGFloat = 310
+let screenHeight: CGFloat = 320
 
 // MARK: - Notification Name
 extension Notification.Name {

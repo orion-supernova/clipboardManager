@@ -14,6 +14,7 @@ struct clipboardManagerApp: App {
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
+    let hotkeyForEscape = HotKey(key: .escape, modifiers: .init())
 
     let persistenceController = PersistenceController.shared
     var mainView: MainView!
@@ -21,6 +22,7 @@ struct clipboardManagerApp: App {
     // MARK: - Lifecycle
     init() {
         hotkeyForInterfaceVisibility.keyDownHandler = appDelegate.handleAppShortcut
+        hotkeyForEscape.keyDownHandler = appDelegate.handleEscapeCharacter
         self.mainView = appDelegate.mainView
     }
 
@@ -29,7 +31,7 @@ struct clipboardManagerApp: App {
         WindowGroup {
             self.mainView
                 .fixedSize()
-        }.windowResizability(.contentSize)
+        }
     }
 }
 
@@ -74,17 +76,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     // MARK: - Private Methods
-    @objc private func setupWindow() {
+    @objc func setupWindow() {
         print("[DEBUG] setup window start")
         let windowController = NSHostingView(rootView: mainView)
         if let window = NSApplication.shared.windows.first {
             self.window = window
-            self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.visibleFrame.minY))
+            self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.frame.minY))
             self.window.contentView = windowController
             self.window.styleMask = [.borderless]
             self.window.titlebarAppearsTransparent = true
             self.window.titleVisibility = .hidden
             self.window.backgroundColor = .clear
+            self.window.level = .popUpMenu
         }
         print("[DEBUG] setup window end")
     }
@@ -160,12 +163,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Private Actions
     @objc private func makeAppVisibleAction() {
+        guard !window.isVisible else { return }
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.window.orderFrontRegardless()
     }
 
     @objc private func makeAppHiddenAction() {
-        self.window.close()
+        guard window.isVisible else { return }
+        window.close()
         NSApplication.shared.deactivate()
         NSApplication.shared.hide(self)
     }
