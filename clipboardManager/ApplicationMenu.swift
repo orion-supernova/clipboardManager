@@ -16,15 +16,14 @@ class ApplicationMenu: NSObject {
     // MARK: - Public Properties
     @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
     weak var delegate: ApplicationMenuDelegate?
-    var clipboardItemArray: [ClipboardItem] = []
     @State var menuItemsArray: [NSMenuItem] = []
 
     // MARK: - Public Methods
     func createMenu() -> NSMenu {
         let menu = NSMenu()
         let openAppMenuItem = NSMenuItem(title: "Open App Interface",
-                                             action: #selector(openAppInterfaceAction),
-                                             keyEquivalent: "")
+                                         action: #selector(openAppInterfaceAction),
+                                         keyEquivalent: "")
         openAppMenuItem.target = self
         menu.addItem(openAppMenuItem)
 
@@ -34,17 +33,6 @@ class ApplicationMenu: NSObject {
     }
 
     // MARK: - Private Methods
-    private func loadClipboardStrings(to menu: NSMenu) {
-        let stringArray = self.clipboardItemArray
-        for item in stringArray.reversed() {
-            let item = NSMenuItem(title: "\(item)",
-                                              action: #selector(copyToClipboardAction),
-                                              keyEquivalent: "")
-            item.target = self
-            menu.addItem(item)
-        }
-    }
-
     private func loadOtherButtons(to menu: NSMenu) {
         let clearAllMenuItem = NSMenuItem(title: "Clear All",
                                           action: #selector(clearAction),
@@ -58,25 +46,18 @@ class ApplicationMenu: NSObject {
 //        preferencesMenuItem.target = self
 //        menu.addItem(preferencesMenuItem)
 
-        let aboutMenuItem = NSMenuItem(title: "About",
-                                       action: #selector(aboutAction),
-                                       keyEquivalent: "")
-        aboutMenuItem.target = self
-        aboutMenuItem.representedObject = "https://walhallaa.com"
-        menu.addItem(aboutMenuItem)
+//        let aboutMenuItem = NSMenuItem(title: "About",
+//                                       action: #selector(aboutAction),
+//                                       keyEquivalent: "")
+//        aboutMenuItem.target = self
+//        aboutMenuItem.representedObject = "https://walhallaa.com"
+//        menu.addItem(aboutMenuItem)
 
         let quitMenuItem = NSMenuItem(title: "Quit",
                                       action: #selector(quitAction),
                                       keyEquivalent: "")
         quitMenuItem.target = self
         menu.addItem(quitMenuItem)
-    }
-
-    private func handleEmptyButton(with menu: NSMenu) {
-        let array = clipboardItemArray
-        guard !array.isEmpty else { menu.addItem(NSMenuItem(title: "<None>", action: nil, keyEquivalent: "")); return }
-        guard array.count < 2 else { return }
-        menu.items.removeAll(where: { $0.action == nil })
     }
 
     // MARK: - Actions
@@ -118,6 +99,4 @@ class ApplicationMenu: NSObject {
     @objc func quitAction(sender: NSMenuItem) {
         NSApp.terminate(self)
     }
-
-
 }
