@@ -32,6 +32,8 @@ class ClipboardManager: ObservableObject {
             changeCount = pasteboard.changeCount
             
             let newItem = self.createClipboardItem()
+            guard newItem?.content != clipboardItems.first?.content else { return }
+            
             self.addClipboardItem(newItem ?? .init(id: UUID(), type: .text, content: Data(), copiedFromApplication: .init(withApplication: NSRunningApplication()), timestamp: Date(), contentDescriptionString: "#error#"))
         }
     }

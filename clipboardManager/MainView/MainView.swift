@@ -33,9 +33,6 @@ struct MainView: View {
             }
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
-        .onReceive(NotificationCenter.default.publisher(for: .refreshClipboardItems)) { _ in
-            refreshClipboardItems()
-        }
     }
     
     func refreshClipboardItems() {

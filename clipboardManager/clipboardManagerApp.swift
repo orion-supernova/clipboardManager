@@ -13,14 +13,12 @@ struct clipboardManagerApp: App {
     
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
     @Environment(\.managedObjectContext) var managedObjectContext
     
     var containerView: ContainerView!
     
     // MARK: - Lifecycle
     init() {
-        hotkeyForInterfaceVisibility.keyDownHandler = appDelegate.handleAppShortcut
         self.containerView = appDelegate.containerView
     }
     
@@ -40,6 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Public Properties
     let persistenceController = PersistenceController.shared
     var containerView = ContainerView()
+    let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
     
     // MARK: - Private Properties
     private var timer: Timer!
@@ -56,6 +55,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusBarItem.menu = menu.createMenu()
         addObservers()
         setupWindow()
+        hotkeyForInterfaceVisibility.keyDownHandler = handleAppShortcut
     }
     
     // MARK: - Public Methods
@@ -96,11 +96,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction(_:)), name: .textSelectedFromClipboardNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updateMenuBarItemCount(_:)), name: .pasteBoardCountNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(hmm), name: NSApplication.didBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil)
     }
     
-    @objc private func hmm() {
-        NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
+    @objc private func didBecomeActive() {
+        setupWindow()
     }
     
     @objc private func updateMenuBarItemCount(_ notification: NSNotification) {

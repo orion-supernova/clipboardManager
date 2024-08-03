@@ -21,7 +21,7 @@ class ApplicationMenu: NSObject {
     // MARK: - Public Methods
     func createMenu() -> NSMenu {
         let menu = NSMenu()
-        let openAppMenuItem = NSMenuItem(title: "Open App Interface",
+        let openAppMenuItem = NSMenuItem(title: "Open App Interface (cmd+shift+v)",
                                          action: #selector(openAppInterfaceAction),
                                          keyEquivalent: "")
         openAppMenuItem.target = self
