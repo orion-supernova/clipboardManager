@@ -16,6 +16,18 @@
 		5434D12229C1CB60009DF037 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 5434D12129C1CB60009DF037 /* HotKey */; };
 		54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238129CA369800F3E2F3 /* KeyCodes.swift */; };
 		54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */; };
+		54A76B892C5D852300AEBD9E /* NSImage+Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A76B882C5D852300AEBD9E /* NSImage+Color.swift */; };
+		54A76B8D2C5E634C00AEBD9E /* URLPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A76B8C2C5E634C00AEBD9E /* URLPreview.swift */; };
+		54A76B902C5E797900AEBD9E /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 54A76B8F2C5E797900AEBD9E /* RevenueCat */; };
+		54A76B922C5E797900AEBD9E /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 54A76B912C5E797900AEBD9E /* RevenueCatUI */; };
+		54B6C87D2C4E6EFE00106CFA /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C87C2C4E6EFE00106CFA /* PaywallView.swift */; };
+		54B6C87F2C4E6FE500106CFA /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C87E2C4E6FE500106CFA /* PurchaseManager.swift */; };
+		54B6C8822C4E799F00106CFA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54B6C8812C4E799F00106CFA /* StoreKit.framework */; };
+		54B6C8A72C4FAF6C00106CFA /* ContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8A62C4FAF6C00106CFA /* ContainerView.swift */; };
+		54B6C8A92C4FB59C00106CFA /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */; };
+		54B6C8AC2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8AA2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld */; };
+		54B6C8AE2C4FDF2E00106CFA /* CopiedFromApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8AD2C4FDF2E00106CFA /* CopiedFromApplication.swift */; };
+		54B6C8B02C4FDF4D00106CFA /* CustomImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8AF2C4FDF4D00106CFA /* CustomImage.swift */; };
 		54B953F029C3B5F300990FAC /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B953EF29C3B5F300990FAC /* Constants.swift */; };
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
 		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
@@ -39,6 +51,16 @@
 		543D607229D34F5200E23D82 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		54A3238129CA369800F3E2F3 /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
 		54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPressHelper.swift; sourceTree = "<group>"; };
+		54A76B882C5D852300AEBD9E /* NSImage+Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Color.swift"; sourceTree = "<group>"; };
+		54A76B8C2C5E634C00AEBD9E /* URLPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = URLPreview.swift; sourceTree = "<group>"; };
+		54B6C87C2C4E6EFE00106CFA /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		54B6C87E2C4E6FE500106CFA /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
+		54B6C8812C4E799F00106CFA /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		54B6C8A62C4FAF6C00106CFA /* ContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerView.swift; sourceTree = "<group>"; };
+		54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardManager.swift; sourceTree = "<group>"; };
+		54B6C8AB2C4FBADF00106CFA /* ClipboardModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClipboardModel.xcdatamodel; sourceTree = "<group>"; };
+		54B6C8AD2C4FDF2E00106CFA /* CopiedFromApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopiedFromApplication.swift; sourceTree = "<group>"; };
+		54B6C8AF2C4FDF4D00106CFA /* CustomImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomImage.swift; sourceTree = "<group>"; };
 		54B953EF29C3B5F300990FAC /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
 		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
@@ -55,7 +77,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				54A76B922C5E797900AEBD9E /* RevenueCatUI in Frameworks */,
 				5434D12229C1CB60009DF037 /* HotKey in Frameworks */,
+				54B6C8822C4E799F00106CFA /* StoreKit.framework in Frameworks */,
+				54A76B902C5E797900AEBD9E /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +92,7 @@
 			children = (
 				5434D10B29C1C433009DF037 /* clipboardManager */,
 				5434D10A29C1C433009DF037 /* Products */,
+				54B6C8802C4E799F00106CFA /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -84,6 +110,8 @@
 				543D607229D34F5200E23D82 /* Info.plist */,
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
+				54B6C87C2C4E6EFE00106CFA /* PaywallView.swift */,
+				54B6C87E2C4E6FE500106CFA /* PurchaseManager.swift */,
 				54E32CB629C4CCCF004772B5 /* MainView */,
 				54B953F129C3B6F300990FAC /* Models */,
 				54B953F229C3B6FB00990FAC /* Helpers */,
@@ -101,10 +129,20 @@
 			path = "Preview Content";
 			sourceTree = "<group>";
 		};
+		54B6C8802C4E799F00106CFA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				54B6C8812C4E799F00106CFA /* StoreKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		54B953F129C3B6F300990FAC /* Models */ = {
 			isa = PBXGroup;
 			children = (
 				54D74EDC29C24183004769D2 /* ClipboardItem.swift */,
+				54B6C8AD2C4FDF2E00106CFA /* CopiedFromApplication.swift */,
+				54B6C8AF2C4FDF4D00106CFA /* CustomImage.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -113,13 +151,17 @@
 			isa = PBXGroup;
 			children = (
 				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
-				54B953EF29C3B5F300990FAC /* Constants.swift */,
+				54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */,
 				5434D11529C1C433009DF037 /* Persistence.swift */,
+				54B953EF29C3B5F300990FAC /* Constants.swift */,
 				54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */,
 				54E32CBF29C4F1C3004772B5 /* Color+Random.swift */,
+				54A76B882C5D852300AEBD9E /* NSImage+Color.swift */,
 				54E32CB929C4E507004772B5 /* VisualEffectView.swift */,
 				54A3238129CA369800F3E2F3 /* KeyCodes.swift */,
 				54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */,
+				54B6C8AA2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld */,
+				54A76B8C2C5E634C00AEBD9E /* URLPreview.swift */,
 			);
 			path = Helpers;
 			sourceTree = "<group>";
@@ -137,6 +179,7 @@
 		54E32CB629C4CCCF004772B5 /* MainView */ = {
 			isa = PBXGroup;
 			children = (
+				54B6C8A62C4FAF6C00106CFA /* ContainerView.swift */,
 				5434D10E29C1C433009DF037 /* MainView.swift */,
 				54E32CBB29C4E743004772B5 /* ClipboardItemBox.swift */,
 				54E32CBD29C4ED5C004772B5 /* CopiedAppLogoView.swift */,
@@ -162,6 +205,8 @@
 			name = clipboardManager;
 			packageProductDependencies = (
 				5434D12129C1CB60009DF037 /* HotKey */,
+				54A76B8F2C5E797900AEBD9E /* RevenueCat */,
+				54A76B912C5E797900AEBD9E /* RevenueCatUI */,
 			);
 			productName = clipboardManager;
 			productReference = 5434D10929C1C433009DF037 /* Mahmut Clipboard.app */;
@@ -193,6 +238,7 @@
 			mainGroup = 5434D10029C1C433009DF037;
 			packageReferences = (
 				5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */,
+				54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			productRefGroup = 5434D10A29C1C433009DF037 /* Products */;
 			projectDirPath = "";
@@ -221,15 +267,24 @@
 			buildActionMask = 2147483647;
 			files = (
 				54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */,
+				54B6C87D2C4E6EFE00106CFA /* PaywallView.swift in Sources */,
+				54B6C8A92C4FB59C00106CFA /* ClipboardManager.swift in Sources */,
+				54B6C8A72C4FAF6C00106CFA /* ContainerView.swift in Sources */,
+				54B6C8AC2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld in Sources */,
 				5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */,
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
 				5434D11629C1C433009DF037 /* Persistence.swift in Sources */,
 				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
 				54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */,
+				54B6C87F2C4E6FE500106CFA /* PurchaseManager.swift in Sources */,
 				54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */,
 				54E32CBE29C4ED5C004772B5 /* CopiedAppLogoView.swift in Sources */,
 				54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */,
+				54B6C8B02C4FDF4D00106CFA /* CustomImage.swift in Sources */,
+				54B6C8AE2C4FDF2E00106CFA /* CopiedFromApplication.swift in Sources */,
+				54A76B8D2C5E634C00AEBD9E /* URLPreview.swift in Sources */,
 				54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */,
+				54A76B892C5D852300AEBD9E /* NSImage+Color.swift in Sources */,
 				54E32CB829C4DBC3004772B5 /* Color+HexColor.swift in Sources */,
 				5434D10F29C1C433009DF037 /* MainView.swift in Sources */,
 				54E32CC029C4F1C3004772B5 /* Color+Random.swift in Sources */,
@@ -363,22 +418,24 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = clipboardManager/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Mahmut;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app needs your permission to simulate paste actions.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -395,22 +452,24 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = clipboardManager/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Mahmut;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app needs your permission to simulate paste actions.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -446,8 +505,16 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/soffes/HotKey.git";
 			requirement = {
-				branch = master;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.0.0;
+			};
+		};
+		54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.2.2;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -457,6 +524,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */;
 			productName = HotKey;
+		};
+		54A76B8F2C5E797900AEBD9E /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		54A76B912C5E797900AEBD9E /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 
@@ -468,6 +545,17 @@
 			);
 			currentVersion = 5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */;
 			path = clipboardManager.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+		54B6C8AA2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				54B6C8AB2C4FBADF00106CFA /* ClipboardModel.xcdatamodel */,
+			);
+			currentVersion = 54B6C8AB2C4FBADF00106CFA /* ClipboardModel.xcdatamodel */;
+			name = ClipboardModel.xcdatamodeld;
+			path = "/Users/muratcankoc/Documents/Swift-MacOS-Projects/clipboardManager/clipboardManager/Helpers/ClipboardModel.xcdatamodeld";
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;
 		};

@@ -10,57 +10,54 @@ import HotKey
 
 @main
 struct clipboardManagerApp: App {
-
+    
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
-    let hotkeyForEscape = HotKey(key: .escape, modifiers: .init())
-
-    let persistenceController = PersistenceController.shared
-    var mainView: MainView!
-
+    @Environment(\.managedObjectContext) var managedObjectContext
+    
+    var containerView: ContainerView!
+    
     // MARK: - Lifecycle
     init() {
         hotkeyForInterfaceVisibility.keyDownHandler = appDelegate.handleAppShortcut
-        hotkeyForEscape.keyDownHandler = appDelegate.handleEscapeCharacter
-        self.mainView = appDelegate.mainView
+        self.containerView = appDelegate.containerView
     }
-
+    
     // MARK: - Body
     var body: some Scene {
         WindowGroup {
-            self.mainView
+            self.containerView
                 .fixedSize()
+                .environment(\.managedObjectContext, appDelegate.persistenceController.container.viewContext)
         }
     }
 }
 
 // MARK: - AppDelegate
 class AppDelegate: NSObject, NSApplicationDelegate {
+    
     // MARK: - Public Properties
-    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArray: Data = Data()
-    var mainView = MainView()
-
+    let persistenceController = PersistenceController.shared
+    var containerView = ContainerView()
+    
     // MARK: - Private Properties
     private var timer: Timer!
     private let pasteboard: NSPasteboard = .general
-    private var tempClipboardItemArray: [ClipboardItem] = []
     private var window: NSWindow!
-
+    
     static private(set) var instance: AppDelegate!
     private lazy var statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let menu = ApplicationMenu()
-
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         menu.delegate = self
-        getAllStringsFromClipboard()
-        setupTimer()
         statusBarItem.menu = menu.createMenu()
         addObservers()
         setupWindow()
     }
-
+    
     // MARK: - Public Methods
     func handleAppShortcut() {
         if self.window.isVisible {
@@ -69,15 +66,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             makeAppVisibleAction()
         }
     }
-
+    
     func handleEscapeCharacter() {
         makeAppHiddenAction()
     }
-
+    
     // MARK: - Private Methods
     @objc func setupWindow() {
         print("[DEBUG] setup window start")
-        let windowController = NSHostingView(rootView: mainView)
+        let windowController = NSHostingView(rootView: containerView)
         if let window = NSApplication.shared.windows.first {
             self.window = window
             self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.frame.minY))
@@ -93,76 +90,47 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
-
+    
     private func addObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction(_:)), name: .textSelectedFromClipboardNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(updateMenuBarItemCount(_:)), name: .pasteBoardCountNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(hmm), name: NSApplication.didBecomeActiveNotification, object: nil)
     }
-
-    private func getAllStringsFromClipboard() {
-        self.tempClipboardItemArray = StorageHelper.loadStringArray(data: appStorageArray)
-        setMenuBarText(count: self.tempClipboardItemArray.count)
+    
+    @objc private func hmm() {
+        NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
     }
-
-    private func setupTimer() {
-        let pasteboard = NSPasteboard.general
-        var changeCount = NSPasteboard.general.changeCount
-
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            guard let copiedString = pasteboard.string(forType: .string), pasteboard.changeCount != changeCount else { return }
-            guard copiedString != self.tempClipboardItemArray.last?.text else { return }
-
-            for item in self.tempClipboardItemArray {
-                if item.text == copiedString {
-                    self.tempClipboardItemArray.removeAll(where: { $0.text == item.text })
-                }
-            }
-
-            changeCount = pasteboard.changeCount
-            guard !copiedString.isEmpty else { return }
-
-            let newItem = ClipboardItem(id: UUID(), text: copiedString, copiedFromApplication: self.getCopiedFromApplication())
-
-            self.tempClipboardItemArray.append(newItem)
-            self.appStorageArray = StorageHelper.archiveStringArray(object: self.tempClipboardItemArray)
-            print("\(changeCount), \(copiedString)")
-
-            self.statusBarItem.menu = self.menu.createMenu()
-            self.setMenuBarText(count: self.tempClipboardItemArray.count)
-            NotificationCenter.default.post(name: .clipboardArrayChangedNotification, object: newItem)
+    
+    @objc private func updateMenuBarItemCount(_ notification: NSNotification) {
+        let fetchRequest: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+        do {
+            let count = try persistenceController.container.viewContext.count(for: fetchRequest)
+            setMenuBarText(count: count)
+        } catch {
+            print("Error fetching clipboard item count: \(error)")
         }
     }
-
-    private func getCopiedFromApplication() -> CopiedFromApplication {
-        guard let tempApplication = NSWorkspace().frontmostApplication else {
-            let emptyApp = NSRunningApplication()
-            return CopiedFromApplication(withApplication: emptyApp)
-        }
-        let application = CopiedFromApplication(withApplication: tempApplication)
-        print("[DEBUG] copied from \(application.applicationTitle ?? "Unknown"))")
-        return application
-    }
-
+    
     private func setMenuBarText(count: Int) {
         statusBarItem.button?.title = "Count: \(count)"
     }
-
+    
     // MARK: - Private Actions
     @objc private func makeAppVisibleAction() {
         guard let window, !window.isVisible else { return }
         NSApplication.shared.activate(ignoringOtherApps: true)
         self.window.orderFrontRegardless()
     }
-
+    
     @objc private func makeAppHiddenAction() {
         guard let window, window.isVisible else { return }
         window.close()
         NSApplication.shared.deactivate()
         NSApplication.shared.hide(self)
     }
-
+    
     @objc private func textSelectedFromClipboardAction(_ notification: NSNotification) {
         makeAppHiddenAction()
         KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
@@ -172,9 +140,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - Extension ApplicationMenu Delegate
 extension AppDelegate: ApplicationMenuDelegate {
     func didTapClearAllButton() {
-        self.tempClipboardItemArray.removeAll()
-        self.statusBarItem.menu = self.menu.createMenu()
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = ClipboardEntity.fetchRequest()
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+        
+        do {
+            try persistenceController.container.viewContext.execute(deleteRequest)
+            try persistenceController.container.viewContext.save()
+        } catch {
+            print("Error deleting clipboard items: \(error)")
+        }
         setMenuBarText(count: 0)
-        NotificationCenter.default.post(name: .clipboardArrayClearedNotification, object: nil)
+        NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
     }
 }
+
+// MARK: - PersistenceController
+class PersistenceController {
+    static let shared = PersistenceController()
+    
+    let container: NSPersistentContainer
+    
+    init() {
+        container = NSPersistentContainer(name: "ClipboardModel")
+        container.loadPersistentStores { (storeDescription, error) in
+            if let error = error as NSError? {
+                fatalError("Unresolved error \(error), \(error.userInfo)")
+            }
+        }
+    }
+}
+

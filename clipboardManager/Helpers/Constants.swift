@@ -13,9 +13,10 @@ let screenHeight: CGFloat = 320
 
 // MARK: - Notification Name
 extension Notification.Name {
-    static let appBecomeActiveNotification       = Notification.Name("appBecomeActive")
-    static let clipboardArrayChangedNotification = Notification.Name("clipboardArrayChanged")
-    static let clipboardArrayClearedNotification = Notification.Name("clipboardArrayCleared")
-    static let makeAppVisibleNotification        = Notification.Name("makeAppVisible")
+    static let appBecomeActiveNotification           = Notification.Name("appBecomeActive")
+    static let clipboardArrayChangedNotification     = Notification.Name("clipboardArrayChanged")
+    static let makeAppVisibleNotification            = Notification.Name("makeAppVisible")
     static let textSelectedFromClipboardNotification = Notification.Name("textSelectedFromClipboard")
+    static let pasteBoardCountNotification           = Notification.Name("pasteBoardCountNotification")
+    static let refreshClipboardItems                 = Notification.Name("refreshClipboardItems")
 }

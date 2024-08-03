@@ -8,85 +8,72 @@
 import SwiftUI
 import CoreData
 
-// MARK: - MainView
 struct MainView: View {
-    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
-    @ObservedObject var viewModel = MainViewViewModel()
-    let publisherFortempArrayChanged  = NotificationCenter.default.publisher(for: .clipboardArrayChangedNotification)
-    let publisherForClipBoardCleared  = NotificationCenter.default.publisher(for: .clipboardArrayClearedNotification)
-    let publisherForAppBecomeActive   = NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)
+    @EnvironmentObject var clipboardManager: ClipboardManager
 
-    // MARK: - Body
     var body: some View {
         GeometryReader { reader in
             ZStack {
                 VisualEffectView(material: .popover, blendingMode: .withinWindow)
                     .ignoresSafeArea()
-                VStack {
-                    Spacer()
-                        .frame(width: reader.size.width,
-                               height: 0)
-                    // MARK: - ScrollView Start
-                    ScrollViewReader { proxy in
-                        ScrollView(.horizontal) {
-                            HStack(spacing: 10) {
-                                Spacer()
-                                ForEach(viewModel.clipboardItemArray.isEmpty ? viewModel.emptyArray : viewModel.clipboardItemArray.reversed(), id: \.id) { item in
-                                    LazyHStack {
-                                        ClipboardItemBox(item: item)
-                                            .onTapGesture {
-                                                if !viewModel.clipboardItemArray.isEmpty {
-                                                    let pasteBoard = NSPasteboard.general
-                                                    pasteBoard.clearContents()
-                                                    pasteBoard.setString(item.text,forType :.string)
-
-                                                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
-                                                }
-                                            }
-                                            .frame(width: 280, height: 300)
-                                            .id(item.id)
-                                    }
-                                }
-                            }
-                        }
-                        .onReceive(publisherForAppBecomeActive, perform: { output in
-                            proxy.scrollTo(viewModel.clipboardItemArray.last?.id, anchor: .trailing)
-                        })
+                
+                if clipboardManager.clipboardItems.isEmpty {
+                    ZStack {
+                        RadialGradient(colors: [
+                            Color.purple
+                                .opacity(0.5),
+                            Color.black.opacity(1)
+                        ], center: .center, startRadius: 1, endRadius: 450)
+                        Text("No Clipboard Items")
+                            .font(.system(size: 24, weight: .bold, design: .monospaced))
                     }
-                    // MARK: - ScrollView End
-                    Spacer()
-                        .frame(width: reader.size.width,
-                               height: 0)
+                } else {
+                    ScrollablePasteboardItemsView()
                 }
             }
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
-        .onAppear {
-            viewModel.clipboardItemArray = StorageHelper.loadStringArray(data: appStorageArrayData)
+        .onReceive(NotificationCenter.default.publisher(for: .refreshClipboardItems)) { _ in
+            refreshClipboardItems()
         }
-        .onReceive(publisherFortempArrayChanged, perform: { output in
-            guard let newItem = output.object as? ClipboardItem else { return }
-            viewModel.clipboardItemArray.append(newItem)
-            print("[DEBUG] added Item -> \(newItem)")
-        })
-        .onReceive(publisherForClipBoardCleared, perform: { output in
-            viewModel.clipboardItemArray = []
-            print("[DEBUG] All Items Deleted!")
-        })
+    }
+    
+    func refreshClipboardItems() {
+        clipboardManager.fetchClipboardItems()
     }
 }
 
-
-
-// MARK: - MainView ViewModel
-class MainViewViewModel: ObservableObject {
-    // MARK: - Public Properties
-    @Published var clipboardItemArray = [ClipboardItem]()
-    var emptyArray = [ClipboardItem(id: UUID(), text: "", copiedFromApplication: CopiedFromApplication(withApplication: NSRunningApplication()))]
+#Preview {
+    MainView()
+        .environmentObject(ClipboardManager(persistenceController: PersistenceController.shared))
 }
 
-struct MainView_Previews: PreviewProvider {
-    static var previews: some View {
-        MainView()
+struct ScrollablePasteboardItemsView: View {
+    @EnvironmentObject var clipboardManager: ClipboardManager
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 10) {
+                    Spacer()
+                    ForEach(clipboardManager.clipboardItems) { item in
+                        LazyHStack {
+                            ClipboardItemBox(item: item)
+                                .onTapGesture {
+                                    let pasteBoard = NSPasteboard.general
+                                    pasteBoard.clearContents()
+                                    pasteBoard.setString(item.contentDescriptionString, forType: .string)
+                                    print("DEBUG: -----", item.contentDescriptionString)
+                                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
+                                }
+                                .frame(width: 300, height: 300)
+                                .id(item.id)
+                        }
+                    }
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
+                proxy.scrollTo(clipboardManager.clipboardItems.first?.id, anchor: .trailing)
+            }
+        }
     }
 }

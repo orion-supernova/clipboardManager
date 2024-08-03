@@ -14,7 +14,7 @@ protocol ApplicationMenuDelegate: AnyObject {
 
 class ApplicationMenu: NSObject {
     // MARK: - Public Properties
-    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
+//    @AppStorage("hmArray", store: UserDefaults(suiteName: "com.walhallaa.clipboardManager")) var appStorageArrayData: Data = Data()
     weak var delegate: ApplicationMenuDelegate?
     @State var menuItemsArray: [NSMenuItem] = []
 
@@ -78,7 +78,7 @@ class ApplicationMenu: NSObject {
     }
 
     @objc func clearAction(sender: NSMenuItem) {
-        appStorageArrayData = StorageHelper.archiveStringArray(object: [])
+//        appStorageArrayData = StorageHelper.archiveStringArray(object: [])
         delegate?.didTapClearAllButton()
     }
 
