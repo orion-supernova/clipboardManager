@@ -39,6 +39,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let persistenceController = PersistenceController.shared
     var containerView = ContainerView()
     let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
+    var hotkeyForEscape = HotKey(key: .escape, modifiers: [])
+    static var windowControllers: [Int: NSWindowController] = [:]
     
     // MARK: - Private Properties
     private var timer: Timer!
@@ -56,6 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         addObservers()
         setupWindow()
         hotkeyForInterfaceVisibility.keyDownHandler = handleAppShortcut
+        hotkeyForEscape.keyDownHandler = makeAppHiddenAction
     }
     
     // MARK: - Public Methods
@@ -95,12 +98,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction(_:)), name: .textSelectedFromClipboardNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(preferencesClickedAction), name: .preferencesClickedNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(updateMenuBarItemCount(_:)), name: .pasteBoardCountNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil)
     }
     
     @objc private func didBecomeActive() {
-        setupWindow()
+        //        setupWindow()
     }
     
     @objc private func updateMenuBarItemCount(_ notification: NSNotification) {
@@ -120,18 +124,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Private Actions
     @objc private func makeAppVisibleAction() {
         guard let window, !window.isVisible else { return }
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        self.window.orderFrontRegardless()
+        NSApplication.shared.activate(ignoringOtherApps: false)
+        //        self.window.orderFrontRegardless()
+        hotkeyForEscape.isPaused = false
+    }
+    
+    @objc private func preferencesClickedAction() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "Clipboard Settings"
+        window.center()
+        window.contentView = NSHostingView(rootView: ClipboardSettingsView())
+        window.orderFrontRegardless()
+        
+        // Keep window from being released
+        let windowController = NSWindowController(window: window)
+//        windowController.showWindow(nil)
+        
+        // Store reference to prevent deallocation
+        let windowNumber = window.windowNumber
+        AppDelegate.windowControllers[windowNumber] = windowController
     }
     
     @objc private func makeAppHiddenAction() {
+        hotkeyForEscape.isPaused = true
         guard let window, window.isVisible else { return }
-        window.close()
+        //        window.close() // This leads to a bug in searchbar.
         NSApplication.shared.deactivate()
         NSApplication.shared.hide(self)
     }
     
-    @objc private func textSelectedFromClipboardAction(_ notification: NSNotification) {
+    @objc private func textSelectedFromClipboardAction(_ setuptimer: NSNotification) {
         makeAppHiddenAction()
         KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }

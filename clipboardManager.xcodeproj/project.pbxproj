@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		540C80622CCA881900FACA44 /* ClipboardSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540C80612CCA881900FACA44 /* ClipboardSettingsView.swift */; };
 		5434D10D29C1C433009DF037 /* clipboardManagerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */; };
 		5434D10F29C1C433009DF037 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D10E29C1C433009DF037 /* MainView.swift */; };
 		5434D11129C1C433009DF037 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5434D11029C1C433009DF037 /* Assets.xcassets */; };
@@ -29,6 +30,7 @@
 		54B6C8AE2C4FDF2E00106CFA /* CopiedFromApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8AD2C4FDF2E00106CFA /* CopiedFromApplication.swift */; };
 		54B6C8B02C4FDF4D00106CFA /* CustomImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8AF2C4FDF4D00106CFA /* CustomImage.swift */; };
 		54B953F029C3B5F300990FAC /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B953EF29C3B5F300990FAC /* Constants.swift */; };
+		54C2FE442C80F726000D209C /* ViewExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C2FE432C80F726000D209C /* ViewExtension.swift */; };
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
 		54D74EDD29C24183004769D2 /* ClipboardItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDC29C24183004769D2 /* ClipboardItem.swift */; };
 		54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* StorageHelper.swift */; };
@@ -40,6 +42,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		540C80612CCA881900FACA44 /* ClipboardSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettingsView.swift; sourceTree = "<group>"; };
 		5434D10929C1C433009DF037 /* Mahmut Clipboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mahmut Clipboard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = clipboardManagerApp.swift; sourceTree = "<group>"; };
 		5434D10E29C1C433009DF037 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
@@ -48,7 +51,7 @@
 		5434D11529C1C433009DF037 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = clipboardManager.xcdatamodel; sourceTree = "<group>"; };
 		5434D11A29C1C433009DF037 /* clipboardManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = clipboardManager.entitlements; sourceTree = "<group>"; };
-		543D607229D34F5200E23D82 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		543D607229D34F5200E23D82 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		54A3238129CA369800F3E2F3 /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
 		54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPressHelper.swift; sourceTree = "<group>"; };
 		54A76B882C5D852300AEBD9E /* NSImage+Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Color.swift"; sourceTree = "<group>"; };
@@ -62,6 +65,7 @@
 		54B6C8AD2C4FDF2E00106CFA /* CopiedFromApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopiedFromApplication.swift; sourceTree = "<group>"; };
 		54B6C8AF2C4FDF4D00106CFA /* CustomImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomImage.swift; sourceTree = "<group>"; };
 		54B953EF29C3B5F300990FAC /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		54C2FE432C80F726000D209C /* ViewExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewExtension.swift; sourceTree = "<group>"; };
 		54D74ED829C240A3004769D2 /* ApplicationMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMenu.swift; sourceTree = "<group>"; };
 		54D74EDC29C24183004769D2 /* ClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardItem.swift; sourceTree = "<group>"; };
 		54D74EDF29C25D90004769D2 /* StorageHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageHelper.swift; sourceTree = "<group>"; };
@@ -87,6 +91,17 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		540C80632CCA9AC000FACA44 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				54C2FE432C80F726000D209C /* ViewExtension.swift */,
+				54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */,
+				54E32CBF29C4F1C3004772B5 /* Color+Random.swift */,
+				54A76B882C5D852300AEBD9E /* NSImage+Color.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
 		5434D10029C1C433009DF037 = {
 			isa = PBXGroup;
 			children = (
@@ -109,12 +124,14 @@
 			children = (
 				543D607229D34F5200E23D82 /* Info.plist */,
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
+				54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
 				54B6C87C2C4E6EFE00106CFA /* PaywallView.swift */,
 				54B6C87E2C4E6FE500106CFA /* PurchaseManager.swift */,
-				54E32CB629C4CCCF004772B5 /* MainView */,
+				54E32CB629C4CCCF004772B5 /* Views */,
 				54B953F129C3B6F300990FAC /* Models */,
 				54B953F229C3B6FB00990FAC /* Helpers */,
+				540C80632CCA9AC000FACA44 /* Extensions */,
 				54B953F329C3B71000990FAC /* Resources */,
 				5434D11229C1C433009DF037 /* Preview Content */,
 			);
@@ -151,16 +168,11 @@
 			isa = PBXGroup;
 			children = (
 				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
-				54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */,
 				5434D11529C1C433009DF037 /* Persistence.swift */,
 				54B953EF29C3B5F300990FAC /* Constants.swift */,
-				54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */,
-				54E32CBF29C4F1C3004772B5 /* Color+Random.swift */,
-				54A76B882C5D852300AEBD9E /* NSImage+Color.swift */,
 				54E32CB929C4E507004772B5 /* VisualEffectView.swift */,
 				54A3238129CA369800F3E2F3 /* KeyCodes.swift */,
 				54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */,
-				54B6C8AA2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld */,
 				54A76B8C2C5E634C00AEBD9E /* URLPreview.swift */,
 			);
 			path = Helpers;
@@ -171,20 +183,22 @@
 			children = (
 				5434D11029C1C433009DF037 /* Assets.xcassets */,
 				5434D11A29C1C433009DF037 /* clipboardManager.entitlements */,
+				54B6C8AA2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld */,
 				5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		54E32CB629C4CCCF004772B5 /* MainView */ = {
+		54E32CB629C4CCCF004772B5 /* Views */ = {
 			isa = PBXGroup;
 			children = (
 				54B6C8A62C4FAF6C00106CFA /* ContainerView.swift */,
 				5434D10E29C1C433009DF037 /* MainView.swift */,
 				54E32CBB29C4E743004772B5 /* ClipboardItemBox.swift */,
 				54E32CBD29C4ED5C004772B5 /* CopiedAppLogoView.swift */,
+				540C80612CCA881900FACA44 /* ClipboardSettingsView.swift */,
 			);
-			path = MainView;
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -270,6 +284,7 @@
 				54B6C87D2C4E6EFE00106CFA /* PaywallView.swift in Sources */,
 				54B6C8A92C4FB59C00106CFA /* ClipboardManager.swift in Sources */,
 				54B6C8A72C4FAF6C00106CFA /* ContainerView.swift in Sources */,
+				54C2FE442C80F726000D209C /* ViewExtension.swift in Sources */,
 				54B6C8AC2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld in Sources */,
 				5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */,
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
@@ -283,6 +298,7 @@
 				54B6C8B02C4FDF4D00106CFA /* CustomImage.swift in Sources */,
 				54B6C8AE2C4FDF2E00106CFA /* CopiedFromApplication.swift in Sources */,
 				54A76B8D2C5E634C00AEBD9E /* URLPreview.swift in Sources */,
+				540C80622CCA881900FACA44 /* ClipboardSettingsView.swift in Sources */,
 				54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */,
 				54A76B892C5D852300AEBD9E /* NSImage+Color.swift in Sources */,
 				54E32CB829C4DBC3004772B5 /* Color+HexColor.swift in Sources */,
@@ -418,7 +434,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -435,7 +451,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -452,7 +468,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -469,7 +485,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -554,8 +570,7 @@
 				54B6C8AB2C4FBADF00106CFA /* ClipboardModel.xcdatamodel */,
 			);
 			currentVersion = 54B6C8AB2C4FBADF00106CFA /* ClipboardModel.xcdatamodel */;
-			name = ClipboardModel.xcdatamodeld;
-			path = "/Users/muratcankoc/Documents/Swift-MacOS-Projects/clipboardManager/clipboardManager/Helpers/ClipboardModel.xcdatamodeld";
+			path = ClipboardModel.xcdatamodeld;
 			sourceTree = "<group>";
 			versionGroupType = wrapper.xcdatamodel;
 		};

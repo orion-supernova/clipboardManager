@@ -40,11 +40,11 @@ class ApplicationMenu: NSObject {
         clearAllMenuItem.target = self
         menu.addItem(clearAllMenuItem)
 
-//        let preferencesMenuItem = NSMenuItem(title: "Preferences",
-//                                             action: #selector(comingSoonAction),
-//                                             keyEquivalent: "")
-//        preferencesMenuItem.target = self
-//        menu.addItem(preferencesMenuItem)
+        let preferencesMenuItem = NSMenuItem(title: "Preferences",
+                                             action: #selector(preferencesAction),
+                                             keyEquivalent: "")
+        preferencesMenuItem.target = self
+        menu.addItem(preferencesMenuItem)
 
 //        let aboutMenuItem = NSMenuItem(title: "About",
 //                                       action: #selector(aboutAction),
@@ -68,13 +68,8 @@ class ApplicationMenu: NSObject {
         KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
 
-    @objc func comingSoonAction(sender: NSMenuItem) {
-        let alert = NSAlert()
-        alert.messageText = "Coming Soon!"
-        alert.informativeText = "Lorem ipsum dolor sit amet bla bla"
-        alert.alertStyle = NSAlert.Style.warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()//== NSApplication.ModalResponse.alertFirstButtonReturn
+    @objc func preferencesAction(sender: NSMenuItem) {
+        NotificationCenter.default.post(name: .preferencesClickedNotification, object: nil)
     }
 
     @objc func clearAction(sender: NSMenuItem) {
