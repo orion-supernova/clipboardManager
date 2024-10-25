@@ -101,3 +101,36 @@ func detectColor(from text: String) -> NSColor? {
 
     return nil
 }
+
+extension NSColor {
+    // Converts a hex string to NSColor
+    static func fromHex(_ hex: String) -> NSColor? {
+        // Remove '#' if it's there
+        var hexColor = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        if hexColor.hasPrefix("#") {
+            hexColor.removeFirst()
+        }
+        
+        // Check for valid length
+        guard hexColor.count == 6 || hexColor.count == 3 else {
+            return nil // Invalid hex format
+        }
+        
+        // Expand 3-digit hex to 6-digit
+        if hexColor.count == 3 {
+            hexColor = hexColor.map { "\($0)\($0)" }.joined()
+        }
+        
+        // Scan the hex value
+        var rgb: UInt64 = 0
+        Scanner(string: hexColor).scanHexInt64(&rgb)
+        
+        // Extract red, green, and blue components
+        let red = CGFloat((rgb >> 16) & 0xFF) / 255.0
+        let green = CGFloat((rgb >> 8) & 0xFF) / 255.0
+        let blue = CGFloat(rgb & 0xFF) / 255.0
+        
+        // Return NSColor
+        return NSColor(red: red, green: green, blue: blue, alpha: 1.0)
+    }
+}

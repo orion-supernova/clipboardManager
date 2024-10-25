@@ -8,12 +8,12 @@
 import SwiftUI
 
 struct ContainerView: View {
-    @StateObject var clipboardManager = ClipboardManager(persistenceController: PersistenceController.shared)
+//    @StateObject var clipboardManager = ClipboardManager(persistenceController: PersistenceController.shared)
     
     var body: some View {
         VStack {
             MainView()
-                .environmentObject(clipboardManager)
+//                .environmentObject(clipboardManager)
         }
     }
 }

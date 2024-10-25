@@ -20,4 +20,15 @@ extension Notification.Name {
     static let textSelectedFromClipboardNotification = Notification.Name("textSelectedFromClipboard")
     static let pasteBoardCountNotification           = Notification.Name("pasteBoardCountNotification")
     static let refreshClipboardItems                 = Notification.Name("refreshClipboardItems")
+    static let isSearchFieldVisibleNotification      = Notification.Name("isSearchFieldVisibleNotification")
+    static let retainCountChangedNotification        = Notification.Name("retainCountChangedNotification")
+    static let launchAtLoginChangedNotification      = Notification.Name("launchAtLoginChangedNotification")
+    static let clearItemsOlderThanHoursChangedNotification = Notification.Name("clearItemsOlderThanHoursChangedNotification")
+}
+
+extension String {
+    static let isSearchFieldVisibleUserDefaultsKey = "isSearchFieldVisibleUserDefaultsKey"
+    static let retainCountUserDefaultsKey = "retainCountUserDefaultsKey"
+    static let launchAtLoginUserDefaultsKey = "launchAtLoginUserDefaultsKey"
+    static let clearItemsOlderThanHoursUserDefaultsKey = "clearItemsOlderThanHoursUserDefaultsKey"
 }

@@ -63,7 +63,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Public Methods
     func handleAppShortcut() {
-        if self.window.isVisible {
+        guard let window = self.window else { return }
+        if window.isVisible {
             makeAppHiddenAction()
         } else {
             makeAppVisibleAction()
@@ -80,13 +81,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let windowController = NSHostingView(rootView: containerView)
         if let window = NSApplication.shared.windows.first {
             self.window = window
-            self.window.setFrameOrigin(NSPoint(x: NSScreen.main!.visibleFrame.minX, y: NSScreen.main!.frame.minY))
             self.window.contentView = windowController
             self.window.styleMask = [.docModalWindow]
             self.window.titlebarAppearsTransparent = true
             self.window.titleVisibility = .hidden
             self.window.backgroundColor = .clear
             self.window.level = .popUpMenu
+            
+            // Make sure window appears in full screen
+            self.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            
+            DispatchQueue.main.asyncAfter(deadline: .now()+0.1) {
+                // Position the window
+                if let screen = NSScreen.main {
+                    self.window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+                }
+            }
+            
+            // Order front to ensure visibility
+            self.window.orderFrontRegardless()
         }
         print("[DEBUG] setup window end")
     }
@@ -122,13 +135,45 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Private Actions
+    
+    
+    
+    // MARK: - Make App Visible
     @objc private func makeAppVisibleAction() {
-        guard let window, !window.isVisible else { return }
-        NSApplication.shared.activate(ignoringOtherApps: false)
-        //        self.window.orderFrontRegardless()
+        guard let window = self.window, !window.isVisible else { return }
+//        NSApplication.shared.activate(ignoringOtherApps: false)
+        // Make sure window appears in full screen
+        window.styleMask = [.docModalWindow]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.backgroundColor = .clear
+        window.level = .popUpMenu
+        
+        // Make sure window appears in full screen
+        self.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        
+        // Position the window
+        if let screen = NSScreen.main {
+            window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+        }
+        
+        // Order front to ensure visibility
+        window.orderFrontRegardless()
         hotkeyForEscape.isPaused = false
+        print("DEBUG: ----- makeAppVisibleAction")
     }
     
+    // MARK: - Make App Hidden
+    @objc private func makeAppHiddenAction() {
+        hotkeyForEscape.isPaused = true
+        guard let window, window.isVisible else { return }
+        //        window.close() // This leads to a bug in searchbar.
+        NSApplication.shared.deactivate()
+        NSApplication.shared.hide(self)
+        print("DEBUG: ----- makeAppHiddenAction")
+    }
+    
+    // MARK: - Preferences Clicked
     @objc private func preferencesClickedAction() {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
@@ -151,34 +196,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         AppDelegate.windowControllers[windowNumber] = windowController
     }
     
-    @objc private func makeAppHiddenAction() {
-        hotkeyForEscape.isPaused = true
-        guard let window, window.isVisible else { return }
-        //        window.close() // This leads to a bug in searchbar.
-        NSApplication.shared.deactivate()
-        NSApplication.shared.hide(self)
-    }
-    
+    // MARK: - Text selected from clipboard
     @objc private func textSelectedFromClipboardAction(_ setuptimer: NSNotification) {
         makeAppHiddenAction()
         KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
 }
 
-// MARK: - Extension ApplicationMenu Delegate
+// MARK: - Extension App Delegate
 extension AppDelegate: ApplicationMenuDelegate {
+    
+    
+    // MARK: - DidTap Clear All Items
     func didTapClearAllButton() {
-        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = ClipboardEntity.fetchRequest()
-        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-        
-        do {
-            try persistenceController.container.viewContext.execute(deleteRequest)
-            try persistenceController.container.viewContext.save()
-        } catch {
-            print("Error deleting clipboard items: \(error)")
+        showCustomAlert(title: "Warning", message: "Are you sure you want to delete all items inside your clipboard?\n This action can NOT be reversed or undone.") { [weak self] in
+            guard let self else { return }
+            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = ClipboardEntity.fetchRequest()
+            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+            
+            do {
+                try persistenceController.container.viewContext.execute(deleteRequest)
+                try persistenceController.container.viewContext.save()
+            } catch {
+                print("Error deleting clipboard items: \(error)")
+            }
+            setMenuBarText(count: 0)
+            NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
         }
-        setMenuBarText(count: 0)
-        NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
     }
 }
 
@@ -197,4 +241,3 @@ class PersistenceController {
         }
     }
 }
-

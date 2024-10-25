@@ -9,8 +9,8 @@ import SwiftUI
 import CoreData
 
 struct MainView: View {
-    @EnvironmentObject var clipboardManager: ClipboardManager
-    
+//    @EnvironmentObject var clipboardManager: ClipboardManager
+    let clipboardManager = ClipboardManager.shared
     var body: some View {
         GeometryReader { reader in
             ZStack {
@@ -42,14 +42,19 @@ struct MainView: View {
 
 #Preview {
     MainView()
-        .environmentObject(ClipboardManager(persistenceController: PersistenceController.shared))
+//        .environmentObject(ClipboardManager(persistenceController: PersistenceController.shared))
 }
 
 struct ScrollablePasteboardItemsView: View {
-    @EnvironmentObject var clipboardManager: ClipboardManager
+//    @EnvironmentObject var clipboardManager: ClipboardManager
+    let clipboardManager = ClipboardManager.shared
+
     @State private var searchText = ""
     @State private var items = ["Item 1", "Item 2"]
     @FocusState private var isFocused: Bool
+    @State private var isSearchFieldVisible = false
+    @StateObject var wrapper = ScrollablePasteboardItemsViewWrapper()
+    
     
     var body: some View {
         VStack {
@@ -68,34 +73,7 @@ struct ScrollablePasteboardItemsView: View {
                     }
                     Spacer()
                 }
-                
-                //                Color.secondary
-                //                    .opacity(0.06)
-                //                    .frame(maxWidth: 900, maxHeight: 60)
-                //                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 HStack {
-                    //                    ScrollViewReader { proxy in
-                    //                        ScrollView(.horizontal, showsIndicators: true) {
-                    //                            LazyHStack(spacing: 10) {
-                    //                                ForEach(0..<32) { item in
-                    //                                    Button(action: {
-                    //                                        print("\(item) clicked")
-                    //                                    }, label: {
-                    //                                        Text("\(item)")
-                    //                                            .padding()
-                    //                                            .frame(width: 150, height: 40)
-                    //                                            .foregroundStyle(Color.white)
-                    //                                            .background(Color.red)
-                    //                                            .clipShape(RoundedRectangle(cornerRadius: 20))
-                    //                                    })
-                    //                                    .buttonStyle(PlainButtonStyle())
-                    //                                }
-                    //                            }
-                    //                        }
-                    //                    }
-                    
-                    
-                    
                     VStack {
                         Text("Board Type: History")
                             .font(.system(size: 14, weight: .semibold))
@@ -121,16 +99,14 @@ struct ScrollablePasteboardItemsView: View {
                 
                 HStack(spacing: 0) {
                     Spacer()
-                    if clipboardManager.isSearchFieldVisible {
+                    if wrapper.isSearchFieldVisible {
                         Button {
                             guard !searchText.isEmpty else { clipboardManager.isSearchFieldVisible = false; return }
-                            DispatchQueue.global(qos: .background).async {
-                                //                                clipboardManager.fetchClipboardItems()
                                 DispatchQueue.main.async {
                                     searchText = ""
                                     clipboardManager.isSearchFieldVisible = false
+                                    clipboardManager.fetchClipboardItems()
                                 }
-                            }
                         } label: {
                             Image(systemName: "xmark")
                                 .resizable()
@@ -205,8 +181,30 @@ struct ScrollablePasteboardItemsView: View {
                 }
             }
             .onDisappear {
-                clipboardManager.isSearchFieldVisible = false
+//                clipboardManager.isSearchFieldVisible = false // TODO: - This part is called in make app visible action. Needs a fix.
             }
+        }
+    }
+}
+
+class ScrollablePasteboardItemsViewWrapper: ObservableObject {
+    // MARK: - Properties
+    @Published var isSearchFieldVisible: Bool = false
+    
+    // MARK: - Lifecycle
+    init () {
+        NotificationCenter.default.addObserver(self, selector: #selector(hmm(_:)), name: .isSearchFieldVisibleNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Private Methods
+    @objc private func hmm (_ notification: NSNotification) {
+        if let object = notification.object as? Bool {
+            print(object)
+            isSearchFieldVisible = object
         }
     }
 }

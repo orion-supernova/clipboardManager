@@ -8,13 +8,45 @@
 import CoreData
 import SwiftUI
 
-class ClipboardManager: ObservableObject {
+class ClipboardManager {
+    static let shared = ClipboardManager(persistenceController: .shared)
     // MARK: - Properties
-    @Published var clipboardItems: [ClipboardItem] = []
-    @Published var isSearchFieldVisible = false
-    @Published var retainCount: Int = 50
-    @Published var launchAtLogin: Bool = false
-    @Published var clearOlderItemsInHours: Int = 48
+    var clipboardItems: [ClipboardItem] = []
+    var isSearchFieldVisible = false {
+        didSet {
+            NotificationCenter.default.post(name: .isSearchFieldVisibleNotification, object: isSearchFieldVisible)
+        }
+    }
+    
+    var launchAtLogin: Bool {
+        get {
+            UserDefaults.standard.bool(forKey: .launchAtLoginUserDefaultsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: .launchAtLoginUserDefaultsKey)
+            NotificationCenter.default.post(name: .launchAtLoginChangedNotification, object: newValue)
+        }
+    }
+
+    var retainCount: Int {
+        get {
+            UserDefaults.standard.integer(forKey: .retainCountUserDefaultsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: .retainCountUserDefaultsKey)
+            NotificationCenter.default.post(name: .retainCountChangedNotification, object: newValue)
+        }
+    }
+
+    var clearItemsOlderThanHours: Int {
+        get {
+            UserDefaults.standard.integer(forKey: .clearItemsOlderThanHoursUserDefaultsKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: .clearItemsOlderThanHoursUserDefaultsKey)
+            NotificationCenter.default.post(name: .clearItemsOlderThanHoursChangedNotification, object: newValue)
+        }
+    }
     
     private let persistenceController: PersistenceController
     private var viewContext: NSManagedObjectContext {
@@ -25,8 +57,10 @@ class ClipboardManager: ObservableObject {
     // MARK: - Lifecycle
     init(persistenceController: PersistenceController) {
         self.persistenceController = persistenceController
-        fetchClipboardItems()  // Load existing items
+//        removeExtraItemsIfNeeded()
+        fetchClipboardItems()
         setupTimer()
+        setDefaultValuesIfNeeded()
     }
 
     // MARK: - Private Methods
@@ -47,7 +81,7 @@ class ClipboardManager: ObservableObject {
                 return
             }
             print("Last Item Description: \(lastItemContentDescriptionString)")
-            print("New Item Description: \(newItem?.contentDescriptionString)")
+            print("New Item Description: \(String(describing: newItem?.contentDescriptionString))")
             print("2", changeCount)
             self.addClipboardItem(
                 newItem
@@ -56,6 +90,38 @@ class ClipboardManager: ObservableObject {
                         copiedFromApplication: .init(withApplication: NSRunningApplication()),
                         timestamp: Date(), contentDescriptionString: "#error#"))
         }
+    }
+    private func setDefaultValuesIfNeeded() {
+        if let _ = UserDefaults.standard.value(forKey: .launchAtLoginUserDefaultsKey) {} else {
+            UserDefaults.standard.set(false, forKey: .clearItemsOlderThanHoursUserDefaultsKey)
+        }
+        if let _ = UserDefaults.standard.value(forKey: .retainCountUserDefaultsKey) {} else {
+            UserDefaults.standard.set(20, forKey: .retainCountUserDefaultsKey)
+        }
+        if let _ = UserDefaults.standard.value(forKey: .clearItemsOlderThanHoursUserDefaultsKey) {} else {
+            UserDefaults.standard.set(48, forKey: .clearItemsOlderThanHoursUserDefaultsKey)
+        }
+    }
+    private func removeExtraItemsIfNeeded() {
+        let fetchRequest: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+            
+            do {
+                let allItems = try viewContext.fetch(fetchRequest)
+                // If retainCount is -1 don't trim
+                if retainCount != -1 && allItems.count > retainCount {
+                    let itemsToDelete = Array(allItems[retainCount...])
+                    
+                    // Delete excess items
+                    itemsToDelete.forEach { item in
+                        viewContext.delete(item)
+                    }
+                    
+                    try viewContext.save()
+                }
+            } catch {
+                print("Failed to remove extra items: \(error)")
+            }
     }
 
     // MARK: - Create Item
@@ -184,39 +250,37 @@ class ClipboardManager: ObservableObject {
 
         do {
             let results = try viewContext.fetch(request)
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                clipboardItems = results.map { entity in
-                    let id = entity.id ?? UUID()  // Provide a default UUID if nil
-                    let typeRawValue = entity.type ?? ClipboardItemType.text.rawValue  // Default to .text if nil
-                    let content = entity.content ?? Data()  // Default to empty Data if nil
-                    let timestamp = entity.timestamp ?? Date()  // Default to current date if nil
-                    let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"  // Default to "Unknown" if nil
+            clipboardItems = results.map { entity in
+                let id = entity.id ?? UUID()  // Provide a default UUID if nil
+                let typeRawValue = entity.type ?? ClipboardItemType.text.rawValue  // Default to .text if nil
+                let content = entity.content ?? Data()  // Default to empty Data if nil
+                let timestamp = entity.timestamp ?? Date()  // Default to current date if nil
+                let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"  // Default to "Unknown" if nil
 
-                    let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
+                let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
 
-                    let copiedFromApp: CopiedFromApplication
-                    do {
-                        copiedFromApp = try CopiedFromApplication.fromData(
-                            entity.copiedFromApplication ?? Data())
-                    } catch {
-                        print("Error decoding copiedFromApplication: \(error)")
-                        copiedFromApp = CopiedFromApplication(
-                            withApplication: NSRunningApplication())  // Provide a default value
-                    }
-
-                    return ClipboardItem(
-                        id: id,
-                        type: type,
-                        content: content,
-                        copiedFromApplication: copiedFromApp,
-                        timestamp: timestamp,
-                        contentDescriptionString: contentDescriptionString
-                    )
+                let copiedFromApp: CopiedFromApplication
+                do {
+                    copiedFromApp = try CopiedFromApplication.fromData(
+                        entity.copiedFromApplication ?? Data())
+                } catch {
+                    print("Error decoding copiedFromApplication: \(error)")
+                    copiedFromApp = CopiedFromApplication(
+                        withApplication: NSRunningApplication())  // Provide a default value
                 }
 
-                NotificationCenter.default.post(
-                    name: .pasteBoardCountNotification, object: results.count)
+                return ClipboardItem(
+                    id: id,
+                    type: type,
+                    content: content,
+                    copiedFromApplication: copiedFromApp,
+                    timestamp: timestamp,
+                    contentDescriptionString: contentDescriptionString
+                )
+            }
+
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .pasteBoardCountNotification, object: results.count)
             }
         } catch {
             print("Error fetching clipboard items: \(error)")
