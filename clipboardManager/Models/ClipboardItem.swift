@@ -5,9 +5,21 @@
 //  Created by Murat Can KOÇ on 15.03.2023.
 //
 
-import Foundation
+import AppKit
 
-struct ClipboardItem: Codable {
-    let text: String
-    //TODO: - Images, Links
+struct ClipboardItem: Identifiable, Codable {
+    let id: UUID
+    let type: ClipboardItemType
+    let content: Data
+    let copiedFromApplication: CopiedFromApplication
+    let timestamp: Date
+    let contentDescriptionString: String
+}
+
+
+enum ClipboardItemType: String, Codable {
+    case text
+    case image
+    case url
+    case color
 }
