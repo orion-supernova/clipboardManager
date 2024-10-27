@@ -10,20 +10,26 @@ import ServiceManagement
 
 struct ClipboardSettingsView: View {
 //    @EnvironmentObject var clipboardManager: ClipboardManager
-    let clipboardManager = ClipboardManager.shared
-    @StateObject var wrapper =  ClipboardSettingsViewWrapper() // Only calling this function is enough since everytime it changes, the UI redraws itself.
+//    let clipboardManager = ClipboardManager.shared
+//    @StateObject var wrapper =  ClipboardSettingsViewWrapper() // Only calling this function is enough since everytime it changes, the UI redraws itself.
                                                                //No need to call its variables somewhere.
-
+    @Environment(\.controlActiveState) private var controlActiveState
+    @StateObject var settings = ClipboardSettings.shared
+    
+    init() {
+print("SETTİNGS INIT")
+    }
+    
     var body: some View {
         VStack(spacing: 20) {
             GroupBox(label: Text("General Settings").bold()) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Launch at login", isOn: Binding(get: { clipboardManager.launchAtLogin }, set: { clipboardManager.launchAtLogin = $0 }))
+                    Toggle("Launch at login", isOn: $settings.launchAtLogin)
                     Divider()
                     
                     HStack {
                         Text("Retain clips:")
-                        Picker("", selection: Binding(get: { clipboardManager.retainCount }, set: { clipboardManager.retainCount = $0 })) {
+                        Picker("", selection: $settings.retainCount) {
                             ForEach([20, 50, 100, 200, 500, -1], id: \.self) { count in
                                 if count == -1 {
                                     Text("Infinite").tag(count)
@@ -49,12 +55,38 @@ struct ClipboardSettingsView: View {
                 .padding()
             }
             
+            GroupBox(label: Text("Don't Forget to Enable Autopaste").bold()) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Enable Autopaste by adding / enabling this app in System Preferences > Privacy & Security > Accessibility")
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Text("If you can't still auto-paste, remove completely with minus sign (-) and add it with plus sign (+) again.")
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Button {
+                        openAccessibilityPreferences()
+                    } label: {
+                        Text("Open Accessibility Preferences")
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+            }
+            
             GroupBox(label: Text("Keyboard Shortcuts").bold()) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
+                        
                         Text("Show / Hide clipboard:")
-                            .frame(width: 100, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        Spacer()
                         KeyboardShortcutView(shortcut: "⌘ + Shift + V")
+                        Spacer()
                     }
 //                    HStack {
 //                        Text("Clear history:")
@@ -75,8 +107,55 @@ struct ClipboardSettingsView: View {
 //                }
 //            }
         }
+        .onChange(of: settings.retainCount) { newCount in
+            if newCount == -1 {
+                showSimpleCustomAlert(title: "Caution!", message: "This may lead to performance issues and more CPU usage if you have a lot of items.")
+            } else {
+                showSimpleCustomAlert(title: "Okay!", message: "Your extra items will be removed when you restart the app.")
+            }
+            
+        }
+        .onChange(of: controlActiveState) { newValue in
+            switch newValue {
+            case .key, .active:
+                break
+            case .inactive:
+                print("SETTİNGS INACTIVE")
+                AppDelegate.windowControllers.removeAll()
+                hotkeyForInterfaceVisibility.isPaused = false
+            @unknown default:
+                break
+            }
+        }
         .padding()
         .frame(width: 400)
+        .onChange(of: settings.launchAtLogin) { newValue in
+            if newValue == true {
+                addToLaunchItems()
+            } else {
+                removeFromLaunchItems()
+            }
+        }
+        .onAppear {
+            hotkeyForInterfaceVisibility.isPaused = true
+        }
+        .onDisappear {
+            AppDelegate.windowControllers.removeAll()
+            hotkeyForInterfaceVisibility.isPaused = false
+            print("disappeared SettingsView")
+        }
+    }
+    
+    @discardableResult
+    func openAccessibilityPreferences() -> Bool {
+        // Try modern URL scheme first
+        let prefpaneURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        if NSWorkspace.shared.open(prefpaneURL) {
+            return true
+        }
+        
+        // Fallback for older versions
+        return NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/Security.prefPane"))
     }
 }
 
@@ -97,48 +176,48 @@ struct KeyboardShortcutView: View {
 }
 
 // MARK: - Wrapper
-class ClipboardSettingsViewWrapper: ObservableObject {
-    // MARK: - Properties
-    @Published var launchOnLogin: Bool = false
-    @Published var retainClips: Int = 20
-    @Published var clearItemsOlderThanHours: Int = 24
-    
-    // MARK: - Lifecycle
-    init () {
-        NotificationCenter.default.addObserver(self, selector: #selector(launchAtLoginChangedNotificationAction(_:)), name: .launchAtLoginChangedNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(retainCountChangedNotificationAction(_:)), name: .retainCountChangedNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(clearItemsOlderThanHoursChangedNotificationAction(_:)), name: .clearItemsOlderThanHoursChangedNotification, object: nil)
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-    
-    // MARK: - Private Methods
-    @objc private func launchAtLoginChangedNotificationAction (_ notification: NSNotification) {
-        if let object = notification.object as? Bool {
-            print(object)
-            launchOnLogin = object
-            if object == true {
-                addToLaunchItems()
-            } else {
-                removeFromLaunchItems()
-            }
-        }
-    }
-    @objc private func retainCountChangedNotificationAction (_ notification: NSNotification) {
-        if let object = notification.object as? Int {
-            print(object)
-            retainClips = object
-        }
-    }
-    @objc private func clearItemsOlderThanHoursChangedNotificationAction (_ notification: NSNotification) {
-        if let object = notification.object as? Int {
-            print(object)
-            clearItemsOlderThanHours = object
-        }
-    }
-    
+//class ClipboardSettingsViewWrapper: ObservableObject {
+//    // MARK: - Properties
+//    @Published var launchOnLogin: Bool = false
+//    @Published var retainClips: Int = 20
+//    @Published var clearItemsOlderThanHours: Int = 24
+//    
+//    // MARK: - Lifecycle
+//    init () {
+//        NotificationCenter.default.addObserver(self, selector: #selector(launchAtLoginChangedNotificationAction(_:)), name: .launchAtLoginChangedNotification, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(retainCountChangedNotificationAction(_:)), name: .retainCountChangedNotification, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(clearItemsOlderThanHoursChangedNotificationAction(_:)), name: .clearItemsOlderThanHoursChangedNotification, object: nil)
+//    }
+//    
+//    deinit {
+//        NotificationCenter.default.removeObserver(self)
+//    }
+//    
+//    // MARK: - Private Methods
+//    @objc private func launchAtLoginChangedNotificationAction (_ notification: NSNotification) {
+//        if let object = notification.object as? Bool {
+//            print(object)
+//            launchOnLogin = object
+//            if object == true {
+//                addToLaunchItems()
+//            } else {
+//                removeFromLaunchItems()
+//            }
+//        }
+//    }
+//    @objc private func retainCountChangedNotificationAction (_ notification: NSNotification) {
+//        if let object = notification.object as? Int {
+//            print(object)
+//            retainClips = object
+//        }
+//    }
+//    @objc private func clearItemsOlderThanHoursChangedNotificationAction (_ notification: NSNotification) {
+//        if let object = notification.object as? Int {
+//            print(object)
+//            clearItemsOlderThanHours = object
+//        }
+//    }
+//    
     func addToLaunchItems() {
         let helperBundleIdentifier = "com.walhallaa.clipboardManagerHelper"
 
@@ -175,10 +254,10 @@ class ClipboardSettingsViewWrapper: ObservableObject {
             print("Failed to write Launch Agent plist: \(error)")
         }
     }
-
-
-
-
+//
+//
+//
+//
     func removeFromLaunchItems() {
         let helperBundleIdentifier = "com.walhallaa.clipboardManagerHelper"
         let launchAgentPath = "\(NSHomeDirectory())/Library/LaunchAgents/\(helperBundleIdentifier).plist"
@@ -190,7 +269,7 @@ class ClipboardSettingsViewWrapper: ObservableObject {
             print("Failed to remove Launch Agent: \(error)")
         }
     }
-
-
-
-}
+//
+//
+//
+//}

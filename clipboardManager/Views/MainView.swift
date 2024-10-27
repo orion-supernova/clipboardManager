@@ -9,8 +9,9 @@ import SwiftUI
 import CoreData
 
 struct MainView: View {
-//    @EnvironmentObject var clipboardManager: ClipboardManager
-    let clipboardManager = ClipboardManager.shared
+    @EnvironmentObject var clipboardManager: ClipboardManager
+    @Environment(\.controlActiveState) private var controlActiveState
+    let publisher = NotificationCenter.default.publisher(for: .allItemsClearedNotification)
     var body: some View {
         GeometryReader { reader in
             ZStack {
@@ -29,7 +30,11 @@ struct MainView: View {
                     }
                 } else {
                     ScrollablePasteboardItemsView()
+                        .environmentObject(clipboardManager)
                 }
+            }
+            .onReceive(publisher) { _ in
+                clipboardManager.clipboardItems.removeAll()
             }
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
@@ -42,19 +47,19 @@ struct MainView: View {
 
 #Preview {
     MainView()
-//        .environmentObject(ClipboardManager(persistenceController: PersistenceController.shared))
+        .environmentObject(ClipboardManager.shared)
 }
 
 struct ScrollablePasteboardItemsView: View {
-//    @EnvironmentObject var clipboardManager: ClipboardManager
-    let clipboardManager = ClipboardManager.shared
+    
+    @EnvironmentObject var clipboardManager: ClipboardManager
 
     @State private var searchText = ""
     @State private var items = ["Item 1", "Item 2"]
     @FocusState private var isFocused: Bool
     @State private var isSearchFieldVisible = false
     @StateObject var wrapper = ScrollablePasteboardItemsViewWrapper()
-    
+    @State private var searchDispatchWorkItem: DispatchWorkItem?
     
     var body: some View {
         VStack {
@@ -64,7 +69,7 @@ struct ScrollablePasteboardItemsView: View {
                         .frame(width: 10)
                     
                     Button {
-                        print("hmm")
+                        NotificationCenter.default.post(name: .preferencesClickedNotification, object: nil)
                     } label: {
                         Image(systemName: "ellipsis")
                             .resizable()
@@ -99,7 +104,7 @@ struct ScrollablePasteboardItemsView: View {
                 
                 HStack(spacing: 0) {
                     Spacer()
-                    if wrapper.isSearchFieldVisible {
+                    if clipboardManager.isSearchFieldVisible {
                         Button {
                             guard !searchText.isEmpty else { clipboardManager.isSearchFieldVisible = false; return }
                                 DispatchQueue.main.async {
@@ -113,20 +118,17 @@ struct ScrollablePasteboardItemsView: View {
                                 .scaledToFit()
                                 .frame(width: 10, height: 10)
                         }
-                        VStack {
-                            TextField("Search", text: $searchText)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .frame(width: 200, height: 20)
-                                .padding(.horizontal, 5)
-                                .focused($isFocused)
-                                .onChange(of: searchText) { newValue in
-                                    guard !newValue.isEmpty else { clipboardManager.isSearchFieldVisible = false; clipboardManager.fetchClipboardItems(); return }
-                                    clipboardManager.fetchClipboardItems(withSearchText: searchText.lowercased())
-                                }
-                                .onAppear {
-                                    isFocused = true
-                                }
-                        }
+                        
+                        TextField("Search", text: $searchText)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .frame(width: 200, height: 20)
+                            .padding(.horizontal, 5)
+                            .focused($isFocused)
+                            .onChange(of: searchText) { newValue in
+                                debounceSearch(text: newValue)
+                            }
+                            .onAppear { isFocused = true }
+                            .onDisappear { isFocused = false }
                         
                     } else {
                         Button {
@@ -148,6 +150,7 @@ struct ScrollablePasteboardItemsView: View {
                 ScrollView(.horizontal) {
                     LazyHStack(spacing: 10) {
                         Spacer()
+                            .frame(width: 5)
                         
                         if clipboardManager.clipboardItems.isEmpty, clipboardManager.isSearchFieldVisible {
                             HStack {
@@ -160,18 +163,16 @@ struct ScrollablePasteboardItemsView: View {
                             .frame(width: screenWidth)
                         } else {
                             ForEach(clipboardManager.clipboardItems) { item in
-                                LazyHStack {
-                                    ClipboardItemBox(item: item)
-                                        .onTapGesture {
-                                            let pasteBoard = NSPasteboard.general
-                                            pasteBoard.clearContents()
-                                            pasteBoard.setString(item.contentDescriptionString, forType: .string)
-                                            print("DEBUG: -----", item.contentDescriptionString)
-                                            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
-                                        }
-                                        .frame(width: 300, height: 300)
-                                        .id(item.id)
-                                }
+                                ClipboardItemBox(item: item)
+                                    .onTapGesture {
+                                        let pasteBoard = NSPasteboard.general
+                                        pasteBoard.clearContents()
+                                        pasteBoard.setString(item.contentDescriptionString, forType: .string)
+                                        print("DEBUG: -----", item.contentDescriptionString)
+                                        NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
+                                    }
+                                    .frame(width: 300, height: 300)
+                                    .id(item.id)
                             }
                         }
                     }
@@ -180,10 +181,28 @@ struct ScrollablePasteboardItemsView: View {
                     proxy.scrollTo(clipboardManager.clipboardItems.first?.id, anchor: .trailing)
                 }
             }
-            .onDisappear {
-//                clipboardManager.isSearchFieldVisible = false // TODO: - This part is called in make app visible action. Needs a fix.
+        }
+    }
+    private func debounceSearch(text: String) {
+        // Cancel the previous work item if it exists
+        searchDispatchWorkItem?.cancel()
+        
+        // Create a new work item with the search functionality
+        let newWorkItem = DispatchWorkItem { [weak clipboardManager] in
+            if text.isEmpty {
+                clipboardManager?.isSearchFieldVisible = false
+                clipboardManager?.fetchClipboardItems()
+            } else {
+                clipboardManager?.isSearchFieldVisible = true
+                clipboardManager?.fetchClipboardItems(withSearchText: text.lowercased())
             }
         }
+        
+        // Store the new work item
+        searchDispatchWorkItem = newWorkItem
+        
+        // Execute the work item after a delay (e.g., 300 milliseconds)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: newWorkItem)
     }
 }
 

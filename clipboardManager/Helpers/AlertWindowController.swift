@@ -5,7 +5,7 @@
 //  Created by muratcankoc on 25/10/2024.
 //
 
-import Cocoa
+import SwiftUI
 
 class AlertWindowController: NSWindowController {
     private let alertView: NSView
@@ -13,10 +13,12 @@ class AlertWindowController: NSWindowController {
     private let alertTitle: String
     private let alertMessage: String
     private var eventMonitor: Any?
+    private let isSimpleAlert: Bool
     
-    init(title: String, message: String, completion: @escaping () -> Void) {
+    init(title: String, message: String, isSimpleAlert: Bool, completion: @escaping () -> Void) {
         self.alertTitle = title
         self.alertMessage = message
+        self.isSimpleAlert = isSimpleAlert
         
         let window = NSWindow(
             contentRect: NSScreen.main?.frame ?? .zero,
@@ -35,7 +37,12 @@ class AlertWindowController: NSWindowController {
         super.init(window: window)
         
         self.completion = completion
-        setupAlertView()
+        if isSimpleAlert {
+            setupSimpleAlertView()
+        } else {
+            setupAlertViewTwoButtons()
+        }
+        
         setupEventMonitor()
     }
     
@@ -88,7 +95,49 @@ class AlertWindowController: NSWindowController {
     }
     
     // MARK: - AlertView Setup
-    private func setupAlertView() {
+    private func setupSimpleAlertView() {
+        alertView.wantsLayer = true
+        if let color = NSColor.fromHex("#401B51") {  // Example for a shade of purple
+            // Use the color
+            alertView.layer?.backgroundColor = color.cgColor
+        }
+        alertView.layer?.cornerRadius = 12
+        alertView.layer?.shadowColor = NSColor.black.cgColor
+        alertView.layer?.shadowOpacity = 0.2
+        alertView.layer?.shadowRadius = 10
+        alertView.layer?.shadowOffset = CGSize(width: 0, height: 2)
+        
+        let titleLabel = createTitleLabel()
+        let messageLabel = createMessageLabel()
+        
+        let okButton = createButton(title: "OK",
+                                        color: .purple,
+                                        action: #selector(cancelButtonClicked))
+        alertView.addSubview(titleLabel)
+        alertView.addSubview(messageLabel)
+        alertView.addSubview(okButton)
+        
+        NSLayoutConstraint.activate([
+            titleLabel.topAnchor.constraint(equalTo: alertView.topAnchor, constant: 20),
+            titleLabel.leadingAnchor.constraint(equalTo: alertView.leadingAnchor, constant: 20),
+            titleLabel.trailingAnchor.constraint(equalTo: alertView.trailingAnchor, constant: -20),
+
+            messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 10),
+            messageLabel.leadingAnchor.constraint(equalTo: alertView.leadingAnchor, constant: 20),
+            messageLabel.trailingAnchor.constraint(equalTo: alertView.trailingAnchor, constant: -20),
+
+            okButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 20),
+            okButton.centerXAnchor.constraint(equalTo: alertView.centerXAnchor, constant: 0),
+            okButton.widthAnchor.constraint(equalToConstant: 80),
+            okButton.heightAnchor.constraint(equalToConstant: 30),
+
+        ])
+        
+        alertView.frame.size = NSSize(width: 600, height: 150)
+        centerAlertView()
+        window?.contentView?.addSubview(alertView)
+    }
+    private func setupAlertViewTwoButtons() {
         configureAlertView()
         let titleLabel = createTitleLabel()
         let messageLabel = createMessageLabel()
@@ -105,7 +154,7 @@ class AlertWindowController: NSWindowController {
         alertView.addSubview(cancelButton)
 
         setupConstraints(for: titleLabel, messageLabel: messageLabel, okButton: okButton, cancelButton: cancelButton)
-        setAlertViewSize()  // Set fixed size for alert view
+        alertView.frame.size = NSSize(width: 450, height: 170)
         centerAlertView()
         window?.contentView?.addSubview(alertView)
     }
@@ -187,12 +236,6 @@ class AlertWindowController: NSWindowController {
             cancelButton.heightAnchor.constraint(equalToConstant: 30)
         ])
     }
-
-    // Sets a fixed size for the alert view
-    private func setAlertViewSize() {
-        alertView.frame.size = NSSize(width: 450, height: 200)
-    }
-
     // Centers the alert view on the screen
     private func centerAlertView() {
         if let screenFrame = NSScreen.main?.frame {
@@ -205,6 +248,7 @@ class AlertWindowController: NSWindowController {
     
     // MARK: - Actions
     @objc func okButtonClicked() {
+        hotkeyForInterfaceVisibility.isPaused = false
         // First, remove the event monitor
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
@@ -229,6 +273,7 @@ class AlertWindowController: NSWindowController {
     }
     
     @objc func cancelButtonClicked() {
+        hotkeyForInterfaceVisibility.isPaused = false
         // First, remove the event monitor
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
@@ -271,8 +316,8 @@ extension NSApplication {
 }
 
 // Show alert function
-func showCustomAlert(title: String, message: String, completion: @escaping () -> Void = {}) {
-    let alertController = AlertWindowController(title: title, message: message) {
+func showCustomAlertWithTwoButtons(title: String, message: String, completion: @escaping () -> Void = {}) {
+    let alertController = AlertWindowController(title: title, message: message, isSimpleAlert: false) {
         completion()
     }
     
@@ -280,11 +325,37 @@ func showCustomAlert(title: String, message: String, completion: @escaping () ->
     NSApplication.shared.windows.forEach { window in
         if window != alertController.window {
             window.ignoresMouseEvents = true
+            if window.identifier == .init("appWindow") {
+                window.close()
+            }
         }
     }
     
     alertController.showWindow(nil)
+    hotkeyForInterfaceVisibility.isPaused = true
+        
+    // Keep a reference to prevent deallocation
+    NSApp.alerts = (NSApp.alerts ?? []) + [alertController]
+}
+
+func showSimpleCustomAlert(title: String, message: String) {
+    let alertController = AlertWindowController(title: title, message: message, isSimpleAlert: true) {
+        //
+    }
     
+    // Disable all other windows
+    NSApplication.shared.windows.forEach { window in
+        if window != alertController.window {
+            window.ignoresMouseEvents = true
+            if window.identifier == .init("appWindow") {
+                window.close()
+            }
+        }
+    }
+    
+    alertController.showWindow(nil)
+    hotkeyForInterfaceVisibility.isPaused = true
+        
     // Keep a reference to prevent deallocation
     NSApp.alerts = (NSApp.alerts ?? []) + [alertController]
 }

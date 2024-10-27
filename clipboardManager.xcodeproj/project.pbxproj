@@ -17,6 +17,7 @@
 		5434D11629C1C433009DF037 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11529C1C433009DF037 /* Persistence.swift */; };
 		5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 5434D11729C1C433009DF037 /* clipboardManager.xcdatamodeld */; };
 		5434D12229C1CB60009DF037 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = 5434D12129C1CB60009DF037 /* HotKey */; };
+		546F03342CCD9A0D00EB4EFD /* ClipboardSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 546F03332CCD9A0D00EB4EFD /* ClipboardSettings.swift */; };
 		54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238129CA369800F3E2F3 /* KeyCodes.swift */; };
 		54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */; };
 		54A76B892C5D852300AEBD9E /* NSImage+Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A76B882C5D852300AEBD9E /* NSImage+Color.swift */; };
@@ -57,6 +58,7 @@
 		5434D11829C1C433009DF037 /* clipboardManager.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = clipboardManager.xcdatamodel; sourceTree = "<group>"; };
 		5434D11A29C1C433009DF037 /* clipboardManager.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = clipboardManager.entitlements; sourceTree = "<group>"; };
 		543D607229D34F5200E23D82 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		546F03332CCD9A0D00EB4EFD /* ClipboardSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardSettings.swift; sourceTree = "<group>"; };
 		54A3238129CA369800F3E2F3 /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
 		54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPressHelper.swift; sourceTree = "<group>"; };
 		54A76B882C5D852300AEBD9E /* NSImage+Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Color.swift"; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 				543D607229D34F5200E23D82 /* Info.plist */,
 				5434D10C29C1C433009DF037 /* clipboardManagerApp.swift */,
 				54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */,
+				546F03332CCD9A0D00EB4EFD /* ClipboardSettings.swift */,
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
 				54B6C87C2C4E6EFE00106CFA /* PaywallView.swift */,
 				54B6C87E2C4E6FE500106CFA /* PurchaseManager.swift */,
@@ -349,6 +352,7 @@
 				54B6C8AC2C4FBADF00106CFA /* ClipboardModel.xcdatamodeld in Sources */,
 				5434D11929C1C433009DF037 /* clipboardManager.xcdatamodeld in Sources */,
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
+				546F03342CCD9A0D00EB4EFD /* ClipboardSettings.swift in Sources */,
 				5434D11629C1C433009DF037 /* Persistence.swift in Sources */,
 				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
 				54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */,
@@ -565,7 +569,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -575,14 +579,15 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Mahmut;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app needs your permission to simulate paste actions.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app needs your permission to enable auto-paste actions.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2.0.10;
+				MARKETING_VERSION = 2.0.16;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -599,7 +604,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 16;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -609,14 +614,15 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Mahmut;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app needs your permission to simulate paste actions.";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "This app needs your permission to enable auto-paste actions.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2.0.10;
+				MARKETING_VERSION = 2.0.16;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;

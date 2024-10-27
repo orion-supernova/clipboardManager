@@ -23,6 +23,8 @@ extension Notification.Name {
     static let isSearchFieldVisibleNotification      = Notification.Name("isSearchFieldVisibleNotification")
     static let retainCountChangedNotification        = Notification.Name("retainCountChangedNotification")
     static let launchAtLoginChangedNotification      = Notification.Name("launchAtLoginChangedNotification")
+    static let setupWindowNotification               = Notification.Name("setupWindowNotification")
+    static let allItemsClearedNotification           = Notification.Name("allItemsClearedNotification")
     static let clearItemsOlderThanHoursChangedNotification = Notification.Name("clearItemsOlderThanHoursChangedNotification")
 }
 

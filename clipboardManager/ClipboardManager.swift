@@ -8,59 +8,31 @@
 import CoreData
 import SwiftUI
 
-class ClipboardManager {
-    static let shared = ClipboardManager(persistenceController: .shared)
+class ClipboardManager: ObservableObject {
+    static let shared = ClipboardManager(persistenceController: .shared) // Singleton instance
+
     // MARK: - Properties
-    var clipboardItems: [ClipboardItem] = []
-    var isSearchFieldVisible = false {
-        didSet {
-            NotificationCenter.default.post(name: .isSearchFieldVisibleNotification, object: isSearchFieldVisible)
-        }
-    }
-    
-    var launchAtLogin: Bool {
-        get {
-            UserDefaults.standard.bool(forKey: .launchAtLoginUserDefaultsKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: .launchAtLoginUserDefaultsKey)
-            NotificationCenter.default.post(name: .launchAtLoginChangedNotification, object: newValue)
-        }
-    }
-
-    var retainCount: Int {
-        get {
-            UserDefaults.standard.integer(forKey: .retainCountUserDefaultsKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: .retainCountUserDefaultsKey)
-            NotificationCenter.default.post(name: .retainCountChangedNotification, object: newValue)
-        }
-    }
-
-    var clearItemsOlderThanHours: Int {
-        get {
-            UserDefaults.standard.integer(forKey: .clearItemsOlderThanHoursUserDefaultsKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: .clearItemsOlderThanHoursUserDefaultsKey)
-            NotificationCenter.default.post(name: .clearItemsOlderThanHoursChangedNotification, object: newValue)
-        }
-    }
+    @Published var clipboardItems: [ClipboardItem] = []
+    @Published var isSearchFieldVisible = false
+    @Published var launchAtLogin: Bool!
+    @Published var retainCount: Int!
+    @Published var clearItemsOlderThanHours: Int!
     
     private let persistenceController: PersistenceController
     private var viewContext: NSManagedObjectContext {
         persistenceController.container.viewContext
     }
     private var lastItemContentDescriptionString = ""
+    var initCount = 0
 
     // MARK: - Lifecycle
-    init(persistenceController: PersistenceController) {
+    private init(persistenceController: PersistenceController) {
         self.persistenceController = persistenceController
-//        removeExtraItemsIfNeeded()
+        setDefaultValuesIfNeeded()
+        removeExtraItemsIfNeeded()
         fetchClipboardItems()
         setupTimer()
-        setDefaultValuesIfNeeded()
+        initCount += 1
     }
 
     // MARK: - Private Methods
@@ -82,7 +54,8 @@ class ClipboardManager {
             }
             print("Last Item Description: \(lastItemContentDescriptionString)")
             print("New Item Description: \(String(describing: newItem?.contentDescriptionString))")
-            print("2", changeCount)
+            
+            lastItemContentDescriptionString = newItem?.contentDescriptionString ?? ""
             self.addClipboardItem(
                 newItem
                     ?? .init(
@@ -92,13 +65,19 @@ class ClipboardManager {
         }
     }
     private func setDefaultValuesIfNeeded() {
-        if let _ = UserDefaults.standard.value(forKey: .launchAtLoginUserDefaultsKey) {} else {
+        if let hm = UserDefaults.standard.value(forKey: .launchAtLoginUserDefaultsKey) {
+            launchAtLogin = hm as? Bool ?? false
+        } else {
             UserDefaults.standard.set(false, forKey: .clearItemsOlderThanHoursUserDefaultsKey)
         }
-        if let _ = UserDefaults.standard.value(forKey: .retainCountUserDefaultsKey) {} else {
+        if let hm2 = UserDefaults.standard.value(forKey: .retainCountUserDefaultsKey) {
+            retainCount = hm2 as? Int ?? -1
+        } else {
             UserDefaults.standard.set(20, forKey: .retainCountUserDefaultsKey)
         }
-        if let _ = UserDefaults.standard.value(forKey: .clearItemsOlderThanHoursUserDefaultsKey) {} else {
+        if let hm3 = UserDefaults.standard.value(forKey: .clearItemsOlderThanHoursUserDefaultsKey) {
+            clearItemsOlderThanHours = hm3 as? Int ?? 48
+        } else {
             UserDefaults.standard.set(48, forKey: .clearItemsOlderThanHoursUserDefaultsKey)
         }
     }
