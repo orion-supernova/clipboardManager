@@ -68,7 +68,7 @@ class FileHandler {
             } else if utType.conforms(to: .movie) {
                 try? fileManager.copyItem(at: url, to: tempURL)
                 return (tempURL, ClipboardItemType.video, nil as Data?)
-            } else if utType.conforms(to: .archive) || utType.conforms(to: .data) {
+            } else if utType.conforms(to: .archive) || utType.conforms(to: .data) || utType.conforms(to: .folder) {
                 try? fileManager.copyItem(at: url, to: tempURL)
                 return (tempURL, ClipboardItemType.file, nil as Data?)
             }

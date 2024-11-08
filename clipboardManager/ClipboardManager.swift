@@ -10,9 +10,6 @@ import SwiftUI
 import AppKit
 import AVFoundation
 
-// Add this line to import ThumbnailService
-@_implementationOnly import struct Foundation.Data
-
 class ClipboardManager: ObservableObject {
     static let shared = ClipboardManager(persistenceController: .shared) // Singleton instance
 
@@ -150,14 +147,15 @@ class ClipboardManager: ObservableObject {
                 var thumbnailURL: URL? = nil
                 
                 // Generate thumbnail for videos
-                if type == .video {
-                    thumbnailURL = generateVideoThumbnail(from: fileURL)
+                if type == .video, let url = fileURL {
+                    thumbnailURL = generateVideoThumbnail(from: url)
+                    print("[DEBUG] Generated video thumbnail: \(String(describing: thumbnailURL))")
                 }
                 
                 return ClipboardItem(
                     id: UUID(),
                     type: type,
-                    content: content ?? Data(), // Use the actual content if available
+                    content: content ?? Data(),
                     copiedFromApplication: copiedFromApp,
                     timestamp: Date(),
                     contentDescriptionString: contentDescription,
@@ -202,15 +200,13 @@ class ClipboardManager: ObservableObject {
         }
     }
 
-    private func generateVideoThumbnail(from url: URL?) -> URL? {
-        guard let url = url else { return nil }
-        
+    private func generateVideoThumbnail(from url: URL) -> URL? {
         let asset = AVAsset(url: url)
         let imageGenerator = AVAssetImageGenerator(asset: asset)
         imageGenerator.appliesPreferredTrackTransform = true
         
         do {
-            let time = CMTime.zero
+            let time = CMTime(seconds: 1, preferredTimescale: 1)  // Take thumbnail at 1 second
             let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
             let thumbnail = NSImage(cgImage: cgImage, size: NSSize(width: 180, height: 180))
             
@@ -224,12 +220,15 @@ class ClipboardManager: ObservableObject {
                 withIntermediateDirectories: true
             )
             
-            if let data = thumbnail.tiffRepresentation {
-                try? data.write(to: tempURL)
+            if let data = thumbnail.tiffRepresentation,
+               let bitmap = NSBitmapImageRep(data: data),
+               let pngData = bitmap.representation(using: .png, properties: [:]) {
+                try pngData.write(to: tempURL)
+                print("[DEBUG] Successfully wrote thumbnail to: \(tempURL)")
                 return tempURL
             }
         } catch {
-            print("Failed to generate video thumbnail: \(error)")
+            print("[ERROR] Failed to generate video thumbnail: \(error)")
         }
         
         return nil
@@ -279,12 +278,12 @@ class ClipboardManager: ObservableObject {
         newItem.copiedFromApplication = try? item.copiedFromApplication.toData()
         newItem.contentDescriptionString = item.contentDescriptionString
         newItem.fileURL = item.fileURL
+        newItem.thumbnailURL = item.thumbnailURL
         
         do {
             try context.save()
-            print("[DEBUG] Successfully saved clipboard item")
+            print("[DEBUG] Successfully saved clipboard item with thumbnail: \(String(describing: item.thumbnailURL))")
             
-            // Update UI immediately
             DispatchQueue.main.async { [weak self] in
                 self?.fetchClipboardItems()
             }
@@ -340,6 +339,7 @@ class ClipboardManager: ObservableObject {
         let timestamp = entity.timestamp ?? Date()
         let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"
         let fileURL = entity.fileURL
+        let thumbnailURL = entity.thumbnailURL
 
         let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
 
@@ -360,7 +360,7 @@ class ClipboardManager: ObservableObject {
             timestamp: timestamp,
             contentDescriptionString: contentDescriptionString,
             fileURL: fileURL,
-            thumbnailURL: nil
+            thumbnailURL: thumbnailURL
         )
     }
 
@@ -478,7 +478,7 @@ class ClipboardManager: ObservableObject {
             isProcessingClipboard = false
             
             // Clear thumbnail cache
-            ThumbnailService.shared.clearCache()
+//            ThumbnailService.shared.clearCache()
         }
     }
 
@@ -511,7 +511,7 @@ class ClipboardManager: ObservableObject {
             
             // Clear thumbnail cache periodically
             if let count = self?.clipboardItems.count, count > 20 {
-                ThumbnailService.shared.clearCache()
+//                ThumbnailService.shared.clearCache()
             }
         }
         RunLoop.main.add(cleanupTimer!, forMode: .common)
@@ -532,8 +532,8 @@ class ClipboardManager: ObservableObject {
                 backgroundContext.reset()
             }
             
-            // Clear temporary data
-            clearTemporaryData()
+            // Clear temporary files
+            FileHandler.shared.cleanupOldFiles()
         }
     }
 

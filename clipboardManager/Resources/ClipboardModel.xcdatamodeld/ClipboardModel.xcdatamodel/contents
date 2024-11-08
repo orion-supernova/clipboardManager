@@ -6,6 +6,7 @@
         <attribute name="copiedFromApplication" optional="YES" attributeType="Binary"/>
         <attribute name="fileURL" optional="YES" attributeType="URI"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="thumbnailURL" optional="YES" attributeType="URI"/>
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="type" optional="YES" attributeType="String"/>
     </entity>
