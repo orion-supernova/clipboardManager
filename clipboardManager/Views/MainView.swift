@@ -14,6 +14,7 @@ struct MainView: View {
     @EnvironmentObject var clipboardManager: ClipboardManager
     @Environment(\.controlActiveState) private var controlActiveState
     @StateObject private var settings = ClipboardSettings.shared
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     let publisher = NotificationCenter.default.publisher(for: .allItemsClearedNotification)
     
     @State private var selectedItemIndex: Int = 0
@@ -104,14 +105,30 @@ struct MainView: View {
         guard itemCount > 0 else { return }
         
         let newIndex = selectedItemIndex + direction
+        let maxAllowedIndex = subscriptionManager.isSubscribed ? itemCount - 1 : min(2, itemCount - 1)
         
         // Check bounds and provide feedback if needed
-        if newIndex < 0 || newIndex >= itemCount {
+        if newIndex < 0 || newIndex > maxAllowedIndex {
             NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+            
+            // Show subscription prompt if trying to navigate beyond free tier limit
+            if !subscriptionManager.isSubscribed && newIndex > 2 && newIndex < itemCount {
+                showSubscriptionView()
+            }
             return
         }
         
         selectedItemIndex = newIndex
+    }
+    
+    private func showSubscriptionView() {
+        WindowManager.shared.showWindow(
+            id: "subscription",
+            title: "Upgrade to Pro",
+            view: SubscriptionView(),
+            width: 400,
+            height: 500
+        )
     }
 }
 
@@ -123,6 +140,8 @@ struct MainView: View {
 struct ScrollablePasteboardItemsView: View {
     
     @EnvironmentObject var clipboardManager: ClipboardManager
+    @StateObject private var settings = ClipboardSettings.shared
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
 
     @State private var searchText = ""
     @State private var items = ["Item 1", "Item 2"]
@@ -131,7 +150,6 @@ struct ScrollablePasteboardItemsView: View {
     @StateObject var wrapper = ScrollablePasteboardItemsViewWrapper()
     @State private var searchDispatchWorkItem: DispatchWorkItem?
     @Binding var selectedItemIndex: Int
-    @StateObject private var settings = ClipboardSettings.shared
     let scrollToIndex: (Int) -> Void
     
     var body: some View {
@@ -205,15 +223,21 @@ struct ScrollablePasteboardItemsView: View {
                         
                     } else {
                         Button {
-                            clipboardManager.isSearchFieldVisible = true
+                            if subscriptionManager.isSubscribed {
+                                clipboardManager.isSearchFieldVisible = true
+                            } else {
+                                showSubscriptionView()
+                            }
                         } label: {
                             Image(systemName: "magnifyingglass")
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 20, height: 20)
+                                .opacity(subscriptionManager.isSubscribed ? 1.0 : 0.5)
                                 .padding()
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .help(subscriptionManager.isSubscribed ? "Search" : "Upgrade to Pro to use search")
                     }
                 }
             }
@@ -238,15 +262,25 @@ struct ScrollablePasteboardItemsView: View {
                             ForEach(Array(clipboardManager.clipboardItems.enumerated()), id: \.element.id) { index, item in
                                 ClipboardItemBox(item: item)
                                     .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(settings.enableKeyboardNavigation && index == selectedItemIndex ? Color.blue : Color.clear, lineWidth: 2)
+                                        Group {
+                                            if !subscriptionManager.isSubscribed && index >= 3 {
+                                                lockedOverlay
+                                            } else if settings.enableKeyboardNavigation && index == selectedItemIndex {
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.blue, lineWidth: 2)
+                                            }
+                                        }
                                     )
                                     .onTapGesture {
-                                        selectedItemIndex = index
-                                        let pasteBoard = NSPasteboard.general
-                                        pasteBoard.clearContents()
-                                        pasteBoard.setString(item.contentDescriptionString, forType: .string)
-                                        NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
+                                        if !subscriptionManager.isSubscribed && index >= 3 {
+                                            showSubscriptionView()
+                                        } else {
+                                            selectedItemIndex = index
+                                            let pasteBoard = NSPasteboard.general
+                                            pasteBoard.clearContents()
+                                            pasteBoard.setString(item.contentDescriptionString, forType: .string)
+                                            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
+                                        }
                                     }
                                     .frame(width: 300, height: 300)
                                     .id(item.id)
@@ -289,6 +323,31 @@ struct ScrollablePasteboardItemsView: View {
         
         // Execute the work item after a delay (e.g., 300 milliseconds)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: newWorkItem)
+    }
+    
+    private var lockedOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.7)
+            VStack {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white)
+                Text("Pro Feature")
+                    .foregroundColor(.white)
+                    .font(.headline)
+            }
+        }
+        .cornerRadius(8)
+    }
+    
+    private func showSubscriptionView() {
+        WindowManager.shared.showWindow(
+            id: "subscription",
+            title: "Upgrade to Pro",
+            view: SubscriptionView(),
+            width: 400,
+            height: 500
+        )
     }
 }
 
