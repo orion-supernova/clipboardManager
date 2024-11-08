@@ -9,35 +9,32 @@ import Foundation
 import StoreKit
 
 enum SubscriptionTier: String, CaseIterable {
-    case monthly = "mahmutclipboard_099_1m_3d0"
-    case weekly = "com.walhallaa.clipboardManager.pro.weekly"
+    case monthly = "com.walhallaa.clipboardmanager.monthly"
+    case yearly = "com.walhallaa.clipboardmanager.yearly"
     
     var displayName: String {
         switch self {
-        case .monthly: return "Pro Access (Monthly)"
-        case .weekly: return "Pro Access (Weekly)"
+        case .monthly: return "Monthly Pro"
+        case .yearly: return "Yearly Pro"
         }
     }
     
     var description: String {
         switch self {
-        case .monthly: return "Pro Access to all features. Renews Monthly."
-        case .weekly: return "Pro Access to all features. Renews Weekly."
+        case .monthly: return "Unlimited clipboard items, Search feature"
+        case .yearly: return "Unlimited clipboard items, Search feature (Save 20%)"
         }
     }
 }
+
 
 @MainActor
 class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
     
     @Published private(set) var subscriptions: [Product] = []
-    @Published private(set) var purchasedSubscriptions: [Product] = []
-    @Published private(set) var isSubscribed = false
     @Published private(set) var isLoading = true
-    @Published var isPresentingSubscription = false
-    
-    private var updateListenerTask: Task<Void, Error>?
+    @Published private(set) var isSubscribed = false
     
     private let productIdentifiers = [
         "mahmutclipboard_099_1m_3d0",
@@ -45,51 +42,33 @@ class SubscriptionManager: ObservableObject {
     ]
     
     private init() {
-        updateListenerTask = listenForTransactions()
-        
         Task {
             await fetchProducts()
-            await updateSubscriptionStatus()
+            await checkSubscriptionStatus()
+            setupTransactionListener()
         }
     }
     
-    deinit {
-        updateListenerTask?.cancel()
-    }
-    
-    func listenForTransactions() -> Task<Void, Error> {
-        return Task.detached {
-            for await result in Transaction.updates {
-                await self.handleTransactionResult(result)
+    private func checkSubscriptionStatus() async {
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                self.isSubscribed = true
+                break
             }
         }
-    }
-    
-    private func handleTransactionResult(_ result: VerificationResult<Transaction>) async {
-        guard case .verified(let transaction) = result else {
-            return
-        }
-        
-        await updateSubscriptionStatus()
-        await transaction.finish()
     }
     
     func fetchProducts() async {
         do {
             isLoading = true
-            print("Requesting products...")
-            let storeProducts = try await Product.products(for: productIdentifiers)
-            print("Received \(storeProducts.count) products from the store")
-            
+            let products = try await Product.products(for: productIdentifiers)
             await MainActor.run {
-                self.subscriptions = storeProducts.sorted { $0.price < $1.price }
+                self.subscriptions = products.sorted { $0.price < $1.price }
                 self.isLoading = false
             }
         } catch {
-            print("Failed to fetch products: \(error)")
-            await MainActor.run {
-                self.isLoading = false
-            }
+            print("Failed to fetch products:", error)
+            isLoading = false
         }
     }
     
@@ -98,12 +77,12 @@ class SubscriptionManager: ObservableObject {
         
         switch result {
         case .success(let verification):
-            guard case .verified(let transaction) = verification else {
-                return
+            switch verification {
+            case .verified(let transaction):
+                await transaction.finish()
+            case .unverified:
+                print("Unverified transaction")
             }
-            await transaction.finish()
-            await updateSubscriptionStatus()
-            await fetchProducts() // Refresh products after purchase
         case .userCancelled:
             print("User cancelled")
         case .pending:
@@ -111,40 +90,24 @@ class SubscriptionManager: ObservableObject {
         @unknown default:
             print("Unknown purchase result")
         }
-    }
-    
-    func updateSubscriptionStatus() async {
-        var isSubscribedTemp = false
-        
-        for await result in Transaction.currentEntitlements {
-            guard case .verified(let transaction) = result else {
-                continue
-            }
-            
-            if transaction.productType == .autoRenewable {
-                let isExpired = transaction.expirationDate != nil &&
-                    transaction.expirationDate! < Date() ||
-                    transaction.revocationDate != nil
-                
-                if !isExpired {
-                    isSubscribedTemp = true
-                    break
-                }
-            }
-        }
-        
-        await MainActor.run {
-            self.isSubscribed = isSubscribedTemp
-        }
+
     }
     
     func restorePurchases() async {
         do {
             try await AppStore.sync()
-            await updateSubscriptionStatus()
-            await fetchProducts() // Refresh products after restore
         } catch {
-            print("Failed to restore purchases: \(error)")
+            print("Failed to restore purchases:", error)
+        }
+    }
+    
+    private func setupTransactionListener() {
+        Task {
+            for await result in Transaction.updates {
+                if case .verified(let transaction) = result {
+                    await transaction.finish()
+                }
+            }
         }
     }
 }
