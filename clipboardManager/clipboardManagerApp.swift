@@ -211,7 +211,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
     
     // MARK: - Make App Hidden
-    @objc private func makeAppHiddenAction() {
+    @objc func makeAppHiddenAction() {
         hotkeyForEscape.isPaused = true
         guard let window, window.isVisible else { return }
         //        window.close()
@@ -274,8 +274,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 return
             }
             
+            // Reduced height from 600 to 500
             self.subscriptionWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
+                contentRect: NSRect(x: 0, y: 0, width: 800, height: 500),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
@@ -288,10 +289,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.level = .floating
             window.delegate = self
             
+            // Position the window higher on the screen
             if let screen = NSScreen.main {
                 let centerX = screen.frame.midX - (window.frame.width / 2)
-                let topY = screen.frame.maxY - 50
-                window.setFrameTopLeftPoint(NSPoint(x: centerX, y: topY))
+                // Position it at 70% of screen height instead of center
+                let centerY = screen.frame.minY + (screen.frame.height * 0.7)
+                window.setFrameOrigin(NSPoint(x: centerX, y: centerY))
             }
             
             let windowController = NSWindowController(window: window)

@@ -9,20 +9,17 @@ import Foundation
 import StoreKit
 
 enum SubscriptionTier: String, CaseIterable {
-    case monthly = "com.walhallaa.clipboardmanager.monthly"
-    case yearly = "com.walhallaa.clipboardmanager.yearly"
+    case monthly = "mahmutclipboard_099_1m_3d0"
     
     var displayName: String {
         switch self {
-        case .monthly: return "Monthly Pro"
-        case .yearly: return "Yearly Pro"
+        case .monthly: return "Pro Access (Monthly)"
         }
     }
     
     var description: String {
         switch self {
-        case .monthly: return "Unlimited clipboard items, Search feature"
-        case .yearly: return "Unlimited clipboard items, Search feature (Save 20%)"
+        case .monthly: return "Pro Access to all features. Renews Monthly."
         }
     }
 }
@@ -69,7 +66,13 @@ class SubscriptionManager: ObservableObject {
     
     func requestProducts() async {
         do {
-            let storeProducts = try await Product.products(for: SubscriptionTier.allCases.map { $0.rawValue })
+            print("Requesting products...")
+            let productIdentifiers = SubscriptionTier.allCases.map { $0.rawValue }
+            print("Product IDs to request: \(productIdentifiers)")
+            
+            let storeProducts = try await Product.products(for: productIdentifiers)
+            print("Received \(storeProducts.count) products from the store")
+            
             subscriptions = storeProducts.sorted { $0.price < $1.price }
         } catch {
             print("Failed to fetch products: \(error)")
