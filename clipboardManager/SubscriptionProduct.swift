@@ -34,6 +34,25 @@ class SubscriptionManager: ObservableObject {
     @Published private(set) var subscriptions: [Product] = []
     @Published private(set) var isLoading = true
     @Published private(set) var isSubscribed = false
+    @Published private(set) var currentTier: SubscriptionTier?
+    @Published private(set) var subscriptionExpirationDate: Date?
+    
+    #if DEBUG
+    // Debug functions
+    func setDebugSubscriptionStatus(isSubscribed: Bool, tier: SubscriptionTier?) {
+        self.isSubscribed = isSubscribed
+        self.currentTier = tier
+        self.subscriptionExpirationDate = Calendar.current.date(byAdding: .month, value: 1, to: Date())
+        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
+    }
+    
+    func cancelDebugSubscription() {
+        self.isSubscribed = false
+        self.currentTier = nil
+        self.subscriptionExpirationDate = nil
+        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
+    }
+    #endif
     
     private let productIdentifiers = [
         "mahmutclipboard_099_1m_3d0",
@@ -51,7 +70,9 @@ class SubscriptionManager: ObservableObject {
     private func checkSubscriptionStatus() async {
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result {
-                self.isSubscribed = true
+                await MainActor.run {
+                    updateSubscriptionStatus(transaction)
+                }
                 break
             }
         }
@@ -155,9 +176,25 @@ class SubscriptionManager: ObservableObject {
         Task {
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result {
+                    await MainActor.run {
+                        updateSubscriptionStatus(transaction)
+                    }
                     await transaction.finish()
                 }
             }
         }
     }
+    
+    private func updateSubscriptionStatus(_ transaction: Transaction) {
+        // Update subscription status based on the transaction
+        isSubscribed = true
+        currentTier = SubscriptionTier(rawValue: transaction.productID)
+        subscriptionExpirationDate = transaction.expirationDate
+        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
+    }
+}
+
+// Add notification name
+extension NSNotification.Name {
+    static let subscriptionStatusChanged = NSNotification.Name("subscriptionStatusChanged")
 }
