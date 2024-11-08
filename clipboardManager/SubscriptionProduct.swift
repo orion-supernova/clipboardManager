@@ -10,16 +10,19 @@ import StoreKit
 
 enum SubscriptionTier: String, CaseIterable {
     case monthly = "mahmutclipboard_099_1m_3d0"
+    case weekly = "com.walhallaa.clipboardManager.pro.weekly"
     
     var displayName: String {
         switch self {
         case .monthly: return "Pro Access (Monthly)"
+        case .weekly: return "Pro Access (Weekly)"
         }
     }
     
     var description: String {
         switch self {
         case .monthly: return "Pro Access to all features. Renews Monthly."
+        case .weekly: return "Pro Access to all features. Renews Weekly."
         }
     }
 }
@@ -31,14 +34,21 @@ class SubscriptionManager: ObservableObject {
     @Published private(set) var subscriptions: [Product] = []
     @Published private(set) var purchasedSubscriptions: [Product] = []
     @Published private(set) var isSubscribed = false
+    @Published private(set) var isLoading = true
+    @Published var isPresentingSubscription = false
     
     private var updateListenerTask: Task<Void, Error>?
+    
+    private let productIdentifiers = [
+        "mahmutclipboard_099_1m_3d0",
+        "com.walhallaa.clipboardManager.pro.weekly"
+    ]
     
     private init() {
         updateListenerTask = listenForTransactions()
         
         Task {
-            await requestProducts()
+            await fetchProducts()
             await updateSubscriptionStatus()
         }
     }
@@ -64,18 +74,22 @@ class SubscriptionManager: ObservableObject {
         await transaction.finish()
     }
     
-    func requestProducts() async {
+    func fetchProducts() async {
         do {
+            isLoading = true
             print("Requesting products...")
-            let productIdentifiers = SubscriptionTier.allCases.map { $0.rawValue }
-            print("Product IDs to request: \(productIdentifiers)")
-            
             let storeProducts = try await Product.products(for: productIdentifiers)
             print("Received \(storeProducts.count) products from the store")
             
-            subscriptions = storeProducts.sorted { $0.price < $1.price }
+            await MainActor.run {
+                self.subscriptions = storeProducts.sorted { $0.price < $1.price }
+                self.isLoading = false
+            }
         } catch {
             print("Failed to fetch products: \(error)")
+            await MainActor.run {
+                self.isLoading = false
+            }
         }
     }
     
@@ -89,12 +103,13 @@ class SubscriptionManager: ObservableObject {
             }
             await transaction.finish()
             await updateSubscriptionStatus()
+            await fetchProducts() // Refresh products after purchase
         case .userCancelled:
-            break
+            print("User cancelled")
         case .pending:
-            break
+            print("Transaction pending")
         @unknown default:
-            break
+            print("Unknown purchase result")
         }
     }
     
@@ -127,6 +142,7 @@ class SubscriptionManager: ObservableObject {
         do {
             try await AppStore.sync()
             await updateSubscriptionStatus()
+            await fetchProducts() // Refresh products after restore
         } catch {
             print("Failed to restore purchases: \(error)")
         }
