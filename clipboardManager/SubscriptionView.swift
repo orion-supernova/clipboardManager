@@ -137,15 +137,7 @@ struct SubscriptionView: View {
     }
     
     private var featuresSection: some View {
-        HStack(spacing: 25) {
-            ForEach(Array(PremiumFeature.allCases.enumerated()), id: \.element.title) { index, feature in
-                FeatureCard(
-                    feature: feature,
-                    isVisible: isAnimating,
-                    delay: Double(index) * 0.2
-                )
-            }
-        }
+        FeatureCardsContainer(isAnimating: isAnimating)
     }
     
     private var subscriptionPlans: some View {
@@ -212,14 +204,41 @@ struct SubscriptionView: View {
     }
 }
 
+struct FeatureCardsContainer: View {
+    let isAnimating: Bool
+    @Namespace private var animation
+    @State private var hoveredFeature: PremiumFeature?
+    
+    var body: some View {
+        HStack(spacing: 25) {
+            ForEach(Array(PremiumFeature.allCases.enumerated()), id: \.element.title) { index, feature in
+                FeatureCard(
+                    feature: feature,
+                    isVisible: isAnimating,
+                    delay: Double(index) * 0.2,
+                    namespace: animation,
+                    isHovered: hoveredFeature == feature
+                )
+                .onHover { isHovered in
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        hoveredFeature = isHovered ? feature : nil
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct FeatureCard: View {
     let feature: PremiumFeature
     let isVisible: Bool
     let delay: Double
-    @State private var isHovered = false
+    let namespace: Namespace.ID
+    let isHovered: Bool
     
     var body: some View {
         VStack(spacing: 20) {
+            // Icon with matched geometry effect
             Image(systemName: feature.icon)
                 .font(.system(size: 28))
                 .foregroundStyle(
@@ -233,9 +252,12 @@ struct FeatureCard: View {
                 .background(
                     Circle()
                         .fill(SubscriptionColors.cardBg)
-                        .shadow(color: SubscriptionColors.accent.opacity(0.3), radius: isHovered ? 8 : 0)
+                        .matchedGeometryEffect(id: "circle\(feature.title)", in: namespace)
+                        .shadow(
+                            color: SubscriptionColors.accent.opacity(0.3),
+                            radius: isHovered ? 8 : 0
+                        )
                 )
-                .scaleEffect(isHovered ? 1.05 : 1.0)
             
             VStack(spacing: 8) {
                 Text(feature.title)
@@ -267,15 +289,11 @@ struct FeatureCard: View {
                             lineWidth: 1
                         )
                 )
+                .matchedGeometryEffect(id: "card\(feature.title)", in: namespace)
         )
         .scaleEffect(isVisible ? 1 : 0.8)
         .opacity(isVisible ? 1 : 0)
         .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(delay), value: isVisible)
-        .onHover { hovering in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isHovered = hovering
-            }
-        }
     }
 }
 
