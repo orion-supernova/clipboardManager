@@ -283,27 +283,79 @@ struct FeatureCard: View {
         .padding(24)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(SubscriptionColors.cardBg)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    SubscriptionColors.accent.opacity(isHovered ? 0.5 : 0.2),
-                                    .clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-                .matchedGeometryEffect(id: "card\(feature.title)", in: namespace)
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(SubscriptionColors.cardBg)
+                    .matchedGeometryEffect(id: "card\(feature.title)", in: namespace)
+                
+                AnimatedBorder(isHovered: isHovered)
+            }
         )
         .scaleEffect(isVisible ? 1 : 0.8)
         .opacity(isVisible ? 1 : 0)
         .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(delay), value: isVisible)
+    }
+}
+
+// Add this new view for the animated border
+struct AnimatedBorder: View {
+    let isHovered: Bool
+    
+    @State private var trimStart: CGFloat = 0
+    
+    var body: some View {
+        ZStack {
+            // Static colored border
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SubscriptionColors.accent,
+                            SubscriptionColors.secondary
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+                .opacity(isHovered ? 0.8 : 0.3)
+            
+            // Traveling highlight
+            RoundedRectangle(cornerRadius: 20)
+                .trim(from: trimStart, to: trimStart + 0.15) // Shorter, more elegant line
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SubscriptionColors.accent.opacity(0),
+                            SubscriptionColors.accent,
+                            SubscriptionColors.secondary,
+                            SubscriptionColors.secondary.opacity(0)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    style: StrokeStyle(
+                        lineWidth: 2,
+                        lineCap: .round
+                    )
+                )
+                .opacity(isHovered ? 0.8 : 0)
+                .blur(radius: 0.5) // Subtle blur for glow effect
+        }
+        .onChange(of: isHovered) { newValue in
+            if newValue {
+                withAnimation(
+                    .linear(duration: 1.5) // Slightly faster animation
+                    .repeatForever(autoreverses: false)
+                ) {
+                    trimStart = 1.0
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    trimStart = 0
+                }
+            }
+        }
     }
 }
 
@@ -352,22 +404,14 @@ struct SubscriptionPlanCard: View {
         }
         .padding(24)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(SubscriptionColors.cardBg)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(
-                            LinearGradient(
-                                colors: [
-                                    SubscriptionColors.accent.opacity(isHovered ? 0.5 : 0.2),
-                                    .clear
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(SubscriptionColors.cardBg)
+                
+                // Use a slightly modified border for subscription cards
+                AnimatedBorder(isHovered: isHovered)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
         )
         .scaleEffect(isHovered ? 1.02 : 1.0)
         .onHover { hovering in
