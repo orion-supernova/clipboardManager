@@ -39,12 +39,22 @@ enum PremiumFeature: CaseIterable {
 struct SubscriptionColors {
     static let background = Color(hex: "0A0A0F")
     static let cardBg = Color(hex: "141419")
-    static let accent = Color(hex: "6C72FF")  // Electric indigo
-    static let secondary = Color(hex: "FF6B6B") // Coral pink
+    
+    // Primary accent colors - Deep purple to blue
+    static let accent = Color(hex: "7C3AED")      // Deep purple
+    static let secondary = Color(hex: "818CF8")    // Indigo blue
+    
     static let text = Color.white
     static let textSecondary = Color(hex: "9999A3")
-    static let gradient1 = Color(hex: "4A00E0")
-    static let gradient2 = Color(hex: "8E2DE2")
+    
+    // Premium button gradients - Rich purple to blue transition
+    static let buttonGradient1 = Color(hex: "8B5CF6")  // Bright purple
+    static let buttonGradient2 = Color(hex: "7C3AED")  // Deep purple
+    static let buttonGradient3 = Color(hex: "6366F1")  // Indigo
+    
+    // Price gradient colors - Ethereal purple
+    static let priceGradient1 = Color(hex: "C4B5FD")  // Light purple
+    static let priceGradient2 = Color(hex: "8B5CF6")  // Medium purple
 }
 
 struct SubscriptionView: View {
@@ -59,17 +69,17 @@ struct SubscriptionView: View {
             LinearGradient(
                 colors: [
                     SubscriptionColors.background,
-                    SubscriptionColors.background.opacity(0.95)
+                    Color(hex: "1A1A2E")  // Slightly purple-tinted dark
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .overlay(
-                // Subtle gradient overlay
+                // Subtle gradient overlay with purple accent
                 RadialGradient(
                     colors: [
-                        SubscriptionColors.accent.opacity(0.1),
-                        SubscriptionColors.secondary.opacity(0.05),
+                        Color(hex: "7C3AED").opacity(0.15),  // Deep purple
+                        Color(hex: "6366F1").opacity(0.1),   // Indigo
                         .clear
                     ],
                     center: .topLeading,
@@ -322,7 +332,16 @@ struct SubscriptionPlanCard: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(product.displayPrice)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(SubscriptionColors.accent)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [
+                                SubscriptionColors.priceGradient1,
+                                SubscriptionColors.priceGradient2
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
                 
                 Text("/month")
                     .font(.system(size: 14, design: .rounded))
@@ -362,6 +381,7 @@ struct SubscriptionPlanCard: View {
 struct PremiumButton: View {
     let title: String
     let action: () -> Void
+    @State private var isHovered = false
     
     init(_ title: String, action: @escaping () -> Void) {
         self.title = title
@@ -377,14 +397,43 @@ struct PremiumButton: View {
                 .padding(.vertical, 12)
                 .background(
                     LinearGradient(
-                        colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                        colors: [
+                            SubscriptionColors.buttonGradient1,
+                            SubscriptionColors.buttonGradient2,
+                            SubscriptionColors.buttonGradient3
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
                 )
                 .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    .white.opacity(0.5),
+                                    .white.opacity(0.2)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
+                .shadow(
+                    color: SubscriptionColors.buttonGradient2.opacity(0.5),
+                    radius: isHovered ? 12 : 8,
+                    y: isHovered ? 2 : 4
+                )
         }
         .buttonStyle(PlainButtonStyle())
+        .scaleEffect(isHovered ? 1.05 : 1.0)
+        .onHover { hover in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isHovered = hover
+            }
+        }
     }
 }
 
