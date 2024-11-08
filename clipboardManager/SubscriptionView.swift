@@ -212,10 +212,10 @@ struct SubscriptionView: View {
                         )
                     }
                     
-                    Button("Debug: Set Yearly") {
+                    Button("Debug: Set Weekly") {
                         subscriptionManager.setDebugSubscriptionStatus(
                             isSubscribed: true,
-                            tier: .yearly
+                            tier: .weekly
                         )
                     }
                     
@@ -248,75 +248,67 @@ struct SubscriptionView: View {
         .padding(.vertical, 30)
     }
     
-    #if DEBUG
-    private var debugControls: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            GroupBox(label: Text("Debug Controls").bold()) {
-                VStack(spacing: 16) {
-                    HStack(spacing: 20) {
-                        Button("Set Monthly") {
-                            subscriptionManager.setDebugSubscriptionStatus(
-                                isSubscribed: true,
-                                tier: .monthly
-                            )
-                        }
-                        .buttonStyle(DebugButtonStyle())
-                        
-                        Button("Set Yearly") {
-                            subscriptionManager.setDebugSubscriptionStatus(
-                                isSubscribed: true,
-                                tier: .yearly
-                            )
-                        }
-                        .buttonStyle(DebugButtonStyle())
-                        
-                        Button("Cancel Sub") {
-                            subscriptionManager.cancelDebugSubscription()
-                        }
-                        .buttonStyle(DebugButtonStyle(isDestructive: true))
-                    }
-                    
-                    // Add more debug controls here if needed
-                    Text("Debug Info:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("Current Tier: \(subscriptionManager.currentTier?.displayName ?? "None")")
-                        .font(.caption)
-                    Text("Is Subscribed: \(subscriptionManager.isSubscribed ? "Yes" : "No")")
-                        .font(.caption)
-                    if let date = subscriptionManager.subscriptionExpirationDate {
-                        Text("Expires: \(date, style: .date)")
-                            .font(.caption)
-                    }
-                }
-                .padding(8)
-            }
-            .frame(maxHeight: 200)  // Limit the height
-            .padding(.top, 20)
-        }
-    }
-
-    struct DebugButtonStyle: ButtonStyle {
-        var isDestructive: Bool = false
-        
-        func makeBody(configuration: Configuration) -> some View {
-            configuration.label
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundColor(isDestructive ? .red : SubscriptionColors.accent)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(
-                            isDestructive ? Color.red.opacity(0.3) : SubscriptionColors.accent.opacity(0.3),
-                            lineWidth: 1
-                        )
-                )
-                .opacity(configuration.isPressed ? 0.8 : 1.0)
-                .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-        }
-    }
-    #endif
+//    #if DEBUG
+//    private var debugControls: some View {
+//        ScrollView(.vertical, showsIndicators: true) {
+//            GroupBox(label: Text("Debug Controls").bold()) {
+//                VStack(spacing: 16) {
+//                    HStack(spacing: 20) {
+//                        Button("Set Monthly") {
+//                            subscriptionManager.setDebugSubscriptionStatus(
+//                                isSubscribed: true,
+//                                tier: .monthly
+//                            )
+//                        }
+//                        .buttonStyle(DebugButtonStyle())
+//                                                
+//                        Button("Cancel Sub") {
+//                            subscriptionManager.cancelDebugSubscription()
+//                        }
+//                        .buttonStyle(DebugButtonStyle(isDestructive: true))
+//                    }
+//                    
+//                    // Add more debug controls here if needed
+//                    Text("Debug Info:")
+//                        .font(.caption)
+//                        .foregroundColor(.secondary)
+//                    Text("Current Tier: \(subscriptionManager.currentTier?.displayName ?? "None")")
+//                        .font(.caption)
+//                    Text("Is Subscribed: \(subscriptionManager.isSubscribed ? "Yes" : "No")")
+//                        .font(.caption)
+//                    if let date = subscriptionManager.subscriptionExpirationDate {
+//                        Text("Expires: \(date, style: .date)")
+//                            .font(.caption)
+//                    }
+//                }
+//                .padding(8)
+//            }
+//            .frame(maxHeight: 200)  // Limit the height
+//            .padding(.top, 20)
+//        }
+//    }
+//
+//    struct DebugButtonStyle: ButtonStyle {
+//        var isDestructive: Bool = false
+//        
+//        func makeBody(configuration: Configuration) -> some View {
+//            configuration.label
+//                .font(.system(size: 13, weight: .medium, design: .rounded))
+//                .foregroundColor(isDestructive ? .red : SubscriptionColors.accent)
+//                .padding(.horizontal, 12)
+//                .padding(.vertical, 6)
+//                .background(
+//                    RoundedRectangle(cornerRadius: 6)
+//                        .stroke(
+//                            isDestructive ? Color.red.opacity(0.3) : SubscriptionColors.accent.opacity(0.3),
+//                            lineWidth: 1
+//                        )
+//                )
+//                .opacity(configuration.isPressed ? 0.8 : 1.0)
+//                .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+//        }
+//    }
+//    #endif
 }
 
 struct FeatureCardsContainer: View {
@@ -636,6 +628,7 @@ struct FooterButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
     }
 }
+
 
 
 

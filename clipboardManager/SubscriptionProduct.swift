@@ -9,20 +9,20 @@ import Foundation
 import StoreKit
 
 enum SubscriptionTier: String, CaseIterable {
-    case monthly = "com.walhallaa.clipboardmanager.monthly"
-    case yearly = "com.walhallaa.clipboardmanager.yearly"
+    case monthly = "mahmutclipboard_099_1m_3d0"
+    case weekly = "com.walhallaa.clipboardManager.pro.weekly"
     
     var displayName: String {
         switch self {
         case .monthly: return "Monthly Pro"
-        case .yearly: return "Yearly Pro"
+        case .weekly: return "Weekly Pro"
         }
     }
     
     var description: String {
         switch self {
         case .monthly: return "Unlimited clipboard items, Search feature"
-        case .yearly: return "Unlimited clipboard items, Search feature (Save 20%)"
+        case .weekly: return "Unlimited clipboard items, Search feature"
         }
     }
 }
@@ -37,43 +37,107 @@ class SubscriptionManager: ObservableObject {
     @Published private(set) var currentTier: SubscriptionTier?
     @Published private(set) var subscriptionExpirationDate: Date?
     
-    #if DEBUG
-    // Debug functions
-    func setDebugSubscriptionStatus(isSubscribed: Bool, tier: SubscriptionTier?) {
-        self.isSubscribed = isSubscribed
-        self.currentTier = tier
-        self.subscriptionExpirationDate = Calendar.current.date(byAdding: .month, value: 1, to: Date())
-        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
-    }
+    // Update product identifiers to match your StoreKit configuration
+    private let productIdentifiers = Set([
+        "mahmutclipboard_099_1m_3d0",  // Monthly subscription ID
+        "com.walhallaa.clipboardManager.pro.weekly"  // Weekly subscription ID
+    ])
     
-    func cancelDebugSubscription() {
-        self.isSubscribed = false
-        self.currentTier = nil
-        self.subscriptionExpirationDate = nil
-        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
-    }
-    #endif
+    // Cache keys
+    private let lastVerifiedKey = "lastVerifiedDate"
+    private let cachedSubscriptionStatusKey = "cachedSubscriptionStatus"
+    private let cachedSubscriptionTierKey = "cachedSubscriptionTier"
+    private let cachedExpirationDateKey = "cachedExpirationDate"
     
-    private let productIdentifiers = [
-        "mahmutclipboard_099_1m_3d0",
-        "com.walhallaa.clipboardManager.pro.weekly"
-    ]
+    // Verification interval (e.g., verify once per day)
+    private let verificationInterval: TimeInterval = 24 * 60 * 60
     
     private init() {
+        // Load cached values first
+        loadCachedSubscriptionStatus()
+        
+        // Only check online if needed
         Task {
             await fetchProducts()
-            await checkSubscriptionStatus()
+            if shouldVerifySubscription() {
+                await checkSubscriptionStatus()
+            }
             setupTransactionListener()
         }
     }
     
+    private func loadCachedSubscriptionStatus() {
+        let defaults = UserDefaults.standard
+        isSubscribed = defaults.bool(forKey: cachedSubscriptionStatusKey)
+        if let tierString = defaults.string(forKey: cachedSubscriptionTierKey) {
+            currentTier = SubscriptionTier(rawValue: tierString)
+        }
+        subscriptionExpirationDate = defaults.object(forKey: cachedExpirationDateKey) as? Date
+    }
+    
+    private func cacheSubscriptionStatus() {
+        let defaults = UserDefaults.standard
+        defaults.set(isSubscribed, forKey: cachedSubscriptionStatusKey)
+        defaults.set(currentTier?.rawValue, forKey: cachedSubscriptionTierKey)
+        defaults.set(subscriptionExpirationDate, forKey: cachedExpirationDateKey)
+        defaults.set(Date(), forKey: lastVerifiedKey)
+    }
+    
+    private func shouldVerifySubscription() -> Bool {
+        let defaults = UserDefaults.standard
+        guard let lastVerified = defaults.object(forKey: lastVerifiedKey) as? Date else {
+            return true
+        }
+        return Date().timeIntervalSince(lastVerified) >= verificationInterval
+    }
+    
     private func checkSubscriptionStatus() async {
-        for await result in Transaction.currentEntitlements {
-            if case .verified(let transaction) = result {
-                await MainActor.run {
-                    updateSubscriptionStatus(transaction)
+        do {
+            var hasActiveSubscription = false
+            
+            for await result in Transaction.currentEntitlements {
+                if case .verified(let transaction) = result {
+                    if let expirationDate = transaction.expirationDate,
+                       expirationDate > Date() {
+                        await MainActor.run {
+                            self.isSubscribed = true
+                            self.currentTier = SubscriptionTier(rawValue: transaction.productID)
+                            self.subscriptionExpirationDate = expirationDate
+                        }
+                        hasActiveSubscription = true
+                        break
+                    }
                 }
-                break
+            }
+            
+            // Cache the verified status
+            cacheSubscriptionStatus()
+            
+        } catch {
+            print("Failed to verify subscription status:", error)
+            // On error, fall back to cached values
+        }
+    }
+    
+    private func setupTransactionListener() {
+        Task {
+            for await result in Transaction.updates {
+                if case .verified(let transaction) = result {
+                    await MainActor.run {
+                        // Only update if the subscription is not expired
+                        if let expirationDate = transaction.expirationDate,
+                           expirationDate > Date() {
+                            self.isSubscribed = true
+                            self.currentTier = SubscriptionTier(rawValue: transaction.productID)
+                            self.subscriptionExpirationDate = expirationDate
+                        } else {
+                            self.isSubscribed = false
+                            self.currentTier = nil
+                            self.subscriptionExpirationDate = nil
+                        }
+                    }
+                    await transaction.finish()
+                }
             }
         }
     }
@@ -172,26 +236,22 @@ class SubscriptionManager: ObservableObject {
         
     }
     
-    private func setupTransactionListener() {
-        Task {
-            for await result in Transaction.updates {
-                if case .verified(let transaction) = result {
-                    await MainActor.run {
-                        updateSubscriptionStatus(transaction)
-                    }
-                    await transaction.finish()
-                }
-            }
-        }
-    }
-    
-    private func updateSubscriptionStatus(_ transaction: Transaction) {
-        // Update subscription status based on the transaction
-        isSubscribed = true
-        currentTier = SubscriptionTier(rawValue: transaction.productID)
-        subscriptionExpirationDate = transaction.expirationDate
+    #if DEBUG
+    // Debug functions should still work the same way for testing
+    func setDebugSubscriptionStatus(isSubscribed: Bool, tier: SubscriptionTier?) {
+        self.isSubscribed = isSubscribed
+        self.currentTier = tier
+        self.subscriptionExpirationDate = Calendar.current.date(byAdding: .month, value: 1, to: Date())
         NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
     }
+    
+    func cancelDebugSubscription() {
+        self.isSubscribed = false
+        self.currentTier = nil
+        self.subscriptionExpirationDate = nil
+        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
+    }
+    #endif
 }
 
 // Add notification name

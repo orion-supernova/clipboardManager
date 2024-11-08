@@ -11,244 +11,165 @@ import ServiceManagement
 struct ClipboardSettingsView: View {
     @Environment(\.controlActiveState) private var controlActiveState
     @StateObject private var settings = ClipboardSettings.shared
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     var body: some View {
         VStack(spacing: 20) {
-            GroupBox(label: Text("General Settings").bold()) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Toggle("Launch at login", isOn: $settings.launchAtLogin)
-                        .onChange(of: settings.launchAtLogin) { newValue in
-                            if newValue {
-                                addToLaunchItems()
-                            } else {
-                                removeFromLaunchItems()
-                            }
-                        }
-                    Divider()
-                    
-                    HStack {
-                        Text("Retain clips:")
-                        Picker("", selection: $settings.retainCount) {
-                            ForEach([20, 50, 100, 200, 500, -1], id: \.self) { count in
-                                if count == -1 {
-                                    Text("Infinite").tag(count)
-                                } else {
-                                    Text("\(count) items").tag(count)
-                                }
-                            }
-                        }
-                        .frame(width: 120)
-                    }
-                    
-                    Toggle("Enable keyboard navigation", isOn: $settings.enableKeyboardNavigation)
-                        .help("Use left/right arrow keys to navigate and Enter to select")
-                    
-                    if settings.enableKeyboardNavigation {
-                        HStack(spacing: 16) {
-                            Text("Shortcuts:")
-                                .foregroundColor(.secondary)
-                                .font(.subheadline)
-                            
-                            HStack(spacing: 12) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.left")
-                                        .foregroundColor(.blue)
-                                    Text("Previous")
-                                        .foregroundColor(.secondary)
-                                        .font(.subheadline)
-                                }
-                                
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.right")
-                                        .foregroundColor(.blue)
-                                    Text("Next")
-                                        .foregroundColor(.secondary)
-                                        .font(.subheadline)
-                                }
-                                
-                                HStack(spacing: 4) {
-                                    Text("↵")
-                                        .foregroundColor(.blue)
-                                    Text("Select")
-                                        .foregroundColor(.secondary)
-                                        .font(.subheadline)
-                                }
-                            }
-                        }
-                        .padding(.leading, 20)
-                        .padding(.top, 2)
-                    }
-                }
-                .padding()
-            }
-            
-            GroupBox(label: Text("Subscription Status").bold()) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Status:")
-                        Text(subscriptionManager.isSubscribed ? "Active" : "Free")
-                            .foregroundColor(subscriptionManager.isSubscribed ? .green : .secondary)
-                    }
-                    
-                    if subscriptionManager.isSubscribed {
-                        HStack {
-                            Text("Plan:")
-                            Text(subscriptionManager.currentTier?.displayName ?? "Unknown")
-                        }
-                        
-                        if let expirationDate = subscriptionManager.subscriptionExpirationDate {
-                            HStack {
-                                Text("Expires:")
-                                Text(expirationDate, style: .date)
-                            }
-                        }
-                    } else {
-                        Button("Upgrade to Pro") {
-                            NotificationCenter.default.post(
-                                name: .showSubscriptionViewNotification,
-                                object: nil
-                            )
-                        }
-                        .controlSize(.large)
-                        .buttonStyle(.borderedProminent)
-                        .padding(.top, 8)
-                    }
-                    
-                    #if DEBUG
-                    Divider()
-                    
-                    Text("Debug Controls")
-                        .font(.headline)
-                    
-                    HStack(spacing: 16) {
-                        Button("Set Monthly") {
-                            subscriptionManager.setDebugSubscriptionStatus(
-                                isSubscribed: true,
-                                tier: .monthly
-                            )
-                        }
-                        
-                        Button("Set Yearly") {
-                            subscriptionManager.setDebugSubscriptionStatus(
-                                isSubscribed: true,
-                                tier: .yearly
-                            )
-                        }
-                        
-                        Button("Cancel") {
-                            subscriptionManager.cancelDebugSubscription()
-                        }
-                        .foregroundColor(.red)
-                    }
-                    #endif
-                }
-                .padding()
-            }
-            
-            GroupBox(label: Text("Don't Forget to Enable Autopaste").bold()) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Enable Autopaste by adding / enabling this app in System Preferences > Privacy & Security > Accessibility")
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Text("If you can't still auto-paste, remove completely with minus sign (-) and add it with plus sign (+) again.")
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    Button {
-                        openAccessibilityPreferences()
-                    } label: {
-                        Text("Open Accessibility Preferences")
-                    }
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-            }
-            
-            GroupBox(label: Text("Keyboard Shortcuts").bold()) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        
-                        Text("Show / Hide clipboard:")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Spacer()
-                        KeyboardShortcutView(shortcut: "⌘ + Shift + V")
-                        Spacer()
-                    }
-//                    HStack {
-//                        Text("Clear history:")
-//                            .frame(width: 100, alignment: .leading)
-//                        KeyboardShortcutView(shortcut: "⌘ + Shift + X")
-//                    }
-                }
-                .padding()
-            }
-            
-//            HStack {
-//                Spacer()
-//                Button("Restore Defaults") {
-//                    // Add reset logic here
-//                }
-//                Button("Save") {
-//                    // Add save logic here
-//                }
-//            }
+            GeneralSettingsSection(settings: settings)
+            SubscriptionStatusSection(subscriptionManager: subscriptionManager)
+            AutopasteSection()
+            KeyboardShortcutsSection()
         }
         .onChange(of: settings.retainCount) { newCount in
             if newCount == -1 {
-                showSimpleCustomAlert(title: "Caution!", message: "This may lead to performance issues and more CPU usage if you have a lot of items.")
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now()+0.2) {
+                    showSimpleCustomAlert(title: "Caution!", message: "This may lead to performance issues and more CPU usage if you have a lot of items.")
+                }
             } else {
-                showSimpleCustomAlert(title: "Okay!", message: "Your extra items will be removed when you restart the app.")
-            }
-            
-        }
-        .onChange(of: controlActiveState) { newValue in
-            switch newValue {
-            case .key, .active:
-                break
-            case .inactive:
-                print("SETTİNGS INACTIVE")
-                AppDelegate.windowControllers.removeAll()
-                hotkeyForInterfaceVisibility.isPaused = false
-            @unknown default:
-                break
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now()+0.2) {
+                    showSimpleCustomAlert(title: "Okay!", message: "Your extra items will be removed when you restart the app.")
+                }
             }
         }
         .padding()
         .frame(width: 400)
-        .onChange(of: settings.launchAtLogin) { newValue in
-            if newValue == true {
-                addToLaunchItems()
-            } else {
-                removeFromLaunchItems()
-            }
-        }
-        .onAppear {
-            hotkeyForInterfaceVisibility.isPaused = true
-        }
-        .onDisappear {
-            AppDelegate.windowControllers.removeAll()
-            hotkeyForInterfaceVisibility.isPaused = false
-            print("disappeared SettingsView")
-        }
-    }
-    
-    @discardableResult
-    func openAccessibilityPreferences() -> Bool {
-        // Try modern URL scheme first
-        let prefpaneURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-        if NSWorkspace.shared.open(prefpaneURL) {
-            return true
-        }
-        
-        // Fallback for older versions
-        return NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/Security.prefPane"))
     }
 }
+
+// Break down into separate components
+struct GeneralSettingsSection: View {
+    @ObservedObject var settings: ClipboardSettings
+    
+    var body: some View {
+        GroupBox(label: Text("General Settings").bold()) {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle("Launch at login", isOn: $settings.launchAtLogin)
+                    .onChange(of: settings.launchAtLogin) { newValue in
+                        if newValue {
+                            addToLaunchItems()
+                        } else {
+                            removeFromLaunchItems()
+                        }
+                    }
+                Divider()
+                
+                RetainClipsSection(settings: settings)
+                KeyboardNavigationSection(settings: settings)
+            }
+            .padding()
+        }
+    }
+}
+
+struct SubscriptionStatusSection: View {
+    @ObservedObject var subscriptionManager: SubscriptionManager
+    
+    var body: some View {
+        GroupBox(label: Text("Subscription Status").bold()) {
+            VStack(alignment: .leading, spacing: 12) {
+                // ... subscription status content ...
+                StatusContent(subscriptionManager: subscriptionManager)
+                
+                #if DEBUG
+                DebugControls(subscriptionManager: subscriptionManager)
+                #endif
+            }
+            .padding()
+        }
+    }
+}
+
+struct StatusContent: View {
+    @ObservedObject var subscriptionManager: SubscriptionManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Status:")
+                Text(subscriptionManager.isSubscribed ? "Active" : "Free")
+                    .foregroundColor(subscriptionManager.isSubscribed ? .green : .secondary)
+            }
+            
+            if subscriptionManager.isSubscribed {
+                SubscriptionDetails(subscriptionManager: subscriptionManager)
+            } else {
+                UpgradeButton()
+            }
+        }
+    }
+}
+
+struct SubscriptionDetails: View {
+    @ObservedObject var subscriptionManager: SubscriptionManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Plan:")
+                Text(subscriptionManager.currentTier?.displayName ?? "Unknown")
+            }
+            
+            if let expirationDate = subscriptionManager.subscriptionExpirationDate {
+                HStack {
+                    Text("Expires:")
+                    Text(expirationDate, style: .date)
+                }
+            }
+        }
+    }
+}
+
+struct UpgradeButton: View {
+    var body: some View {
+        Button("Upgrade to Pro") {
+            NotificationCenter.default.post(
+                name: .showSubscriptionViewNotification,
+                object: nil
+            )
+        }
+        .controlSize(.large)
+        .buttonStyle(.borderedProminent)
+        .padding(.top, 8)
+    }
+}
+
+#if DEBUG
+struct DebugControls: View {
+    @ObservedObject var subscriptionManager: SubscriptionManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+            Text("Debug Controls")
+                .font(.headline)
+            
+            HStack(spacing: 16) {
+                Button("Set Monthly") {
+                    subscriptionManager.setDebugSubscriptionStatus(
+                        isSubscribed: true,
+                        tier: .monthly
+                    )
+                }
+                
+                Button("Set Weekly") {
+                    subscriptionManager.setDebugSubscriptionStatus(
+                        isSubscribed: true,
+                        tier: .weekly
+                    )
+                }
+                
+                Button("Cancel") {
+                    subscriptionManager.cancelDebugSubscription()
+                }
+                .foregroundColor(.red)
+            }
+        }
+    }
+}
+#endif
 
 struct KeyboardShortcutView: View {
     let shortcut: String
@@ -364,3 +285,118 @@ struct KeyboardShortcutView: View {
 //
 //
 //}
+
+struct AutopasteSection: View {
+    var body: some View {
+        GroupBox(label: Text("Don't Forget to Enable Autopaste").bold()) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Enable Autopaste by adding / enabling this app in System Preferences > Privacy & Security > Accessibility")
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text("If you can't still auto-paste, remove completely with minus sign (-) and add it with plus sign (+) again.")
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Button("Open Accessibility Preferences") {
+                    openAccessibilityPreferences()
+                }
+            }
+            .padding()
+        }
+    }
+    
+    private func openAccessibilityPreferences() -> Bool {
+        let prefpaneURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        if NSWorkspace.shared.open(prefpaneURL) {
+            return true
+        }
+        return NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Library/PreferencePanes/Security.prefPane"))
+    }
+}
+
+struct KeyboardShortcutsSection: View {
+    var body: some View {
+        GroupBox(label: Text("Keyboard Shortcuts").bold()) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Show / Hide clipboard:")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Spacer()
+                    KeyboardShortcutView(shortcut: "⌘ + Shift + V")
+                    Spacer()
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+struct RetainClipsSection: View {
+    @ObservedObject var settings: ClipboardSettings
+    
+    var body: some View {
+        HStack {
+            Text("Retain clips:")
+            Picker("", selection: $settings.retainCount) {
+                ForEach([20, 50, 100, 200, 500, -1], id: \.self) { count in
+                    if count == -1 {
+                        Text("Infinite").tag(count)
+                    } else {
+                        Text("\(count) items").tag(count)
+                    }
+                }
+            }
+            .frame(width: 120)
+        }
+    }
+}
+
+struct KeyboardNavigationSection: View {
+    @ObservedObject var settings: ClipboardSettings
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Enable keyboard navigation", isOn: $settings.enableKeyboardNavigation)
+                .help("Use left/right arrow keys to navigate and Enter to select")
+            
+            if settings.enableKeyboardNavigation {
+                HStack(spacing: 16) {
+                    Text("Shortcuts:")
+                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                    
+                    HStack(spacing: 12) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.left")
+                                .foregroundColor(.blue)
+                            Text("Previous")
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.right")
+                                .foregroundColor(.blue)
+                            Text("Next")
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
+                        
+                        HStack(spacing: 4) {
+                            Text("↵")
+                                .foregroundColor(.blue)
+                            Text("Select")
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                        }
+                    }
+                }
+                .padding(.leading, 20)
+            }
+        }
+    }
+}
