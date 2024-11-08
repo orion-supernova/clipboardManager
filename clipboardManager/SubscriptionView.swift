@@ -188,6 +188,11 @@ struct SubscriptionView: View {
                     .foregroundColor(SubscriptionColors.textSecondary)
                 
                 Button("Restore Purchases") {
+                    // Bring window to front before starting restore process
+                    if let window = NSApp.windows.first(where: { $0.title == "Subscription" }) {
+                        window.orderFrontRegardless()
+                    }
+                    
                     Task {
                         await subscriptionManager.restorePurchases()
                     }

@@ -64,6 +64,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         setupWindow()
         hotkeyForInterfaceVisibility.keyDownHandler = handleAppShortcut
         hotkeyForEscape.keyDownHandler = makeAppHiddenAction
+
+        // Set up window level observer for StoreKit authentication window
+        NSWindow.swizzleKeyWindow()
     }
 
     // MARK: - Public Methods
@@ -275,7 +278,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 return
             }
 
-            // Reduced height from 600 to 500
             self.subscriptionWindow = NSWindow(
                 contentRect: NSRect(x: 0, y: 0, width: 800, height: 800),
                 styleMask: [.titled, .closable],
@@ -285,20 +287,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             guard let window = self.subscriptionWindow else { return }
 
-            window.title = "Upgrade to Pro"
+            window.title = "Subscription"  // Changed to match what StoreKit looks for
             window.contentView = NSHostingView(rootView: SubscriptionView())
             window.level = .screenSaver
             window.delegate = self
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-
-            // Position the window higher on the screen
-            if let screen = NSScreen.main {
-                let centerX = screen.frame.midX - (window.frame.width / 2)
-                // Position it at 70% of screen height instead of center
-                let centerY = screen.frame.minY + (screen.frame.height * 0.7)
-                window.setFrameOrigin(NSPoint(x: centerX, y: centerY))
-            }
+            window.isMovableByWindowBackground = false
+            window.center()  // Center the window
 
             let windowController = NSWindowController(window: window)
             AppDelegate.windowControllers.append(windowController)
@@ -372,4 +368,28 @@ extension NSNotification.Name {
     // ... other notification names ...
     static let showSubscriptionViewNotification = NSNotification.Name(
         "showSubscriptionViewNotification")
+}
+
+extension NSWindow {
+    static func swizzleKeyWindow() {
+        let originalSelector = #selector(NSWindow.makeKeyAndOrderFront(_:))
+        let swizzledSelector = #selector(NSWindow.swizzled_makeKeyAndOrderFront(_:))
+        
+        let originalMethod = class_getInstanceMethod(NSWindow.self, originalSelector)
+        let swizzledMethod = class_getInstanceMethod(NSWindow.self, swizzledSelector)
+        
+        if let originalMethod = originalMethod, let swizzledMethod = swizzledMethod {
+            method_exchangeImplementations(originalMethod, swizzledMethod)
+        }
+    }
+    
+    @objc func swizzled_makeKeyAndOrderFront(_ sender: Any?) {
+        self.swizzled_makeKeyAndOrderFront(sender)
+        
+        // Check if this is a StoreKit authentication window
+        if self.title.contains("Store") {
+            self.level = .popUpMenu  // Highest level for modal windows
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
 }

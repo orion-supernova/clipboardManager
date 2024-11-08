@@ -27,7 +27,6 @@ enum SubscriptionTier: String, CaseIterable {
     }
 }
 
-
 @MainActor
 class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
@@ -73,32 +72,83 @@ class SubscriptionManager: ObservableObject {
     }
     
     func purchase(_ product: Product) async throws {
-        let result = try await product.purchase()
+        // Store current window and its level
+        let subscriptionWindow = NSApp.windows.first(where: { $0.title == "Subscription" })
+        let originalLevel = subscriptionWindow?.level
         
-        switch result {
-        case .success(let verification):
-            switch verification {
-            case .verified(let transaction):
-                await transaction.finish()
-            case .unverified:
-                print("Unverified transaction")
-            }
-        case .userCancelled:
-            print("User cancelled")
-        case .pending:
-            print("Transaction pending")
-        @unknown default:
-            print("Unknown purchase result")
+        // Lower window level temporarily
+        DispatchQueue.main.async {
+            subscriptionWindow?.level = .normal
         }
-
+        
+        do {
+            let result = try await product.purchase()
+            
+            switch result {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    await transaction.finish()
+                case .unverified:
+                    print("Unverified transaction")
+                }
+            case .userCancelled:
+                print("User cancelled")
+            case .pending:
+                print("Transaction pending")
+            @unknown default:
+                print("Unknown purchase result")
+            }
+            
+            // Restore window level after purchase attempt
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
+                subscriptionWindow?.level = .screenSaver
+            }
+        } catch {
+            print("Purchase failed:", error)
+            
+            // Restore window level even if purchase fails
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
+                subscriptionWindow?.level = .screenSaver
+            }
+        }
     }
     
     func restorePurchases() async {
+        // Store current window and its level
+        let subscriptionWindow = NSApp.windows.first(where: { $0.title == "Subscription" })
+        let originalLevel = subscriptionWindow?.level
+        
+        // Lower window level temporarily
+        DispatchQueue.main.async {
+            subscriptionWindow?.level = .normal
+        }
+        
         do {
             try await AppStore.sync()
+            
+            // Wait briefly then restore window level
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
+            
+            DispatchQueue.main.async {
+                subscriptionWindow?.level = originalLevel ?? .modalPanel
+                subscriptionWindow?.orderFrontRegardless()
+                NSApp.activate(ignoringOtherApps: true)
+            }
         } catch {
             print("Failed to restore purchases:", error)
+            
+            // Restore window level even if restore fails
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
+                subscriptionWindow?.level = .screenSaver
+            }
         }
+    }
+    private func reOrderWindowsAfterFail() {
+        
     }
     
     private func setupTransactionListener() {
