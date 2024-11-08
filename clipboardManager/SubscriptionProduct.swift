@@ -83,32 +83,68 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
-    func purchase(_ product: Product) async throws {
-        let result = try await product.purchase()
+    private func manageSubscriptionWindow(operation: @escaping () async throws -> Void) async {
+        // Store current window and its level
+        let subscriptionWindow = NSApp.windows.first(where: { $0.title == "Subscription" })
+        let originalLevel = subscriptionWindow?.level
         
-        switch result {
-        case .success(let verification):
-            switch verification {
-            case .verified(let transaction):
-                await transaction.finish()
-            case .unverified:
-                print("Unverified transaction")
+        // Lower window level temporarily
+        DispatchQueue.main.async {
+            subscriptionWindow?.level = .normal
+        }
+        
+        do {
+            try await operation()
+            
+            // Restore window level and ensure visibility
+            DispatchQueue.main.async {
+                subscriptionWindow?.level = originalLevel ?? .screenSaver
+                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil )
+                NSApp.activate(ignoringOtherApps: true)
+                subscriptionWindow?.makeKeyAndOrderFront(nil)
+                subscriptionWindow?.orderFrontRegardless()
             }
-        case .userCancelled:
-            print("User cancelled")
-        case .pending:
-            print("Transaction pending")
-        @unknown default:
-            print("Unknown purchase result")
+        } catch {
+            print("Operation failed:", error)
+            
+            // Restore window level even on error
+            DispatchQueue.main.async {
+                subscriptionWindow?.level = originalLevel ?? .screenSaver
+                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil )
+                NSApp.activate(ignoringOtherApps: true)
+                subscriptionWindow?.makeKeyAndOrderFront(nil)
+                subscriptionWindow?.orderFrontRegardless()
+            }
+        }
+    }
+    
+    func purchase(_ product: Product) async throws {
+        await manageSubscriptionWindow {
+            let result = try await product.purchase()
+            
+            switch result {
+            case .success(let verification):
+                switch verification {
+                case .verified(let transaction):
+                    await transaction.finish()
+                case .unverified:
+                    print("Unverified transaction")
+                }
+            case .userCancelled:
+                print("User cancelled")
+            case .pending:
+                print("Transaction pending")
+            @unknown default:
+                print("Unknown purchase result")
+            }
         }
     }
     
     func restorePurchases() async {
-        do {
+        await manageSubscriptionWindow { [weak self] in
+            guard let self else { return }
             try await AppStore.sync()
             await checkSubscriptionStatus()
-        } catch {
-            print("Failed to restore purchases:", error)
         }
     }
     
