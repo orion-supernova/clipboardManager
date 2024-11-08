@@ -96,31 +96,29 @@ class SubscriptionManager: ObservableObject {
     }
     
     func updateSubscriptionStatus() async {
-            var isSubscribedTemp = false
-            
-            for await result in Transaction.currentEntitlements {
-                guard case .verified(let transaction) = result else {
-                    continue
-                }
-                
-                // Check if the transaction is valid
-                if transaction.productType == .autoRenewable {
-                    // Check if the transaction is still valid
-                    let isExpired = transaction.expirationDate != nil &&
-                        transaction.expirationDate! < Date() ||
-                        transaction.revocationDate != nil
-                    
-                    if !isExpired {
-                        isSubscribedTemp = true
-                        break
-                    }
-                }
+        var isSubscribedTemp = false
+        
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else {
+                continue
             }
             
-            DispatchQueue.main.async {
-                self.isSubscribed = isSubscribedTemp
+            if transaction.productType == .autoRenewable {
+                let isExpired = transaction.expirationDate != nil &&
+                    transaction.expirationDate! < Date() ||
+                    transaction.revocationDate != nil
+                
+                if !isExpired {
+                    isSubscribedTemp = true
+                    break
+                }
             }
         }
+        
+        await MainActor.run {
+            self.isSubscribed = isSubscribedTemp
+        }
+    }
     
     func restorePurchases() async {
         do {

@@ -10,7 +10,6 @@ import StoreKit
 
 struct SubscriptionView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
-    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(spacing: 20) {

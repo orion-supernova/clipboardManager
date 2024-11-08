@@ -122,12 +122,9 @@ struct MainView: View {
     }
     
     private func showSubscriptionView() {
-        WindowManager.shared.showWindow(
-            id: "subscription",
-            title: "Upgrade to Pro",
-            view: SubscriptionView(),
-            width: 400,
-            height: 500
+        NotificationCenter.default.post(
+            name: .showSubscriptionViewNotification,
+            object: nil
         )
     }
 }
@@ -341,12 +338,9 @@ struct ScrollablePasteboardItemsView: View {
     }
     
     private func showSubscriptionView() {
-        WindowManager.shared.showWindow(
-            id: "subscription",
-            title: "Upgrade to Pro",
-            view: SubscriptionView(),
-            width: 400,
-            height: 500
+        NotificationCenter.default.post(
+            name: .showSubscriptionViewNotification,
+            object: nil
         )
     }
 }

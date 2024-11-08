@@ -36,7 +36,7 @@ struct clipboardManagerApp: App {
 let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
 var hotkeyForEscape = HotKey(key: .escape, modifiers: [])
 // MARK: - AppDelegate
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     
     // MARK: - Public Properties
     let persistenceController = PersistenceController.shared
@@ -53,6 +53,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var statusBarItem = NSStatusBar.system.statusItem(
         withLength: NSStatusItem.variableLength)
     private let menu = ApplicationMenu()
+    
+    private var subscriptionWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
@@ -137,7 +139,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NotificationCenter.default.addObserver(
             self, selector: #selector(didBecomeActive),
             name: NSApplication.didBecomeActiveNotification, object: nil)
-        //        NotificationCenter.default.addObserver(self, selector: #selector(setupWindowWithDelay), name: .setupWindowNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(showSubscriptionWindow),
+            name: .showSubscriptionViewNotification, object: nil)
     }
     
     @objc private func didBecomeActive() {
@@ -259,6 +263,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         makeAppHiddenAction()
         KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
+    
+    @objc private func showSubscriptionWindow() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            guard let self else { return }
+            
+            if let existingWindow = self.subscriptionWindow {
+                existingWindow.makeKeyAndOrderFront(nil)
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                return
+            }
+            
+            self.subscriptionWindow = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            
+            guard let window = self.subscriptionWindow else { return }
+            
+            window.title = "Upgrade to Pro"
+            window.contentView = NSHostingView(rootView: SubscriptionView())
+            window.level = .floating
+            window.delegate = self
+            
+            if let screen = NSScreen.main {
+                let centerX = screen.frame.midX - (window.frame.width / 2)
+                let topY = screen.frame.maxY - 50
+                window.setFrameTopLeftPoint(NSPoint(x: centerX, y: topY))
+            }
+            
+            let windowController = NSWindowController(window: window)
+            AppDelegate.windowControllers.append(windowController)
+            
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
+        }
+    }
+    
+    // NSWindowDelegate method
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow else { return }
+        
+        if window == subscriptionWindow {
+            subscriptionWindow = nil
+            AppDelegate.windowControllers.removeAll { controller in
+                controller.window == window
+            }
+        } else if window == preferencesWindow {
+            preferencesWindow = nil
+            AppDelegate.windowControllers.removeAll { controller in
+                controller.window == window
+            }
+        }
+    }
 }
 
 // MARK: - Extension App Delegate
@@ -301,4 +360,9 @@ class PersistenceController {
             }
         }
     }
+}
+
+extension NSNotification.Name {
+    // ... other notification names ...
+    static let showSubscriptionViewNotification = NSNotification.Name("showSubscriptionViewNotification")
 }
