@@ -37,85 +37,78 @@ class SubscriptionManager: ObservableObject {
     @Published private(set) var currentTier: SubscriptionTier?
     @Published private(set) var subscriptionExpirationDate: Date?
     
-    // Update product identifiers to match your StoreKit configuration
     private let productIdentifiers = Set([
-        "mahmutclipboard_099_1m_3d0",  // Monthly subscription ID
-        "com.walhallaa.clipboardManager.pro.weekly"  // Weekly subscription ID
+        "mahmutclipboard_099_1m_3d0",
+        "com.walhallaa.clipboardManager.pro.weekly"
     ])
     
-    // Cache keys
-    private let lastVerifiedKey = "lastVerifiedDate"
-    private let cachedSubscriptionStatusKey = "cachedSubscriptionStatus"
-    private let cachedSubscriptionTierKey = "cachedSubscriptionTier"
-    private let cachedExpirationDateKey = "cachedExpirationDate"
+    #if DEBUG
+    private let debugIsSubscribedKey = "debugIsSubscribed"
+    private let debugSubscriptionTierKey = "debugSubscriptionTier"
+    private let debugExpirationDateKey = "debugExpirationDate"
     
-    // Verification interval (e.g., verify once per day)
-    private let verificationInterval: TimeInterval = 24 * 60 * 60
+    private var isDebugSubscription: Bool {
+        get { UserDefaults.standard.bool(forKey: debugIsSubscribedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: debugIsSubscribedKey) }
+    }
+    #endif
     
     private init() {
-        // Load cached values first
-        loadCachedSubscriptionStatus()
+        #if DEBUG
+        // Load debug status if exists
+        if isDebugSubscription {
+            self.isSubscribed = true
+            if let tierString = UserDefaults.standard.string(forKey: debugSubscriptionTierKey) {
+                self.currentTier = SubscriptionTier(rawValue: tierString)
+            }
+            self.subscriptionExpirationDate = UserDefaults.standard.object(forKey: debugExpirationDateKey) as? Date
+        }
+        #endif
         
-        // Only check online if needed
         Task {
             await fetchProducts()
-            if shouldVerifySubscription() {
-                await checkSubscriptionStatus()
-            }
+            await checkSubscriptionStatus()
             setupTransactionListener()
         }
     }
     
-    private func loadCachedSubscriptionStatus() {
-        let defaults = UserDefaults.standard
-        isSubscribed = defaults.bool(forKey: cachedSubscriptionStatusKey)
-        if let tierString = defaults.string(forKey: cachedSubscriptionTierKey) {
-            currentTier = SubscriptionTier(rawValue: tierString)
-        }
-        subscriptionExpirationDate = defaults.object(forKey: cachedExpirationDateKey) as? Date
-    }
-    
-    private func cacheSubscriptionStatus() {
-        let defaults = UserDefaults.standard
-        defaults.set(isSubscribed, forKey: cachedSubscriptionStatusKey)
-        defaults.set(currentTier?.rawValue, forKey: cachedSubscriptionTierKey)
-        defaults.set(subscriptionExpirationDate, forKey: cachedExpirationDateKey)
-        defaults.set(Date(), forKey: lastVerifiedKey)
-    }
-    
-    private func shouldVerifySubscription() -> Bool {
-        let defaults = UserDefaults.standard
-        guard let lastVerified = defaults.object(forKey: lastVerifiedKey) as? Date else {
-            return true
-        }
-        return Date().timeIntervalSince(lastVerified) >= verificationInterval
-    }
-    
-    private func checkSubscriptionStatus() async {
+    func fetchProducts() async {
+        isLoading = true
         do {
-            var hasActiveSubscription = false
-            
-            for await result in Transaction.currentEntitlements {
-                if case .verified(let transaction) = result {
-                    if let expirationDate = transaction.expirationDate,
-                       expirationDate > Date() {
-                        await MainActor.run {
-                            self.isSubscribed = true
-                            self.currentTier = SubscriptionTier(rawValue: transaction.productID)
-                            self.subscriptionExpirationDate = expirationDate
-                        }
-                        hasActiveSubscription = true
-                        break
-                    }
-                }
-            }
-            
-            // Cache the verified status
-            cacheSubscriptionStatus()
-            
+            subscriptions = try await Product.products(for: productIdentifiers)
+            isLoading = false
         } catch {
-            print("Failed to verify subscription status:", error)
-            // On error, fall back to cached values
+            print("Failed to fetch products:", error)
+            isLoading = false
+        }
+    }
+    
+    func purchase(_ product: Product) async throws {
+        let result = try await product.purchase()
+        
+        switch result {
+        case .success(let verification):
+            switch verification {
+            case .verified(let transaction):
+                await transaction.finish()
+            case .unverified:
+                print("Unverified transaction")
+            }
+        case .userCancelled:
+            print("User cancelled")
+        case .pending:
+            print("Transaction pending")
+        @unknown default:
+            print("Unknown purchase result")
+        }
+    }
+    
+    func restorePurchases() async {
+        do {
+            try await AppStore.sync()
+            await checkSubscriptionStatus()
+        } catch {
+            print("Failed to restore purchases:", error)
         }
     }
     
@@ -124,7 +117,6 @@ class SubscriptionManager: ObservableObject {
             for await result in Transaction.updates {
                 if case .verified(let transaction) = result {
                     await MainActor.run {
-                        // Only update if the subscription is not expired
                         if let expirationDate = transaction.expirationDate,
                            expirationDate > Date() {
                             self.isSubscribed = true
@@ -142,106 +134,39 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
-    func fetchProducts() async {
-        do {
-            isLoading = true
-            let products = try await Product.products(for: productIdentifiers)
-            await MainActor.run {
-                self.subscriptions = products.sorted { $0.price < $1.price }
-                self.isLoading = false
-            }
-        } catch {
-            print("Failed to fetch products:", error)
-            isLoading = false
+    private func checkSubscriptionStatus() async {
+        #if DEBUG
+        if isDebugSubscription {
+            return
         }
-    }
-    
-    func purchase(_ product: Product) async throws {
-        // Store current window and its level
-        let subscriptionWindow = NSApp.windows.first(where: { $0.title == "Subscription" })
-        let originalLevel = subscriptionWindow?.level
+        #endif
         
-        // Lower window level temporarily
-        DispatchQueue.main.async {
-            subscriptionWindow?.level = .normal
-        }
-        
-        do {
-            let result = try await product.purchase()
-            
-            switch result {
-            case .success(let verification):
-                switch verification {
-                case .verified(let transaction):
-                    await transaction.finish()
-                case .unverified:
-                    print("Unverified transaction")
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result {
+                if let expirationDate = transaction.expirationDate,
+                   expirationDate > Date() {
+                    await MainActor.run {
+                        self.isSubscribed = true
+                        self.currentTier = SubscriptionTier(rawValue: transaction.productID)
+                        self.subscriptionExpirationDate = expirationDate
+                    }
+                    break
                 }
-            case .userCancelled:
-                print("User cancelled")
-            case .pending:
-                print("Transaction pending")
-            @unknown default:
-                print("Unknown purchase result")
-            }
-            
-            // Restore window level after purchase attempt
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
-                subscriptionWindow?.level = .screenSaver
-            }
-        } catch {
-            print("Purchase failed:", error)
-            
-            // Restore window level even if purchase fails
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
-                subscriptionWindow?.level = .screenSaver
             }
         }
-    }
-    
-    func restorePurchases() async {
-        // Store current window and its level
-        let subscriptionWindow = NSApp.windows.first(where: { $0.title == "Subscription" })
-        let originalLevel = subscriptionWindow?.level
-        
-        // Lower window level temporarily
-        DispatchQueue.main.async {
-            subscriptionWindow?.level = .normal
-        }
-        
-        do {
-            try await AppStore.sync()
-            
-            // Wait briefly then restore window level
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second delay
-            
-            DispatchQueue.main.async {
-                subscriptionWindow?.level = originalLevel ?? .modalPanel
-                subscriptionWindow?.orderFrontRegardless()
-                NSApp.activate(ignoringOtherApps: true)
-            }
-        } catch {
-            print("Failed to restore purchases:", error)
-            
-            // Restore window level even if restore fails
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .makeAppVisibleNotification, object: nil)
-                subscriptionWindow?.level = .screenSaver
-            }
-        }
-    }
-    private func reOrderWindowsAfterFail() {
-        
     }
     
     #if DEBUG
-    // Debug functions should still work the same way for testing
     func setDebugSubscriptionStatus(isSubscribed: Bool, tier: SubscriptionTier?) {
         self.isSubscribed = isSubscribed
         self.currentTier = tier
         self.subscriptionExpirationDate = Calendar.current.date(byAdding: .month, value: 1, to: Date())
+        
+        // Persist debug status
+        self.isDebugSubscription = isSubscribed
+        UserDefaults.standard.set(tier?.rawValue, forKey: debugSubscriptionTierKey)
+        UserDefaults.standard.set(self.subscriptionExpirationDate, forKey: debugExpirationDateKey)
+        
         NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
     }
     
@@ -249,6 +174,12 @@ class SubscriptionManager: ObservableObject {
         self.isSubscribed = false
         self.currentTier = nil
         self.subscriptionExpirationDate = nil
+        
+        // Clear debug status
+        self.isDebugSubscription = false
+        UserDefaults.standard.removeObject(forKey: debugSubscriptionTierKey)
+        UserDefaults.standard.removeObject(forKey: debugExpirationDateKey)
+        
         NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
     }
     #endif
