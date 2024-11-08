@@ -240,7 +240,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.preferencesWindow?.title = "Clipboard Settings"
                 self.preferencesWindow?.contentView = NSHostingView(
                     rootView: ClipboardSettingsView())
-                self.preferencesWindow?.level = .floating
+                self.preferencesWindow?.level = .screenSaver
             }
 
             guard let preferencesWindow = self.preferencesWindow else { return }

@@ -11,6 +11,7 @@ import ServiceManagement
 struct ClipboardSettingsView: View {
     @Environment(\.controlActiveState) private var controlActiveState
     @StateObject private var settings = ClipboardSettings.shared
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     var body: some View {
         VStack(spacing: 20) {
@@ -78,6 +79,59 @@ struct ClipboardSettingsView: View {
                         .padding(.leading, 20)
                         .padding(.top, 2)
                     }
+                }
+                .padding()
+            }
+            
+            GroupBox(label: Text("Subscription Status").bold()) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Status:")
+                        Text(subscriptionManager.isSubscribed ? "Active" : "Free")
+                            .foregroundColor(subscriptionManager.isSubscribed ? .green : .secondary)
+                    }
+                    
+                    if subscriptionManager.isSubscribed {
+                        HStack {
+                            Text("Plan:")
+                            Text(subscriptionManager.currentTier?.displayName ?? "Unknown")
+                        }
+                        
+                        if let expirationDate = subscriptionManager.subscriptionExpirationDate {
+                            HStack {
+                                Text("Expires:")
+                                Text(expirationDate, style: .date)
+                            }
+                        }
+                    }
+                    
+                    #if DEBUG
+                    Divider()
+                    
+                    Text("Debug Controls")
+                        .font(.headline)
+                    
+                    HStack(spacing: 16) {
+                        Button("Set Monthly") {
+                            subscriptionManager.setDebugSubscriptionStatus(
+                                isSubscribed: true,
+                                tier: .monthly
+                            )
+                        }
+                        
+                        Button("Set Yearly") {
+                            subscriptionManager.setDebugSubscriptionStatus(
+                                isSubscribed: true,
+                                tier: .yearly
+                            )
+                        }
+                        
+                        Button("Cancel") {
+                            subscriptionManager.cancelDebugSubscription()
+                        }
+                        .foregroundColor(.red)
+                    }
+                    #endif
                 }
                 .padding()
             }
