@@ -52,16 +52,12 @@ class FileHandler {
         guard let uti = try? url.resourceValues(forKeys: [.typeIdentifierKey]).typeIdentifier,
               let utType = UTType(uti) else { return nil }
         
-        // Create a unique filename while preserving the original filename
-        let originalFilename = url.lastPathComponent
-        let uniqueFilename = "\(UUID().uuidString)-\(originalFilename)"
-        var tempURL = tempDirectory.appendingPathComponent(uniqueFilename)
-        
         if utType.conforms(to: .image) {
-            // For images, create an optimized copy
+            // For images, we still want to optimize and store them
             if let image = NSImage(contentsOf: url) {
                 return autoreleasepool { () -> (URL?, ClipboardItemType, Data?)? in
                     if let optimizedData = image.optimizedData(maxSize: CGSize(width: 1200, height: 1200)) {
+                        let tempURL = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("png")
                         try? optimizedData.write(to: tempURL)
                         return (tempURL, ClipboardItemType.image, nil as Data?)
                     }
@@ -69,29 +65,11 @@ class FileHandler {
                 }
             }
         } else if utType.conforms(to: .movie) {
-            do {
-                try fileManager.copyItem(at: url, to: tempURL)
-                return (tempURL, ClipboardItemType.video, nil as Data?)
-            } catch {
-                print("[ERROR] Failed to copy video file: \(error)")
-                return nil
-            }
+            // For videos, just store the original URL
+            return (url, ClipboardItemType.video, nil as Data?)
         } else {
-            // Handle any other file type
-            do {
-                // Copy the file with its metadata
-                try fileManager.copyItem(at: url, to: tempURL)
-                
-                // Preserve file attributes
-                let attributes = try fileManager.attributesOfItem(atPath: url.path)
-                try fileManager.setAttributes(attributes, ofItemAtPath: tempURL.path)
-                
-                print("[DEBUG] Copied file: \(originalFilename) to \(tempURL.path)")
-                return (tempURL, ClipboardItemType.file, nil as Data?)
-            } catch {
-                print("[ERROR] Failed to copy file: \(error)")
-                return nil
-            }
+            // For other files, just store the original URL
+            return (url, ClipboardItemType.file, nil as Data?)
         }
         
         return nil

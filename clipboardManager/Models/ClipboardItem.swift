@@ -16,6 +16,7 @@ struct ClipboardItem: Identifiable {
     let contentDescriptionString: String
     let fileURL: URL?
     let thumbnailURL: URL?
+    let pasteboardItems: [(NSPasteboard.PasteboardType, Data)]
 }
 
 enum ClipboardItemType: String {

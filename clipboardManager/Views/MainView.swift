@@ -19,6 +19,7 @@ struct MainView: View {
     
     @State private var selectedItemIndex: Int = 0
     @State private var keyMonitor: Any?
+    @State private var searchText = ""
     
     var body: some View {
         GeometryReader { reader in
@@ -26,11 +27,10 @@ struct MainView: View {
                 VisualEffectView(material: .popover, blendingMode: .withinWindow)
                     .ignoresSafeArea()
                 
-                if clipboardManager.clipboardItems.isEmpty, clipboardManager.isSearchFieldVisible == false {
+                if clipboardManager.orderedItems.isEmpty, !clipboardManager.isSearchFieldVisible {
                     ZStack {
                         RadialGradient(colors: [
-                            Color.purple
-                                .opacity(0.5),
+                            Color.purple.opacity(0.5),
                             Color.black.opacity(1)
                         ], center: .center, startRadius: 1, endRadius: 450)
                         Text("No Clipboard Items")
@@ -45,7 +45,7 @@ struct MainView: View {
                 }
             }
             .onReceive(publisher) { _ in
-                clipboardManager.clipboardItems.removeAll()
+                clipboardManager.clearAllItems()
             }
             .onAppear {
                 setupKeyboardMonitoring()
@@ -78,18 +78,40 @@ struct MainView: View {
                 moveSelection(direction: 1)
                 return nil
             case 36: // Return/Enter
-                if !clipboardManager.clipboardItems.isEmpty {
-                    let index = min(selectedItemIndex, clipboardManager.clipboardItems.count - 1)
-                    let item = clipboardManager.clipboardItems[index]
-                    let pasteBoard = NSPasteboard.general
-                    pasteBoard.clearContents()
-                    pasteBoard.setString(item.contentDescriptionString, forType: .string)
-                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
-                }
+                handleEnterKey()
                 return nil
             default:
                 return event
             }
+        }
+    }
+    
+    private func handleEnterKey() {
+        let items = clipboardManager.orderedItems
+        if !items.isEmpty {
+            let index = min(selectedItemIndex, items.count - 1)
+            let item = items[index]
+            
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            
+            switch item.type {
+            case .file, .video:
+                if let fileURL = item.fileURL {
+                    pasteboard.writeObjects([fileURL as NSURL])
+                }
+            case .image:
+                if let fileURL = item.fileURL,
+                   let image = NSImage(contentsOf: fileURL) {
+                    pasteboard.writeObjects([image])
+                }
+            default:
+                if let string = String(data: item.content, encoding: .utf8) {
+                    pasteboard.setString(string, forType: .string)
+                }
+            }
+            
+            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
         }
     }
     
@@ -101,17 +123,15 @@ struct MainView: View {
     }
     
     private func moveSelection(direction: Int) {
-        let itemCount = clipboardManager.clipboardItems.count
+        let itemCount = clipboardManager.orderedItems.count
         guard itemCount > 0 else { return }
         
         let newIndex = selectedItemIndex + direction
         let maxAllowedIndex = subscriptionManager.isSubscribed ? itemCount - 1 : min(2, itemCount - 1)
         
-        // Check bounds and provide feedback if needed
         if newIndex < 0 || newIndex > maxAllowedIndex {
             NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
             
-            // Show subscription prompt if trying to navigate beyond free tier limit
             if !subscriptionManager.isSubscribed && newIndex > 2 && newIndex < itemCount {
                 showSubscriptionView()
             }
@@ -148,6 +168,56 @@ struct ScrollablePasteboardItemsView: View {
     @State private var searchDispatchWorkItem: DispatchWorkItem?
     @Binding var selectedItemIndex: Int
     let scrollToIndex: (Int) -> Void
+    
+    private func clipboardItemView(item: ClipboardItem, index: Int) -> some View {
+        ClipboardItemBox(item: item)
+            .overlay(
+                Group {
+                    if !subscriptionManager.isSubscribed && index >= 3 {
+                        lockedOverlay
+                    } else if settings.enableKeyboardNavigation && index == selectedItemIndex {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.blue, lineWidth: 2)
+                    }
+                }
+            )
+            .onTapGesture {
+                handleItemTap(item: item, index: index)
+            }
+            .frame(width: 300, height: 300)
+            .id(item.id)
+    }
+    
+    private func handleItemTap(item: ClipboardItem, index: Int) {
+        if !subscriptionManager.isSubscribed && index >= 3 {
+            showSubscriptionView()
+        } else {
+            selectedItemIndex = index
+            copyItemToPasteboard(item)
+            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
+        }
+    }
+    
+    private func copyItemToPasteboard(_ item: ClipboardItem) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        
+        switch item.type {
+        case .file, .video:
+            if let fileURL = item.fileURL {
+                pasteboard.writeObjects([fileURL as NSURL])
+            }
+        case .image:
+            if let fileURL = item.fileURL,
+               let image = NSImage(contentsOf: fileURL) {
+                pasteboard.writeObjects([image])
+            }
+        default:
+            if let string = String(data: item.content, encoding: .utf8) {
+                pasteboard.setString(string, forType: .string)
+            }
+        }
+    }
     
     var body: some View {
         VStack {
@@ -246,56 +316,25 @@ struct ScrollablePasteboardItemsView: View {
                         Spacer()
                             .frame(width: 5)
                         
-                        if clipboardManager.clipboardItems.isEmpty, clipboardManager.isSearchFieldVisible {
-                            HStack {
-                                Spacer()
-                                Text("No items found contains ''\(searchText)''")
-                                    .font(.headline)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .frame(width: screenWidth)
+                        if clipboardManager.clipboardItems.isEmpty && clipboardManager.isSearchFieldVisible {
+                            emptySearchResultView
                         } else {
-                            ForEach(Array(clipboardManager.clipboardItems.enumerated()), id: \.element.id) { index, item in
-                                ClipboardItemBox(item: item)
-                                    .overlay(
-                                        Group {
-                                            if !subscriptionManager.isSubscribed && index >= 3 {
-                                                lockedOverlay
-                                            } else if settings.enableKeyboardNavigation && index == selectedItemIndex {
-                                                RoundedRectangle(cornerRadius: 8)
-                                                    .stroke(Color.blue, lineWidth: 2)
-                                            }
-                                        }
-                                    )
-                                    .onTapGesture {
-                                        if !subscriptionManager.isSubscribed && index >= 3 {
-                                            showSubscriptionView()
-                                        } else {
-                                            selectedItemIndex = index
-                                            let pasteBoard = NSPasteboard.general
-                                            pasteBoard.clearContents()
-                                            pasteBoard.setString(item.contentDescriptionString, forType: .string)
-                                            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
-                                        }
-                                    }
-                                    .frame(width: 300, height: 300)
-                                    .id(item.id)
-                            }
+                            clipboardItemsListView
                         }
-
                     }
-
                 }
-                .onChange(of: selectedItemIndex) { newIndex in
-                    if newIndex < clipboardManager.clipboardItems.count {
+                .onChange(of: selectedItemIndex) { _ in
+                    if selectedItemIndex < clipboardManager.orderedItems.count {
                         withAnimation {
-                            proxy.scrollTo(clipboardManager.clipboardItems[newIndex].id, anchor: .center)
+                            let item = clipboardManager.orderedItems[selectedItemIndex]
+                            proxy.scrollTo(item.id, anchor: .center)
                         }
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
-                    proxy.scrollTo(clipboardManager.clipboardItems.first?.id, anchor: .trailing)
+                    if let firstItem = clipboardManager.orderedItems.first {
+                        proxy.scrollTo(firstItem.id, anchor: .trailing)
+                    }
                 }
             }
         }
@@ -320,6 +359,23 @@ struct ScrollablePasteboardItemsView: View {
         
         // Execute the work item after a delay (e.g., 300 milliseconds)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: newWorkItem)
+    }
+    
+    private var emptySearchResultView: some View {
+        HStack {
+            Spacer()
+            Text("No items found contains ''\(searchText)''")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            Spacer()
+        }
+        .frame(width: screenWidth)
+    }
+    
+    private var clipboardItemsListView: some View {
+        ForEach(Array(clipboardManager.orderedItems.enumerated()), id: \.1.id) { index, item in
+            clipboardItemView(item: item, index: index)
+        }
     }
     
     private var lockedOverlay: some View {

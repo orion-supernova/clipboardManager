@@ -14,7 +14,8 @@ class ClipboardManager: ObservableObject {
     static let shared = ClipboardManager(persistenceController: .shared) // Singleton instance
 
     // MARK: - Properties
-    @Published var clipboardItems: [ClipboardItem] = []
+    @Published private(set) var clipboardItems: [String: ClipboardItem] = [:]
+    @Published private(set) var itemOrder: [String] = []
     @Published var isSearchFieldVisible = false
     @Published var launchAtLogin: Bool!
     @Published var retainCount: Int!
@@ -142,11 +143,18 @@ class ClipboardManager: ObservableObject {
             let contentDescription = pasteboard.string(forType: .string) ?? ""
             let copiedFromApp = getCopiedFromApplication()
             
+            // Capture all pasteboard items
+            var pasteboardItems: [(NSPasteboard.PasteboardType, Data)] = []
+            for type in pasteboard.types ?? [] {
+                if let data = pasteboard.data(forType: type) {
+                    pasteboardItems.append((type, data))
+                }
+            }
+            
             // Handle file-based items and images
             if let (fileURL, type, content) = FileHandler.shared.handlePasteboardItem(pasteboard) {
                 var thumbnailURL: URL? = nil
                 
-                // Generate thumbnail for videos
                 if type == .video, let url = fileURL {
                     thumbnailURL = generateVideoThumbnail(from: url)
                 }
@@ -159,30 +167,21 @@ class ClipboardManager: ObservableObject {
                     content: content ?? Data(),
                     copiedFromApplication: copiedFromApp,
                     timestamp: Date(),
-                    contentDescriptionString: contentDescription,
+                    contentDescriptionString: finalDescription,
                     fileURL: fileURL,
-                    thumbnailURL: thumbnailURL
+                    thumbnailURL: thumbnailURL,
+                    pasteboardItems: pasteboardItems
                 )
             }
             
-            // Handle other types (text, color, urls)
+            // Handle other types
             let type = getClipboardItemType()
             var content = Data()
             
             switch type {
-            case .text:
-                if let string = pasteboard.string(forType: .string) {
-                    content = Data(string.utf8)
-                }
-            case .url:
-                if let url = pasteboard.string(forType: .URL) {
-                    content = url.data(using: .utf8) ?? Data()
-                }
-            case .color:
-                if let color = detectColor(from: contentDescription),
-                   let colorData = try? NSKeyedArchiver.archivedData(
-                    withRootObject: color, requiringSecureCoding: true) {
-                    content = colorData
+            case .text, .url, .color:
+                if let data = pasteboard.data(forType: .string) {
+                    content = data
                 }
             default:
                 return nil
@@ -196,7 +195,8 @@ class ClipboardManager: ObservableObject {
                 timestamp: Date(),
                 contentDescriptionString: contentDescription,
                 fileURL: nil,
-                thumbnailURL: nil
+                thumbnailURL: nil,
+                pasteboardItems: pasteboardItems
             )
         }
     }
@@ -271,6 +271,15 @@ class ClipboardManager: ObservableObject {
     private func addClipboardItem(_ item: ClipboardItem, in context: NSManagedObjectContext) {
         print("[DEBUG] Adding clipboard item to CoreData")
         
+        let key = item.contentDescriptionString
+        
+        // Check if item already exists
+        if clipboardItems[key] != nil {
+            // Move existing item to front
+            moveItemToFront(key)
+            return
+        }
+        
         let newItem = ClipboardEntity(context: context)
         newItem.id = item.id
         newItem.content = item.content
@@ -281,9 +290,23 @@ class ClipboardManager: ObservableObject {
         newItem.fileURL = item.fileURL
         newItem.thumbnailURL = item.thumbnailURL
         
+        // Encode pasteboardItems
+        do {
+            let itemsToArchive = item.pasteboardItems.map { type, data in
+                ["type": type.rawValue, "data": data]
+            }
+            let archivedData = try NSKeyedArchiver.archivedData(
+                withRootObject: itemsToArchive,
+                requiringSecureCoding: true
+            )
+            newItem.setValue(archivedData, forKey: "pasteboardItemsData")
+        } catch {
+            print("Error encoding pasteboard items: \(error)")
+        }
+        
         do {
             try context.save()
-            print("[DEBUG] Successfully saved clipboard item with thumbnail: \(String(describing: item.thumbnailURL))")
+            print("[DEBUG] Successfully saved clipboard item")
             
             DispatchQueue.main.async { [weak self] in
                 self?.fetchClipboardItems()
@@ -294,6 +317,58 @@ class ClipboardManager: ObservableObject {
         }
     }
 
+    // Add helper methods for duplicate checking
+    private func findDuplicateItem(for newItem: ClipboardItem) -> ClipboardItem? {
+        return orderedItems.first { item in
+            switch newItem.type {
+            case .file, .video:
+                return item.fileURL == newItem.fileURL
+            case .text, .url:
+                return item.content == newItem.content
+            case .image:
+                return item.content == newItem.content
+            case .color:
+                return item.content == newItem.content
+            }
+        }
+    }
+
+    private func moveItemToFront(_ contentDescription: String) {
+        guard clipboardItems[contentDescription] != nil else { return }
+        
+        // Remove from current position
+        itemOrder.removeAll { $0 == contentDescription }
+        // Add to front
+        itemOrder.insert(contentDescription, at: 0)
+        
+        // Update Core Data order
+        updateItemOrder()
+    }
+
+    private func updateItemOrder() {
+        let backgroundContext = persistenceController.container.newBackgroundContext()
+        backgroundContext.perform { [weak self] in
+            guard let self = self else { return }
+            
+            // Update timestamps to reflect new order
+            for (index, key) in self.itemOrder.enumerated() {
+                let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+                request.predicate = NSPredicate(format: "contentDescriptionString == %@", key)
+                
+                do {
+                    if let entity = try backgroundContext.fetch(request).first {
+                        // Use current time plus index to maintain order
+                        entity.timestamp = Date().addingTimeInterval(Double(-index))
+                    }
+                } catch {
+                    print("Error updating item order: \(error)")
+                }
+            }
+            
+            try? backgroundContext.save()
+        }
+    }
+
     // MARK: - Fetch All Items
     func fetchClipboardItems() {
         let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
@@ -301,10 +376,6 @@ class ClipboardManager: ObservableObject {
             NSSortDescriptor(keyPath: \ClipboardEntity.timestamp, ascending: false)
         ]
         
-        request.fetchLimit = 50  // Reduced from 100
-        request.fetchBatchSize = 10  // Reduced from 20
-        
-        // Use background context for fetching
         let backgroundContext = persistenceController.container.newBackgroundContext()
         backgroundContext.perform { [weak self] in
             guard let self = self else { return }
@@ -312,18 +383,27 @@ class ClipboardManager: ObservableObject {
             autoreleasepool {
                 do {
                     let results = try backgroundContext.fetch(request)
-                    let mappedItems = results.compactMap { entity -> ClipboardItem? in
-                        autoreleasepool {
-                            return self.mapEntityToClipboardItem(entity)
+                    var newItems: [String: ClipboardItem] = [:]
+                    var newOrder: [String] = []
+                    
+                    for entity in results {
+                        let item = self.mapEntityToClipboardItem(entity)
+                        let key = item.contentDescriptionString
+                        newItems[key] = item
+                        if !newOrder.contains(key) {
+                            newOrder.append(key)
                         }
                     }
                     
-                    DispatchQueue.main.async { [weak self] in
-                        self?.clipboardItems = mappedItems
-                        NotificationCenter.default.post(name: .pasteBoardCountNotification, object: results.count)
+                    DispatchQueue.main.async {
+                        self.clipboardItems = newItems
+                        self.itemOrder = newOrder
+                        NotificationCenter.default.post(
+                            name: .pasteBoardCountNotification,
+                            object: newOrder.count
+                        )
                     }
                     
-                    // Reset the context after use
                     backgroundContext.reset()
                 } catch {
                     print("Error fetching clipboard items: \(error)")
@@ -352,6 +432,25 @@ class ClipboardManager: ObservableObject {
             copiedFromApp = CopiedFromApplication(
                 withApplication: NSRunningApplication())
         }
+        
+        // Decode pasteboardItems with nil check
+        var pasteboardItems: [(NSPasteboard.PasteboardType, Data)] = []
+        if let itemsData = entity.value(forKey: "pasteboardItemsData") as? Data {
+            do {
+                let decoded = try NSKeyedUnarchiver.unarchivedObject(
+                    ofClasses: [NSArray.self, NSString.self, NSData.self],
+                    from: itemsData
+                ) as? [[String: Any]]
+                
+                pasteboardItems = decoded?.compactMap {
+                    guard let typeString = $0["type"] as? String,
+                          let data = $0["data"] as? Data else { return nil }
+                    return (NSPasteboard.PasteboardType(typeString), data)
+                } ?? []
+            } catch {
+                print("Error decoding pasteboard items: \(error)")
+            }
+        }
 
         return ClipboardItem(
             id: id,
@@ -361,7 +460,8 @@ class ClipboardManager: ObservableObject {
             timestamp: timestamp,
             contentDescriptionString: contentDescriptionString,
             fileURL: fileURL,
-            thumbnailURL: thumbnailURL
+            thumbnailURL: thumbnailURL,
+            pasteboardItems: pasteboardItems
         )
     }
 
@@ -377,38 +477,24 @@ class ClipboardManager: ObservableObject {
 
         do {
             let results = try viewContext.fetch(request)
-            clipboardItems = results.map { entity in
-                let id = entity.id ?? UUID()  // Provide a default UUID if nil
-                let typeRawValue = entity.type ?? ClipboardItemType.text.rawValue  // Default to .text if nil
-                let content = entity.content ?? Data()  // Default to empty Data if nil
-                let timestamp = entity.timestamp ?? Date()  // Default to current date if nil
-                let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"  // Default to "Unknown" if nil
-                let fileURL = entity.fileURL
-
-                let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
-
-                let copiedFromApp: CopiedFromApplication
-                do {
-                    copiedFromApp = try CopiedFromApplication.fromData(
-                        entity.copiedFromApplication ?? Data())
-                } catch {
-                    print("Error decoding copiedFromApplication: \(error)")
-                    copiedFromApp = CopiedFromApplication(withApplication: NSRunningApplication())  // Provide a default value
+            var newItems: [String: ClipboardItem] = [:]
+            var newOrder: [String] = []
+            
+            for entity in results {
+                let item = mapEntityToClipboardItem(entity)
+                let key = item.contentDescriptionString
+                newItems[key] = item
+                if !newOrder.contains(key) {
+                    newOrder.append(key)
                 }
-
-                return ClipboardItem(
-                    id: id,
-                    type: type,
-                    content: content,
-                    copiedFromApplication: copiedFromApp,
-                    timestamp: timestamp,
-                    contentDescriptionString: contentDescriptionString,
-                    fileURL: fileURL,
-                    thumbnailURL: nil
-                )
             }
+            
+            clipboardItems = newItems
+            itemOrder = newOrder
+            
             NotificationCenter.default.post(
-                name: .pasteBoardCountNotification, object: results.count)
+                name: .pasteBoardCountNotification,
+                object: newOrder.count)
         } catch {
             print("Error fetching clipboard items: \(error)")
         }
@@ -437,11 +523,13 @@ class ClipboardManager: ObservableObject {
         do {
             let results = try viewContext.fetch(request)
             if let itemToDelete = results.first {
+                let contentDescription = itemToDelete.contentDescriptionString ?? ""
                 viewContext.delete(itemToDelete)
                 try viewContext.save()
                 
-                // Update the UI
-                fetchClipboardItems()
+                // Remove from dictionary and order array
+                clipboardItems.removeValue(forKey: contentDescription)
+                itemOrder.removeAll { $0 == contentDescription }
                 
                 // Post notification to update count
                 NotificationCenter.default.post(
@@ -561,13 +649,9 @@ class ClipboardManager: ObservableObject {
 
     func handleMemoryWarning() {
         autoreleasepool {
-            // Don't reset the main view context, just refresh it
             viewContext.refreshAllObjects()
-            
-            // Clear temporary data without resetting contexts
             clearTemporaryData()
             
-            // Refetch with minimal data using a background context
             let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
             request.fetchLimit = 20
             request.fetchBatchSize = 5
@@ -579,20 +663,26 @@ class ClipboardManager: ObservableObject {
                 autoreleasepool {
                     do {
                         let results = try backgroundContext.fetch(request)
-                        let mappedItems = results.compactMap { entity -> ClipboardItem? in
-                            autoreleasepool {
-                                return self.mapEntityToClipboardItem(entity)
+                        var newItems: [String: ClipboardItem] = [:]
+                        var newOrder: [String] = []
+                        
+                        for entity in results {
+                            let item = self.mapEntityToClipboardItem(entity)
+                            let key = item.contentDescriptionString
+                            newItems[key] = item
+                            if !newOrder.contains(key) {
+                                newOrder.append(key)
                             }
                         }
                         
-                        DispatchQueue.main.async { [weak self] in
-                            self?.clipboardItems = mappedItems
+                        DispatchQueue.main.async {
+                            self.clipboardItems = newItems
+                            self.itemOrder = newOrder
                         }
                     } catch {
                         print("Error handling memory warning: \(error)")
                     }
                     
-                    // Only reset the background context
                     backgroundContext.reset()
                 }
             }
@@ -633,8 +723,14 @@ class ClipboardManager: ObservableObject {
             timestamp: Date(),
             contentDescriptionString: description,
             fileURL: nil,
-            thumbnailURL: nil
+            thumbnailURL: nil,
+            pasteboardItems: []  // Empty array since this is just a basic item
         )
+    }
+
+    // Add a method to get ordered items
+    var orderedItems: [ClipboardItem] {
+        return itemOrder.compactMap { clipboardItems[$0] }
     }
 }
 
