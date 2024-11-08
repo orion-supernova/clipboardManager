@@ -207,13 +207,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Preferences Clicked
     @objc private func preferencesClickedAction() {
-//        makeAppHiddenAction()
+        // Check if preferences window already exists and is visible
+        if let preferencesWindow = self.preferencesWindow {
+            preferencesWindow.makeKeyAndOrderFront(nil)
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            return
+        }
         
         DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { [weak self] in
             guard let self else { return }
             
             preferencesWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
+                contentRect: NSRect(x: 0, y: 150, width: 400, height: 400),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false

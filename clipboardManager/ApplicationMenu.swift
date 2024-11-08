@@ -40,11 +40,11 @@ class ApplicationMenu: NSObject {
         clearAllMenuItem.target = self
         menu.addItem(clearAllMenuItem)
 
-        let preferencesMenuItem = NSMenuItem(title: "Preferences",
-                                             action: #selector(preferencesAction),
-                                             keyEquivalent: "")
-        preferencesMenuItem.target = self
-        menu.addItem(preferencesMenuItem)
+//        let preferencesMenuItem = NSMenuItem(title: "Preferences",
+//                                             action: #selector(preferencesAction),
+//                                             keyEquivalent: "")
+//        preferencesMenuItem.target = self
+//        menu.addItem(preferencesMenuItem)
 
 //        let aboutMenuItem = NSMenuItem(title: "About",
 //                                       action: #selector(aboutAction),
