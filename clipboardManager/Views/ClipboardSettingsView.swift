@@ -7,6 +7,10 @@
 
 import SwiftUI
 import ServiceManagement
+import Carbon
+
+// Add these declarations
+private let kTISPropertyUnicodeKeyLayoutData: CFString = ("TISPropertyUnicodeKeyLayoutData" as CFString)
 
 struct ClipboardSettingsView: View {
     @Environment(\.controlActiveState) private var controlActiveState
@@ -329,9 +333,88 @@ struct KeyboardShortcutsSection: View {
                     KeyboardShortcutView(shortcut: "⌘ + Shift + V")
                     Spacer()
                 }
+                
+                HStack {
+                    Text("Open Settings:")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    Spacer()
+                    KeyboardShortcutView(
+                        shortcut: "⌘ + \(getKeyboardCharacter(for: KeyCode.comma).uppercased())"
+                    )
+                    Spacer()
+                }
             }
             .padding()
         }
+    }
+    
+    private func getKeyboardCharacter(for keyCode: UInt16) -> String {
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let layoutData = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData),
+              let keyboardLayout = unsafeBitCast(layoutData, to: CFData.self) as Data? else {
+            return ","
+        }
+        
+        var deadKeyState: UInt32 = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        var length = 0
+        
+        return keyboardLayout.withUnsafeBytes { ptr -> String in
+            guard let baseAddress = ptr.baseAddress else { return "," }
+            
+            let status = UCKeyTranslate(
+                baseAddress.assumingMemoryBound(to: UCKeyboardLayout.self),
+                keyCode,
+                UInt16(kUCKeyActionDisplay),
+                0,
+                UInt32(LMGetKbdType()),
+                UInt32(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                4,
+                &length,
+                &chars
+            )
+            
+            if status == noErr {
+                return String(utf16CodeUnits: chars, count: length)
+            }
+            
+            return ","
+        }
+    }
+}
+
+// Update the key code conversion extension
+extension NSEvent {
+    static func keyEquivalent(from keyCode: UInt16) -> String? {
+        guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let layoutData = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData),
+              let keyLayout = unsafeBitCast(layoutData, to: CFData.self) as Data? else {
+            return nil
+        }
+        
+        var deadKeyState: UInt32 = 0
+        var stringLength = 0
+        var chars = [UniChar](repeating: 0, count: 4)
+        
+        let result = withUnsafePointer(to: keyLayout.withUnsafeBytes { $0.load(as: UCKeyboardLayout.self) }) { ptr in
+            UCKeyTranslate(
+                ptr,
+                keyCode,
+                UInt16(kUCKeyActionDisplay),
+                0,  // No modifiers
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                4,
+                &stringLength,
+                &chars
+            )
+        }
+        
+        guard result == noErr else { return nil }
+        return String(utf16CodeUnits: chars, count: stringLength)
     }
 }
 

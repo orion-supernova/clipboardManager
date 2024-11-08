@@ -34,7 +34,8 @@ struct clipboardManagerApp: App {
 }
 
 let hotkeyForInterfaceVisibility = HotKey(key: .v, modifiers: [.command, .shift])
-var hotkeyForEscape = HotKey(key: .escape, modifiers: [])
+let hotkeyForEscape = HotKey(key: .escape, modifiers: [])
+let hotkeyForSettings = HotKey(key: .comma, modifiers: [.command])
 // MARK: - AppDelegate
 class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
@@ -62,9 +63,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusBarItem.menu = menu.createMenu()
         addObservers()
         setupWindow()
+        
+        // Setup keyboard shortcuts
         hotkeyForInterfaceVisibility.keyDownHandler = handleAppShortcut
         hotkeyForEscape.keyDownHandler = makeAppHiddenAction
-
+        hotkeyForSettings.keyDownHandler = { [weak self] in
+            self?.preferencesClickedAction()
+        }
+        
         // Set up window level observer for StoreKit authentication window
         NSWindow.swizzleKeyWindow()
     }
@@ -76,7 +82,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             makeAppHiddenAction()
         } else {
             makeAppVisibleAction()
-            //            setupWindow()
         }
     }
 
@@ -208,7 +213,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
             }
         }
-
+        hotkeyForEscape.isPaused = false
+        hotkeyForSettings.isPaused = false
         app.activate(options: [.activateIgnoringOtherApps])
         print("DEBUG: ----- makeAppVisibleAction")
     }
@@ -216,6 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Make App Hidden
     @objc func makeAppHiddenAction() {
         hotkeyForEscape.isPaused = true
+        hotkeyForSettings.isPaused = true
         guard let window, window.isVisible else { return }
         //        window.close()
         NSApplication.shared.deactivate()
