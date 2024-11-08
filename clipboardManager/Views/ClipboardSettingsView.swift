@@ -42,6 +42,42 @@ struct ClipboardSettingsView: View {
                     
                     Toggle("Enable keyboard navigation", isOn: $settings.enableKeyboardNavigation)
                         .help("Use left/right arrow keys to navigate and Enter to select")
+                    
+                    if settings.enableKeyboardNavigation {
+                        HStack(spacing: 16) {
+                            Text("Shortcuts:")
+                                .foregroundColor(.secondary)
+                                .font(.subheadline)
+                            
+                            HStack(spacing: 12) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.left")
+                                        .foregroundColor(.blue)
+                                    Text("Previous")
+                                        .foregroundColor(.secondary)
+                                        .font(.subheadline)
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.right")
+                                        .foregroundColor(.blue)
+                                    Text("Next")
+                                        .foregroundColor(.secondary)
+                                        .font(.subheadline)
+                                }
+                                
+                                HStack(spacing: 4) {
+                                    Text("↵")
+                                        .foregroundColor(.blue)
+                                    Text("Select")
+                                        .foregroundColor(.secondary)
+                                        .font(.subheadline)
+                                }
+                            }
+                        }
+                        .padding(.leading, 20)
+                        .padding(.top, 2)
+                    }
                 }
                 .padding()
             }
