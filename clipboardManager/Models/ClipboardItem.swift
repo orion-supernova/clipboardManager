@@ -18,12 +18,11 @@ struct ClipboardItem: Identifiable {
     let thumbnailURL: URL?
 }
 
-
-enum ClipboardItemType: String, Codable {
+enum ClipboardItemType: String {
     case text
     case image
-    case video
-    case url
     case color
+    case url
+    case video
     case file
 }

@@ -140,17 +140,18 @@ struct ClipboardItemBox: View {
                         Image(nsImage: icon)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 100, maxHeight: 100)
+                            .frame(maxWidth: 60, maxHeight: 60)
                         
-                        Text(item.contentDescriptionString)
+                        Text(url.lastPathComponent)
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
                             .font(.system(size: 12))
+                            .foregroundColor(.white)
                     } else {
                         Image(systemName: "doc")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 100, maxHeight: 100)
+                            .frame(maxWidth: 60, maxHeight: 60)
                             .foregroundColor(.gray)
                         
                         Text("File not available")
