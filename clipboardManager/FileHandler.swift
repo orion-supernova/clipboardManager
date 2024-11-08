@@ -11,70 +11,70 @@ import AVFoundation
 
 class FileHandler {
     static let shared = FileHandler()
-    private let fileManager = FileManager.default
-    private let supportedImageTypes = ["public.image", "public.png", "public.jpeg", "public.tiff"]
-    private let supportedVideoTypes = ["public.movie", "public.video", "com.apple.quicktime-movie"]
-    private let tempDirectory: URL
-    
-    private init() {
-        tempDirectory = fileManager.temporaryDirectory.appendingPathComponent("ClipboardCache")
-        try? fileManager.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
-    }
-    
-    func handlePasteboardItem(_ pasteboard: NSPasteboard) -> (url: URL?, type: ClipboardItemType, content: Data?)? {
-            // First check for raw image data
-            if let pngData = pasteboard.data(forType: .png) {
-                return (nil, .image, pngData)
-            } else if let tiffData = pasteboard.data(forType: .tiff) {
-                if let image = NSImage(data: tiffData),
-                   let pngData = image.pngRepresentation() {
-                    return (nil, .image, pngData)
-                }
-            }
-            
-            // Then check for file URLs
+        private let fileManager = FileManager.default
+        private let tempDirectory: URL
+        
+        private init() {
+            tempDirectory = fileManager.temporaryDirectory.appendingPathComponent("ClipboardCache")
+            try? fileManager.createDirectory(at: tempDirectory, withIntermediateDirectories: true)
+        }
+        
+        func handlePasteboardItem(_ pasteboard: NSPasteboard) -> (url: URL?, type: ClipboardItemType, content: Data?)? {
+            // First check for file URLs as they're more memory efficient
             if let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL],
                let url = urls.first {
                 return handleFileURL(url)
+            }
+            
+            // Then check for raw image data
+            return handleImageData(from: pasteboard)
+        }
+        
+        private func handleImageData(from pasteboard: NSPasteboard) -> (url: URL?, type: ClipboardItemType, content: Data?)? {
+            // Create a temporary file for the image data
+            let tempURL = tempDirectory.appendingPathComponent(UUID().uuidString).appendingPathExtension("png")
+            
+            if let image = NSImage(pasteboard: pasteboard) {
+                // Resize and compress the image before saving
+                return autoreleasepool { () -> (URL?, ClipboardItemType, Data?)? in
+                    if let optimizedData = image.optimizedData(maxSize: CGSize(width: 1200, height: 1200)) {
+                        try? optimizedData.write(to: tempURL)
+                        return (tempURL, ClipboardItemType.image, nil as Data?)
+                    }
+                    return nil
+                }
             }
             
             return nil
         }
         
         private func handleFileURL(_ url: URL) -> (url: URL?, type: ClipboardItemType, content: Data?)? {
-            // Get UTType of file
             guard let uti = try? url.resourceValues(forKeys: [.typeIdentifierKey]).typeIdentifier,
                   let utType = UTType(uti) else { return nil }
             
+            let tempURL = tempDirectory.appendingPathComponent(url.lastPathComponent)
+            
             if utType.conforms(to: .image) {
-                // For images, load the actual content
-                if let imageData = try? Data(contentsOf: url) {
-                    return (url, .image, imageData)
+                // For images, create an optimized copy
+                if let image = NSImage(contentsOf: url) {
+                    return autoreleasepool { () -> (URL?, ClipboardItemType, Data?)? in
+                        if let optimizedData = image.optimizedData(maxSize: CGSize(width: 1200, height: 1200)) {
+                            try? optimizedData.write(to: tempURL)
+                            return (tempURL, ClipboardItemType.image, nil as Data?)
+                        }
+                        return nil
+                    }
                 }
             } else if utType.conforms(to: .movie) {
-                return (url, .video, nil)
+                try? fileManager.copyItem(at: url, to: tempURL)
+                return (tempURL, ClipboardItemType.video, nil as Data?)
             } else if utType.conforms(to: .archive) || utType.conforms(to: .data) {
-                return (url, .file, nil)
+                try? fileManager.copyItem(at: url, to: tempURL)
+                return (tempURL, ClipboardItemType.file, nil as Data?)
             }
             
             return nil
         }
-    
-    private func handleData(_ data: Data, type: NSPasteboard.PasteboardType) -> (url: URL?, type: ClipboardItemType)? {
-        let tempURL = tempDirectory.appendingPathComponent(UUID().uuidString)
-        
-        if type == .tiff || type == .png {
-            let fileURL = tempURL.appendingPathExtension("png")
-            try? data.write(to: fileURL)
-            return (fileURL, .image)
-        } else if type.rawValue.contains("video") {
-            let fileURL = tempURL.appendingPathExtension("mov")
-            try? data.write(to: fileURL)
-            return (fileURL, .video)
-        }
-        
-        return nil
-    }
     
     func cleanupOldFiles() {
         let thirtyMinutesAgo = Date().addingTimeInterval(-1800)
@@ -98,12 +98,37 @@ class FileHandler {
     }
 }
 
-// Add this helper extension
+// Add these helper extensions
 private extension NSImage {
-    func pngRepresentation() -> Data? {
-        guard let tiffRepresentation = self.tiffRepresentation,
-              let bitmapImage = NSBitmapImageRep(data: tiffRepresentation) else { return nil }
-        return bitmapImage.representation(using: .png, properties: [:])
+    func optimizedData(maxSize: CGSize) -> Data? {
+        return autoreleasepool { () -> Data? in
+            let resized = self.resized(to: maxSize)
+            guard let tiffData = resized.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiffData) else {
+                return nil
+            }
+            
+            return bitmap.representation(using: .png, properties: [
+                .compressionFactor: 0.7,
+                .interlaced: false
+            ])
+        }
+    }
+    
+    func resized(to maxSize: CGSize) -> NSImage {
+        let ratio = min(maxSize.width / size.width, maxSize.height / size.height, 1)
+        let newSize = NSSize(width: size.width * ratio, height: size.height * ratio)
+        
+        let newImage = NSImage(size: newSize)
+        newImage.lockFocus()
+        NSGraphicsContext.current?.imageInterpolation = .high
+        draw(in: NSRect(origin: .zero, size: newSize),
+             from: NSRect(origin: .zero, size: size),
+             operation: .copy,
+             fraction: 1.0)
+        newImage.unlockFocus()
+        
+        return newImage
     }
 }
 

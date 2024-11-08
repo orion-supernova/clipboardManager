@@ -62,25 +62,31 @@ struct ClipboardItemBox: View {
             )
         case .image:
             return AnyView(
-                VStack {
-                    Text(item.contentDescriptionString)
-                        .frame(height: 20)
-                    
+                VStack(spacing: 8) {
                     if let fileURL = item.fileURL {
-                        AsyncImageView(url: fileURL)
-                            .frame(maxWidth: 180, maxHeight: 180)
-                    } else if let nsImage = NSImage(data: item.content) {
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 180, maxHeight: 180)
+                        LazyImageView(url: fileURL)
+                            .frame(maxWidth: 250, maxHeight: 200)
                     } else {
-                        Image(systemName: "photo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 180, maxHeight: 180)
+                        VStack(spacing: 4) {
+                            Image(systemName: "photo.fill")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 64, height: 64)
+                                .foregroundColor(.gray)
+                            
+                            Text("Unable to load image")
+                                .font(.system(size: 12))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    
+                    if !item.contentDescriptionString.isEmpty {
+                        Text(item.contentDescriptionString)
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
                     }
                 }
+                .padding(.horizontal, 10)
             )
         case .url:
             if let url = URL(dataRepresentation: item.content, relativeTo: nil) {
@@ -201,6 +207,62 @@ struct AsyncImageView: View {
                         self.error = error
                         self.isLoading = false
                         print("[ERROR] Failed to load image: \(error)")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Add this new view for lazy loading
+struct LazyImageView: View {
+    let url: URL
+    @State private var image: NSImage?
+    @State private var isLoading = true
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+            } else if isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+            } else {
+                Image(systemName: "photo.fill")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 64, height: 64)
+                    .foregroundColor(.gray)
+            }
+        }
+        .onAppear {
+            loadImage()
+        }
+        .onDisappear {
+            // Clear memory when view disappears
+            image = nil
+        }
+    }
+    
+    private func loadImage() {
+        guard image == nil else { return }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            autoreleasepool {
+                if let image = NSImage(contentsOf: url) {
+                    DispatchQueue.main.async {
+                        self.image = image
+                        self.isLoading = false
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.isLoading = false
                     }
                 }
             }
