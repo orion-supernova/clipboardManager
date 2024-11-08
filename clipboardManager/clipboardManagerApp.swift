@@ -5,8 +5,8 @@
 //  Created by Murat Can KOÇ on 15.03.2023.
 //
 
-import SwiftUI
 import HotKey
+import SwiftUI
 
 @main
 struct clipboardManagerApp: App {
@@ -27,7 +27,8 @@ struct clipboardManagerApp: App {
         WindowGroup {
             self.containerView
                 .fixedSize()
-                .environment(\.managedObjectContext, appDelegate.persistenceController.container.viewContext)
+                .environment(
+                    \.managedObjectContext, appDelegate.persistenceController.container.viewContext)
         }
     }
 }
@@ -49,7 +50,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var window: NSWindow!
     
     static private(set) var instance: AppDelegate!
-    private lazy var statusBarItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private lazy var statusBarItem = NSStatusBar.system.statusItem(
+        withLength: NSStatusItem.variableLength)
     private let menu = ApplicationMenu()
     
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -69,7 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             makeAppHiddenAction()
         } else {
             makeAppVisibleAction()
-//            setupWindow()
+            //            setupWindow()
         }
     }
     
@@ -79,7 +81,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Private Methods
     @objc private func setupWindowWithDelay() {
-        DispatchQueue.main.asyncAfter(deadline: .now()+0.5) {[weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
             guard let self else { return }
             self.setupWindow()
         }
@@ -100,15 +102,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Make sure window appears in full screen
             self.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             
-            
             if let screen = NSScreen.main {
-                self.window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+                self.window.setFrameOrigin(
+                    NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
             }
             
             self.window.makeKey()
             self.window.orderFrontRegardless()
             NSApplication.shared.activate(ignoringOtherApps: true)
-            
             
         }
         print("[DEBUG] setup window end")
@@ -118,17 +119,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func addObservers() {
-        NotificationCenter.default.addObserver(self, selector: #selector(makeAppHiddenAction), name: NSApplication.willResignActiveNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(textSelectedFromClipboardAction(_:)), name: .textSelectedFromClipboardNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(preferencesClickedAction), name: .preferencesClickedNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(updateMenuBarItemCount(_:)), name: .pasteBoardCountNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(didBecomeActive), name: NSApplication.didBecomeActiveNotification, object: nil)
-//        NotificationCenter.default.addObserver(self, selector: #selector(setupWindowWithDelay), name: .setupWindowNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(makeAppHiddenAction),
+            name: NSApplication.willResignActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(textSelectedFromClipboardAction(_:)),
+            name: .textSelectedFromClipboardNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(makeAppVisibleAction), name: .makeAppVisibleNotification,
+            object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(preferencesClickedAction),
+            name: .preferencesClickedNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(updateMenuBarItemCount(_:)),
+            name: .pasteBoardCountNotification, object: nil)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(didBecomeActive),
+            name: NSApplication.didBecomeActiveNotification, object: nil)
+        //        NotificationCenter.default.addObserver(self, selector: #selector(setupWindowWithDelay), name: .setupWindowNotification, object: nil)
     }
     
     @objc private func didBecomeActive() {
-//                setupWindow()
+        //                setupWindow()
     }
     
     @objc private func updateMenuBarItemCount(_ notification: NSNotification) {
@@ -147,8 +160,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Private Actions
     
-    
-    
     // MARK: - Make App Visible
     @objc private func makeAppVisibleAction() {
         let app = NSRunningApplication.current
@@ -162,44 +173,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.level = .popUpMenu
         window.identifier = .init("appWindow")
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
+        
         // Start the window off-screen at the bottom
         let screenHeight = NSScreen.main?.frame.height ?? 0
-        let offScreenY = -window.frame.height // Move the window off-screen
+        let offScreenY = -window.frame.height  // Move the window off-screen
         window.setFrameOrigin(NSPoint(x: window.frame.origin.x, y: offScreenY))
         
         // Make the window key and order it front
         DispatchQueue.main.async {
             window.makeKeyAndOrderFront(nil)
             window.makeFirstResponder(window.contentView)  // Ensure content view is first responder
-
+            
             // Animate the window's position
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.5 // Duration of the animation
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut) // Animation timing
-
-                // Set the final position of the window
-                window.animator().setFrameOrigin(NSPoint(x: window.frame.origin.x, y: screenHeight - window.frame.height - 50)) // Adjust to your desired position
-            }, completionHandler: nil)
-
+            NSAnimationContext.runAnimationGroup(
+                { context in
+                    context.duration = 0.5  // Duration of the animation
+                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)  // Animation timing
+                    
+                    // Set the final position of the window
+                    window.animator().setFrameOrigin(
+                        NSPoint(
+                            x: window.frame.origin.x, y: screenHeight - window.frame.height - 50))  // Adjust to your desired position
+                }, completionHandler: nil)
+            
             // Ensure the window is positioned correctly on the screen
             if let screen = NSScreen.main {
                 window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
             }
         }
-
+        
         app.activate(options: [.activateIgnoringOtherApps])
         print("DEBUG: ----- makeAppVisibleAction")
     }
-
-
-
     
     // MARK: - Make App Hidden
     @objc private func makeAppHiddenAction() {
         hotkeyForEscape.isPaused = true
         guard let window, window.isVisible else { return }
-//        window.close()
+        //        window.close()
         NSApplication.shared.deactivate()
         NSApplication.shared.hide(self)
         print("DEBUG: ----- makeAppHiddenAction")
@@ -207,14 +218,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Preferences Clicked
     @objc private func preferencesClickedAction() {
-        // Check if preferences window already exists and is visible
-        if let preferencesWindow = self.preferencesWindow {
-            preferencesWindow.makeKeyAndOrderFront(nil)
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            return
-        }
+        //        makeAppHiddenAction()
         
-        DispatchQueue.main.asyncAfter(deadline: .now()+0.2) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             guard let self else { return }
             
             preferencesWindow = NSWindow(
@@ -235,7 +241,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             // Keep window from being released
             let windowController = NSWindowController(window: preferencesWindow)
-//            windowController.showWindow(nil)settings
+            //            windowController.showWindow(nil)settings
             
             // Store reference to prevent deallocation
             let windowNumber = preferencesWindow.windowNumber
@@ -254,10 +260,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 // MARK: - Extension App Delegate
 extension AppDelegate: ApplicationMenuDelegate {
     
-    
     // MARK: - DidTap Clear All Items
     func didTapClearAllButton() {
-        showCustomAlertWithTwoButtons(title: "Warning", message: "Are you sure you want to delete all items inside your clipboard?\n This action can NOT be reversed or undone.") { [weak self] in
+        showCustomAlertWithTwoButtons(
+            title: "Warning",
+            message:
+                "Are you sure you want to delete all items inside your clipboard?\n This action can NOT be reversed or undone."
+        ) { [weak self] in
             guard let self else { return }
             let fetchRequest: NSFetchRequest<NSFetchRequestResult> = ClipboardEntity.fetchRequest()
             let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)

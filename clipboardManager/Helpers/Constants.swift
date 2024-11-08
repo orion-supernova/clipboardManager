@@ -33,4 +33,6 @@ extension String {
     static let retainCountUserDefaultsKey = "retainCountUserDefaultsKey"
     static let launchAtLoginUserDefaultsKey = "launchAtLoginUserDefaultsKey"
     static let clearItemsOlderThanHoursUserDefaultsKey = "clearItemsOlderThanHoursUserDefaultsKey"
+    static let enableKeyboardNavigationUserDefaultsKey = "enableKeyboardNavigationUserDefaultsKey"
+
 }

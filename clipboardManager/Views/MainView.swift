@@ -7,11 +7,18 @@
 
 import SwiftUI
 import CoreData
+import AppKit
+import Combine
 
 struct MainView: View {
     @EnvironmentObject var clipboardManager: ClipboardManager
     @Environment(\.controlActiveState) private var controlActiveState
+    @StateObject private var settings = ClipboardSettings.shared
     let publisher = NotificationCenter.default.publisher(for: .allItemsClearedNotification)
+    
+    @State private var selectedItemIndex: Int = 0
+    @State private var keyMonitor: Any?
+    
     var body: some View {
         GeometryReader { reader in
             ZStack {
@@ -29,19 +36,74 @@ struct MainView: View {
                             .font(.system(size: 24, weight: .bold, design: .monospaced))
                     }
                 } else {
-                    ScrollablePasteboardItemsView()
-                        .environmentObject(clipboardManager)
+                    ScrollablePasteboardItemsView(
+                        selectedItemIndex: $selectedItemIndex,
+                        scrollToIndex: moveSelection
+                    )
+                    .environmentObject(clipboardManager)
                 }
             }
             .onReceive(publisher) { _ in
                 clipboardManager.clipboardItems.removeAll()
             }
+            .onAppear {
+                setupKeyboardMonitoring()
+            }
+            .onDisappear {
+                removeKeyboardMonitor()
+            }
+            .onChange(of: settings.enableKeyboardNavigation) { newValue in
+                if newValue {
+                    setupKeyboardMonitoring()
+                } else {
+                    removeKeyboardMonitor()
+                }
+            }
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
     }
     
-    func refreshClipboardItems() {
-        clipboardManager.fetchClipboardItems()
+    private func setupKeyboardMonitoring() {
+        removeKeyboardMonitor()
+        
+        guard settings.enableKeyboardNavigation else { return }
+        
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            switch event.keyCode {
+            case 123: // Left Arrow
+                moveSelection(direction: -1)
+                return nil
+            case 124: // Right Arrow
+                moveSelection(direction: 1)
+                return nil
+            case 36: // Return/Enter
+                if !clipboardManager.clipboardItems.isEmpty {
+                    let index = min(selectedItemIndex, clipboardManager.clipboardItems.count - 1)
+                    let item = clipboardManager.clipboardItems[index]
+                    let pasteBoard = NSPasteboard.general
+                    pasteBoard.clearContents()
+                    pasteBoard.setString(item.contentDescriptionString, forType: .string)
+                    NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
+                }
+                return nil
+            default:
+                return event
+            }
+        }
+    }
+    
+    private func removeKeyboardMonitor() {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
+    }
+    
+    private func moveSelection(direction: Int) {
+        let itemCount = clipboardManager.clipboardItems.count
+        guard itemCount > 0 else { return }
+        
+        selectedItemIndex = (selectedItemIndex + direction + itemCount) % itemCount
     }
 }
 
@@ -60,6 +122,9 @@ struct ScrollablePasteboardItemsView: View {
     @State private var isSearchFieldVisible = false
     @StateObject var wrapper = ScrollablePasteboardItemsViewWrapper()
     @State private var searchDispatchWorkItem: DispatchWorkItem?
+    @Binding var selectedItemIndex: Int
+    @StateObject private var settings = ClipboardSettings.shared
+    let scrollToIndex: (Int) -> Void
     
     var body: some View {
         VStack {
@@ -162,18 +227,31 @@ struct ScrollablePasteboardItemsView: View {
                             }
                             .frame(width: screenWidth)
                         } else {
-                            ForEach(clipboardManager.clipboardItems) { item in
+                            ForEach(Array(clipboardManager.clipboardItems.enumerated()), id: \.element.id) { index, item in
                                 ClipboardItemBox(item: item)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(settings.enableKeyboardNavigation && index == selectedItemIndex ? Color.blue : Color.clear, lineWidth: 2)
+                                    )
                                     .onTapGesture {
+                                        selectedItemIndex = index
                                         let pasteBoard = NSPasteboard.general
                                         pasteBoard.clearContents()
                                         pasteBoard.setString(item.contentDescriptionString, forType: .string)
-                                        print("DEBUG: -----", item.contentDescriptionString)
                                         NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
                                     }
                                     .frame(width: 300, height: 300)
                                     .id(item.id)
                             }
+                        }
+
+                    }
+
+                }
+                .onChange(of: selectedItemIndex) { newIndex in
+                    if newIndex < clipboardManager.clipboardItems.count {
+                        withAnimation {
+                            proxy.scrollTo(clipboardManager.clipboardItems[newIndex].id, anchor: .center)
                         }
                     }
                 }
@@ -227,3 +305,10 @@ class ScrollablePasteboardItemsViewWrapper: ObservableObject {
         }
     }
 }
+
+// Add this class to manage navigation state
+class NavigationState: ObservableObject {
+    @Published var selectedItemIndex: Int = 0
+}
+
+

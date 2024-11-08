@@ -9,22 +9,21 @@ import SwiftUI
 import ServiceManagement
 
 struct ClipboardSettingsView: View {
-//    @EnvironmentObject var clipboardManager: ClipboardManager
-//    let clipboardManager = ClipboardManager.shared
-//    @StateObject var wrapper =  ClipboardSettingsViewWrapper() // Only calling this function is enough since everytime it changes, the UI redraws itself.
-                                                               //No need to call its variables somewhere.
     @Environment(\.controlActiveState) private var controlActiveState
-    @StateObject var settings = ClipboardSettings.shared
-    
-    init() {
-print("SETTİNGS INIT")
-    }
+    @StateObject private var settings = ClipboardSettings.shared
     
     var body: some View {
         VStack(spacing: 20) {
             GroupBox(label: Text("General Settings").bold()) {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("Launch at login", isOn: $settings.launchAtLogin)
+                        .onChange(of: settings.launchAtLogin) { newValue in
+                            if newValue {
+                                addToLaunchItems()
+                            } else {
+                                removeFromLaunchItems()
+                            }
+                        }
                     Divider()
                     
                     HStack {
@@ -41,16 +40,8 @@ print("SETTİNGS INIT")
                         .frame(width: 120)
                     }
                     
-//                    HStack {
-//                        Text("Clear items older than:")
-//                        Picker("", selection: Binding(get: { clipboardManager.clearItemsOlderThanHours }, set: { clipboardManager.clearItemsOlderThanHours = $0 })) {
-//                            Text("Never clear items automatically").tag(0)
-//                            Text("24 hours").tag(24)
-//                            Text("48 hours").tag(48)
-//                            Text("7 days").tag(168)
-//                        }
-//                        .frame(width: 120)
-//                    }
+                    Toggle("Enable keyboard navigation", isOn: $settings.enableKeyboardNavigation)
+                        .help("Use left/right arrow keys to navigate and Enter to select")
                 }
                 .padding()
             }
