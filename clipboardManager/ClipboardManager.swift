@@ -326,4 +326,29 @@ class ClipboardManager: ObservableObject {
             print("Failed to clear items: \(error)")
         }
     }
+
+    // MARK: - Delete Item
+    func deleteClipboardItem(withId id: UUID) {
+        let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        
+        do {
+            let results = try viewContext.fetch(request)
+            if let itemToDelete = results.first {
+                viewContext.delete(itemToDelete)
+                try viewContext.save()
+                
+                // Update the UI
+                fetchClipboardItems()
+                
+                // Post notification to update count
+                NotificationCenter.default.post(
+                    name: .pasteBoardCountNotification,
+                    object: clipboardItems.count
+                )
+            }
+        } catch {
+            print("Error deleting clipboard item: \(error)")
+        }
+    }
 }

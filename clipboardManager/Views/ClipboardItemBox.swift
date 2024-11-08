@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ClipboardItemBox: View {
     var item: ClipboardItem
+    @EnvironmentObject var clipboardManager: ClipboardManager
     
     var body: some View {
         ZStack {
@@ -25,6 +26,13 @@ struct ClipboardItemBox: View {
             }
         }
         .cornerRadius(10)
+        .contextMenu {
+            Button(action: {
+                clipboardManager.deleteClipboardItem(withId: item.id)
+            }) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
     
     func getCopiedItemView(for item: ClipboardItem) -> some View {
