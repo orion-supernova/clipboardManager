@@ -103,6 +103,48 @@ struct ClipboardItemBox: View {
                         .font(.system(size: 13))
                 )
             }
+        case .video:
+            return AnyView(
+                VStack {
+                    Text(item.contentDescriptionString)
+                        .frame(height: 20)
+                    
+                    if let thumbnailURL = item.thumbnailURL {
+                        AsyncImageView(url: thumbnailURL)
+                            .frame(maxWidth: 180, maxHeight: 180)
+                            .overlay(
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 44))
+                                    .foregroundColor(.white)
+                            )
+                    } else {
+                        Image(systemName: "video")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 180, maxHeight: 180)
+                    }
+                }
+            )
+        
+        case .file:
+            return AnyView(
+                VStack {
+                    Text(item.contentDescriptionString)
+                        .frame(height: 20)
+                    
+                    if let url = item.fileURL {
+                        let icon = NSWorkspace.shared.icon(forFile: url.path)
+                        Image(nsImage: icon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 60, maxHeight: 60)
+                        
+                        Text(url.lastPathComponent)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+            )
         }
     }
     
@@ -164,10 +206,4 @@ struct AsyncImageView: View {
             }
         }
     }
-}
-
-#Preview {
-    let url = URL(string: "https://www.youtube.com")
-    let data = url?.dataRepresentation
-    return ClipboardItemBox(item: ClipboardItem(id: UUID(), type: .url, content: data!, copiedFromApplication: .init(withApplication: NSRunningApplication()), timestamp: Date(), contentDescriptionString: "", fileURL: nil))
 }

@@ -8,6 +8,7 @@
 import CoreData
 import SwiftUI
 import AppKit
+import AVFoundation
 
 // Add this line to import ThumbnailService
 @_implementationOnly import struct Foundation.Data
@@ -141,73 +142,53 @@ class ClipboardManager: ObservableObject {
     private func createClipboardItem() -> ClipboardItem? {
         return autoreleasepool { () -> ClipboardItem? in
             let pasteboard = NSPasteboard.general
-            let type = getClipboardItemType()
             let contentDescription = pasteboard.string(forType: .string) ?? ""
             let copiedFromApp = getCopiedFromApplication()
-            var content = Data()
-            var fileURL: URL? = nil
-
-            switch type {
-            case .image:
-                // First check for file URLs
-                if let files = pasteboard.propertyList(forType: .fileURL) as? [String],
-                   let firstFile = files.first {
-                    let fileURL = URL(fileURLWithPath: firstFile)
-                    if FileManager.default.fileExists(atPath: fileURL.path) {
-                        // Store minimal content for identification
-                        content = fileURL.absoluteString.data(using: .utf8) ?? Data()
-                        print("[DEBUG] Image file URL found: \(fileURL.path)")
-                        return ClipboardItem(
-                            id: UUID(),
-                            type: .image,
-                            content: content,
-                            copiedFromApplication: copiedFromApp,
-                            timestamp: Date(),
-                            contentDescriptionString: contentDescription,
-                            fileURL: fileURL
-                        )
-                    }
+            
+            // Handle file-based items and images
+            if let (fileURL, type, content) = FileHandler.shared.handlePasteboardItem(pasteboard) {
+                var thumbnailURL: URL? = nil
+                
+                // Generate thumbnail for videos
+                if type == .video {
+                    thumbnailURL = generateVideoThumbnail(from: fileURL)
                 }
                 
-                // If no file URL, try to get image data directly
-                if let pngData = pasteboard.data(forType: .png) {
-                    content = pngData
-                    print("[DEBUG] PNG data found: \(pngData.count) bytes")
-                } else if let tiffData = pasteboard.data(forType: .tiff) {
-                    if let image = NSImage(data: tiffData),
-                       let pngData = image.pngData() {
-                        content = pngData
-                        print("[DEBUG] Converted TIFF to PNG: \(pngData.count) bytes")
-                    } else {
-                        content = tiffData
-                    }
-                }
-
+                return ClipboardItem(
+                    id: UUID(),
+                    type: type,
+                    content: content ?? Data(), // Use the actual content if available
+                    copiedFromApplication: copiedFromApp,
+                    timestamp: Date(),
+                    contentDescriptionString: contentDescription,
+                    fileURL: fileURL,
+                    thumbnailURL: thumbnailURL
+                )
+            }
+            
+            // Handle other types (text, color, urls)
+            let type = getClipboardItemType()
+            var content = Data()
+            
+            switch type {
             case .text:
                 if let string = pasteboard.string(forType: .string) {
                     content = Data(string.utf8)
-                } else {
-                    return basicClipboardItem(copiedFromApp: copiedFromApp, description: contentDescription)
                 }
-                
             case .url:
-                if let url = pasteboard.string(forType: .URL),
-                   let urlData = url.data(using: .utf8) {
-                    content = urlData
-                } else {
-                    return basicClipboardItem(copiedFromApp: copiedFromApp, description: contentDescription)
+                if let url = pasteboard.string(forType: .URL) {
+                    content = url.data(using: .utf8) ?? Data()
                 }
-                
             case .color:
                 if let color = detectColor(from: contentDescription),
                    let colorData = try? NSKeyedArchiver.archivedData(
                     withRootObject: color, requiringSecureCoding: true) {
                     content = colorData
-                } else {
-                    return basicClipboardItem(copiedFromApp: copiedFromApp, description: contentDescription)
                 }
+            default:
+                return nil
             }
-
+            
             return ClipboardItem(
                 id: UUID(),
                 type: type,
@@ -215,9 +196,43 @@ class ClipboardManager: ObservableObject {
                 copiedFromApplication: copiedFromApp,
                 timestamp: Date(),
                 contentDescriptionString: contentDescription,
-                fileURL: fileURL
+                fileURL: nil,
+                thumbnailURL: nil
             )
         }
+    }
+
+    private func generateVideoThumbnail(from url: URL?) -> URL? {
+        guard let url = url else { return nil }
+        
+        let asset = AVAsset(url: url)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+        
+        do {
+            let time = CMTime.zero
+            let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
+            let thumbnail = NSImage(cgImage: cgImage, size: NSSize(width: 180, height: 180))
+            
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("thumbnails")
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("png")
+            
+            try? FileManager.default.createDirectory(
+                at: tempURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            
+            if let data = thumbnail.tiffRepresentation {
+                try? data.write(to: tempURL)
+                return tempURL
+            }
+        } catch {
+            print("Failed to generate video thumbnail: \(error)")
+        }
+        
+        return nil
     }
 
     private func getCopiedFromApplication() -> CopiedFromApplication {
@@ -344,7 +359,8 @@ class ClipboardManager: ObservableObject {
             copiedFromApplication: copiedFromApp,
             timestamp: timestamp,
             contentDescriptionString: contentDescriptionString,
-            fileURL: fileURL
+            fileURL: fileURL,
+            thumbnailURL: nil
         )
     }
 
@@ -386,7 +402,8 @@ class ClipboardManager: ObservableObject {
                     copiedFromApplication: copiedFromApp,
                     timestamp: timestamp,
                     contentDescriptionString: contentDescriptionString,
-                    fileURL: fileURL
+                    fileURL: fileURL,
+                    thumbnailURL: nil
                 )
             }
             NotificationCenter.default.post(
@@ -614,7 +631,8 @@ class ClipboardManager: ObservableObject {
             copiedFromApplication: copiedFromApp,
             timestamp: Date(),
             contentDescriptionString: description,
-            fileURL: nil
+            fileURL: nil,
+            thumbnailURL: nil
         )
     }
 }
