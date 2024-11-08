@@ -52,7 +52,10 @@ class FileHandler {
             guard let uti = try? url.resourceValues(forKeys: [.typeIdentifierKey]).typeIdentifier,
                   let utType = UTType(uti) else { return nil }
             
-            let tempURL = tempDirectory.appendingPathComponent(url.lastPathComponent)
+            // Create a unique filename while preserving the original filename
+            let originalFilename = url.lastPathComponent
+            let uniqueFilename = "\(UUID().uuidString)-\(originalFilename)"
+            var tempURL = tempDirectory.appendingPathComponent(uniqueFilename)
             
             if utType.conforms(to: .image) {
                 // For images, create an optimized copy
@@ -66,11 +69,29 @@ class FileHandler {
                     }
                 }
             } else if utType.conforms(to: .movie) {
-                try? fileManager.copyItem(at: url, to: tempURL)
-                return (tempURL, ClipboardItemType.video, nil as Data?)
-            } else if utType.conforms(to: .archive) || utType.conforms(to: .data) || utType.conforms(to: .folder) {
-                try? fileManager.copyItem(at: url, to: tempURL)
-                return (tempURL, ClipboardItemType.file, nil as Data?)
+                do {
+                    try fileManager.copyItem(at: url, to: tempURL)
+                    return (tempURL, ClipboardItemType.video, nil as Data?)
+                } catch {
+                    print("[ERROR] Failed to copy video file: \(error)")
+                    return nil
+                }
+            } else {
+                // Handle any other file type
+                do {
+                    // Copy the file with its metadata
+                    try fileManager.copyItem(at: url, to: tempURL)
+                    
+                    // Preserve file attributes
+                    let attributes = try fileManager.attributesOfItem(atPath: url.path)
+                    try fileManager.setAttributes(attributes, ofItemAtPath: tempURL.path)
+                    
+                    print("[DEBUG] Copied file: \(originalFilename) to \(tempURL.path)")
+                    return (tempURL, ClipboardItemType.file, nil as Data?)
+                } catch {
+                    print("[ERROR] Failed to copy file: \(error)")
+                    return nil
+                }
             }
             
             return nil

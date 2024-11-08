@@ -134,22 +134,31 @@ struct ClipboardItemBox: View {
         
         case .file:
             return AnyView(
-                VStack {
-                    Text(item.contentDescriptionString)
-                        .frame(height: 20)
-                    
+                VStack(spacing: 8) {
                     if let url = item.fileURL {
                         let icon = NSWorkspace.shared.icon(forFile: url.path)
                         Image(nsImage: icon)
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 60, maxHeight: 60)
+                            .frame(maxWidth: 100, maxHeight: 100)
                         
-                        Text(url.lastPathComponent)
+                        Text(item.contentDescriptionString)
                             .lineLimit(2)
                             .multilineTextAlignment(.center)
+                            .font(.system(size: 12))
+                    } else {
+                        Image(systemName: "doc")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxWidth: 100, maxHeight: 100)
+                            .foregroundColor(.gray)
+                        
+                        Text("File not available")
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
                     }
                 }
+                .padding(.vertical, 8)
             )
         }
     }

@@ -152,6 +152,14 @@ class ClipboardManager: ObservableObject {
                     print("[DEBUG] Generated video thumbnail: \(String(describing: thumbnailURL))")
                 }
                 
+//                // For files, use the original filename as the description
+//                let finalDescription: String
+//                if type == .file || type == .video {
+//                    finalDescription = fileURL?.lastPathComponent ?? contentDescription
+//                } else {
+//                    finalDescription = contentDescription
+//                }
+                
                 return ClipboardItem(
                     id: UUID(),
                     type: type,
