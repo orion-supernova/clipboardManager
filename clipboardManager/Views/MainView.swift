@@ -103,7 +103,15 @@ struct MainView: View {
         let itemCount = clipboardManager.clipboardItems.count
         guard itemCount > 0 else { return }
         
-        selectedItemIndex = (selectedItemIndex + direction + itemCount) % itemCount
+        let newIndex = selectedItemIndex + direction
+        
+        // Check bounds and provide feedback if needed
+        if newIndex < 0 || newIndex >= itemCount {
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .default)
+            return
+        }
+        
+        selectedItemIndex = newIndex
     }
 }
 

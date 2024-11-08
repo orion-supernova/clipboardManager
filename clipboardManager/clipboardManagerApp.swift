@@ -224,7 +224,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             
             preferencesWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 150, width: 400, height: 400),
+                contentRect: NSRect(x: 0, y: 500, width: 400, height: 400),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
