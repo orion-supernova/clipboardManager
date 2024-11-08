@@ -218,36 +218,40 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Preferences Clicked
     @objc private func preferencesClickedAction() {
-        //        makeAppHiddenAction()
-        
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             guard let self else { return }
             
-            preferencesWindow = NSWindow(
-                contentRect: NSRect(x: 0, y: 500, width: 400, height: 400),
-                styleMask: [.titled, .closable],
-                backing: .buffered,
-                defer: false
-            )
+            // Create the window if it doesn't exist
+            if self.preferencesWindow == nil {
+                self.preferencesWindow = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 400, height: 500),
+                    styleMask: [.titled, .closable, .miniaturizable],
+                    backing: .buffered,
+                    defer: false
+                )
+                
+                self.preferencesWindow?.title = "Clipboard Settings"
+                self.preferencesWindow?.contentView = NSHostingView(rootView: ClipboardSettingsView())
+                self.preferencesWindow?.level = .floating
+            }
             
-            guard let preferencesWindow else { return }
+            guard let preferencesWindow = self.preferencesWindow else { return }
             
-            preferencesWindow.title = "Clipboard Settings"
-            preferencesWindow.center()
-            preferencesWindow.contentView = NSHostingView(rootView: ClipboardSettingsView())
+            // Position the window at the top-center of the screen
+            if let screen = NSScreen.main {
+                let centerX = screen.frame.midX - (preferencesWindow.frame.width / 2)
+                let topY = screen.frame.maxY - 50  // 50 pixels from top
+                
+                preferencesWindow.setFrameTopLeftPoint(NSPoint(x: centerX, y: topY))
+            }
             
             NSApplication.shared.activate(ignoringOtherApps: true)
             preferencesWindow.makeKeyAndOrderFront(nil)
             
             // Keep window from being released
             let windowController = NSWindowController(window: preferencesWindow)
-            //            windowController.showWindow(nil)settings
-            
-            // Store reference to prevent deallocation
-            let windowNumber = preferencesWindow.windowNumber
             AppDelegate.windowControllers.append(windowController)
         }
-        
     }
     
     // MARK: - Text selected from clipboard
