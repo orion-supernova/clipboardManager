@@ -102,41 +102,45 @@ struct SubscriptionView: View {
                     .offset(y: isAnimating ? 0 : -30)
                     .opacity(isAnimating ? 1 : 0)
                 
-                if subscriptionManager.isSubscribed {
-                    VStack(spacing: 20) {
-                        Text("You're a Pro user!")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundColor(SubscriptionColors.text)
-                        
-                        Button("Close") {
-                            dismiss()
-                        }
-                        .buttonStyle(PremiumButtonStyle())
-                    }
+                // Features Grid
+                featuresSection
+                    .offset(y: isAnimating ? 0 : 50)
+                    .opacity(isAnimating ? 1 : 0)
+                
+                // Subscription Plans
+                if subscriptionManager.subscriptions.isEmpty {
+                    loadingView
                 } else {
-                    // Features Grid
-                    featuresSection
+                    subscriptionPlans
                         .offset(y: isAnimating ? 0 : 50)
                         .opacity(isAnimating ? 1 : 0)
-                    
-                    // Subscription Plans
-                    if subscriptionManager.subscriptions.isEmpty {
-                        loadingView
-                    } else {
-                        subscriptionPlans
-                            .offset(y: isAnimating ? 0 : 50)
-                            .opacity(isAnimating ? 1 : 0)
-                    }
-                    
-                    Spacer()
-                    
-                    // Footer
-                    footerSection
-                        .offset(y: isAnimating ? 0 : 30)
-                        .opacity(isAnimating ? 1 : 0)
                 }
+                
+                Spacer()
+                
+                // Footer
+                footerSection
+                    .offset(y: isAnimating ? 0 : 30)
+                    .opacity(isAnimating ? 1 : 0)
             }
             .padding(40)
+            
+            // Success overlay
+            if subscriptionManager.isSubscribed {
+                Color.black.opacity(0.95)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 20) {
+                    Text("You're a Pro user now!")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(SubscriptionColors.text)
+                    
+                    Button("Close") {
+                        dismiss()
+                    }
+                    .buttonStyle(PremiumButtonStyle())
+                }
+            }
         }
         .frame(width: 800, height: 600)
         .onAppear {
@@ -632,6 +636,10 @@ struct FooterButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
     }
 }
+
+
+
+
 
 
 

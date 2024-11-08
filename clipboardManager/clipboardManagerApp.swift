@@ -273,6 +273,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             guard let self else { return }
 
             if let existingWindow = self.subscriptionWindow {
+                existingWindow.titlebarAppearsTransparent = true
+                existingWindow.titleVisibility = .hidden
                 existingWindow.makeKeyAndOrderFront(nil)
                 NSApplication.shared.activate(ignoringOtherApps: true)
                 return
@@ -287,14 +289,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
             guard let window = self.subscriptionWindow else { return }
 
-            window.title = "Subscription"  // Changed to match what StoreKit looks for
+            window.title = "Subscription"
             window.contentView = NSHostingView(rootView: SubscriptionView())
             window.level = .screenSaver
             window.delegate = self
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.isMovableByWindowBackground = false
-            window.center()  // Center the window
+            window.center()
 
             let windowController = NSWindowController(window: window)
             AppDelegate.windowControllers.append(windowController)
