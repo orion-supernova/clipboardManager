@@ -329,6 +329,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             }
         }
     }
+
+    func applicationDidReceiveMemoryWarning(_ notification: Notification) {
+        ClipboardManager.shared.handleMemoryWarning()
+    }
 }
 
 // MARK: - Extension App Delegate

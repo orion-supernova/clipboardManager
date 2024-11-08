@@ -21,6 +21,7 @@
 		549204D72CDE05F700EC6DA0 /* SubscriptionProduct.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549204D62CDE05F700EC6DA0 /* SubscriptionProduct.swift */; };
 		549204D92CDE060500EC6DA0 /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549204D82CDE060500EC6DA0 /* SubscriptionView.swift */; };
 		549204DD2CDE105B00EC6DA0 /* ProAccessStoreKit.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 549204DC2CDE105B00EC6DA0 /* ProAccessStoreKit.storekit */; };
+		549205012CDE6C8300EC6DA0 /* ThumbnailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 549205002CDE6C8300EC6DA0 /* ThumbnailService.swift */; };
 		54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238129CA369800F3E2F3 /* KeyCodes.swift */; };
 		54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */; };
 		54A76B892C5D852300AEBD9E /* NSImage+Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A76B882C5D852300AEBD9E /* NSImage+Color.swift */; };
@@ -63,6 +64,7 @@
 		549204D62CDE05F700EC6DA0 /* SubscriptionProduct.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionProduct.swift; sourceTree = "<group>"; };
 		549204D82CDE060500EC6DA0 /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
 		549204DC2CDE105B00EC6DA0 /* ProAccessStoreKit.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ProAccessStoreKit.storekit; sourceTree = "<group>"; };
+		549205002CDE6C8300EC6DA0 /* ThumbnailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbnailService.swift; sourceTree = "<group>"; };
 		54A3238129CA369800F3E2F3 /* KeyCodes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyCodes.swift; sourceTree = "<group>"; };
 		54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyPressHelper.swift; sourceTree = "<group>"; };
 		54A76B882C5D852300AEBD9E /* NSImage+Color.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSImage+Color.swift"; sourceTree = "<group>"; };
@@ -151,6 +153,7 @@
 				54D74ED829C240A3004769D2 /* ApplicationMenu.swift */,
 				549204D62CDE05F700EC6DA0 /* SubscriptionProduct.swift */,
 				549204D82CDE060500EC6DA0 /* SubscriptionView.swift */,
+				549205002CDE6C8300EC6DA0 /* ThumbnailService.swift */,
 				549204DC2CDE105B00EC6DA0 /* ProAccessStoreKit.storekit */,
 				54E32CB629C4CCCF004772B5 /* Views */,
 				54B953F129C3B6F300990FAC /* Models */,
@@ -365,6 +368,7 @@
 				54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */,
 				54B6C8B02C4FDF4D00106CFA /* CustomImage.swift in Sources */,
 				54B6C8AE2C4FDF2E00106CFA /* CopiedFromApplication.swift in Sources */,
+				549205012CDE6C8300EC6DA0 /* ThumbnailService.swift in Sources */,
 				54A76B8D2C5E634C00AEBD9E /* URLPreview.swift in Sources */,
 				540C80622CCA881900FACA44 /* ClipboardSettingsView.swift in Sources */,
 				54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */,

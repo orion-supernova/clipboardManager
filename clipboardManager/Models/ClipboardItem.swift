@@ -7,13 +7,14 @@
 
 import AppKit
 
-struct ClipboardItem: Identifiable, Codable {
+struct ClipboardItem: Identifiable {
     let id: UUID
     let type: ClipboardItemType
     let content: Data
     let copiedFromApplication: CopiedFromApplication
     let timestamp: Date
     let contentDescriptionString: String
+    let fileURL: URL?
 }
 
 

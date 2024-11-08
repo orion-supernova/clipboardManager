@@ -7,6 +7,10 @@
 
 import CoreData
 import SwiftUI
+import AppKit
+
+// Add this line to import ThumbnailService
+@_implementationOnly import struct Foundation.Data
 
 class ClipboardManager: ObservableObject {
     static let shared = ClipboardManager(persistenceController: .shared) // Singleton instance
@@ -24,45 +28,71 @@ class ClipboardManager: ObservableObject {
     }
     private var lastItemContentDescriptionString = ""
     var initCount = 0
+    private var pasteboardTimer: Timer?
+    private var cleanupTimer: Timer?
+    private var isProcessingClipboard = false
 
     // MARK: - Lifecycle
     private init(persistenceController: PersistenceController) {
         self.persistenceController = persistenceController
         setDefaultValuesIfNeeded()
         removeExtraItemsIfNeeded()
+        
+        print("[DEBUG] Initializing ClipboardManager")
+        
+        // Setup initial state
         fetchClipboardItems()
-        setupTimer()
+        
+        // Start monitoring clipboard
+        DispatchQueue.main.async { [weak self] in
+            self?.setupTimer()
+            self?.setupCleanupTimer()
+        }
+        
         initCount += 1
     }
 
     // MARK: - Private Methods
     private func setupTimer() {
+        pasteboardTimer?.invalidate()
+        
         let pasteboard = NSPasteboard.general
-        var changeCount = NSPasteboard.general.changeCount
-
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            guard pasteboard.changeCount != changeCount else { return }
-
-            changeCount = pasteboard.changeCount
-            print(changeCount)
-
-            let newItem = self.createClipboardItem()
-            //            guard newItem?.content != clipboardItems.first?.content else { return }
-            guard newItem?.contentDescriptionString != lastItemContentDescriptionString else {
-                return
-            }
-            print("Last Item Description: \(lastItemContentDescriptionString)")
-            print("New Item Description: \(String(describing: newItem?.contentDescriptionString))")
+        var changeCount = pasteboard.changeCount
+        
+        print("[DEBUG] Setting up clipboard monitoring timer")
+        
+        pasteboardTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
+            guard let self = self,
+                  !self.isProcessingClipboard else { return }
             
-            lastItemContentDescriptionString = newItem?.contentDescriptionString ?? ""
-            self.addClipboardItem(
-                newItem
-                    ?? .init(
-                        id: UUID(), type: .text, content: Data(),
-                        copiedFromApplication: .init(withApplication: NSRunningApplication()),
-                        timestamp: Date(), contentDescriptionString: "#error#"))
+            // Check if pasteboard has changed
+            guard pasteboard.changeCount != changeCount else { return }
+            
+            // Set processing flag
+            self.isProcessingClipboard = true
+            
+            autoreleasepool {
+                print("[DEBUG] Pasteboard change detected: \(pasteboard.changeCount) (was \(changeCount))")
+                changeCount = pasteboard.changeCount
+                
+                // Get the new content immediately
+                if let newItem = self.createClipboardItem() {
+                    if newItem.contentDescriptionString != self.lastItemContentDescriptionString {
+                        // Use background context for saving
+                        let backgroundContext = self.persistenceController.container.newBackgroundContext()
+                        backgroundContext.perform {
+                            self.addClipboardItem(newItem, in: backgroundContext)
+                            self.lastItemContentDescriptionString = newItem.contentDescriptionString
+                        }
+                    }
+                }
+                
+                // Reset processing flag
+                self.isProcessingClipboard = false
+            }
         }
+        
+        RunLoop.main.add(pasteboardTimer!, forMode: .common)
     }
     private func setDefaultValuesIfNeeded() {
         if let hm = UserDefaults.standard.value(forKey: .launchAtLoginUserDefaultsKey) {
@@ -82,92 +112,112 @@ class ClipboardManager: ObservableObject {
         }
     }
     private func removeExtraItemsIfNeeded() {
+        guard retainCount != -1 else { return }
+        
         let fetchRequest: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
-            
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+        
+        viewContext.perform { [weak self] in
+            guard let self = self else { return }
             do {
-                let allItems = try viewContext.fetch(fetchRequest)
-                // If retainCount is -1 don't trim
-                if retainCount != -1 && allItems.count > retainCount {
-                    let itemsToDelete = Array(allItems[retainCount...])
+                let allItems = try self.viewContext.fetch(fetchRequest)
+                if allItems.count > self.retainCount {
+                    let itemsToDelete = Array(allItems[self.retainCount...])
                     
-                    // Delete excess items
-                    itemsToDelete.forEach { item in
-                        viewContext.delete(item)
-                    }
+                    // Batch delete instead of individual deletes
+                    let objectIDs = itemsToDelete.map { $0.objectID }
+                    let batchDelete = NSBatchDeleteRequest(objectIDs: objectIDs)
                     
-                    try viewContext.save()
+                    try self.viewContext.execute(batchDelete)
+                    try self.viewContext.save()
                 }
             } catch {
                 print("Failed to remove extra items: \(error)")
             }
+        }
     }
 
     // MARK: - Create Item
     private func createClipboardItem() -> ClipboardItem? {
-        let pasteboard = NSPasteboard.general
-        let type = getClipboardItemType()
+        return autoreleasepool { () -> ClipboardItem? in
+            let pasteboard = NSPasteboard.general
+            let type = getClipboardItemType()
+            let contentDescription = pasteboard.string(forType: .string) ?? ""
+            let copiedFromApp = getCopiedFromApplication()
+            var content = Data()
+            var fileURL: URL? = nil
 
-        let content: Data
-        let copiedFromApp = getCopiedFromApplication()
-        let contentDescription = pasteboard.string(forType: .string) ?? ""
-
-        let basicClipboardItem = ClipboardItem(
-            id: UUID(), type: .text, content: contentDescription.data(using: .utf8) ?? Data(),
-            copiedFromApplication: copiedFromApp, timestamp: Date(),
-            contentDescriptionString: contentDescription)
-
-        switch type {
-        case .text:
-            if let string = pasteboard.string(forType: .string) {
-                content = Data(string.utf8)
-            } else {
-                return basicClipboardItem
-            }
-        case .image:
-            if let pngData = pasteboard.data(forType: .png) {
-                content = pngData
-            } else if let tiffData = pasteboard.data(forType: .tiff) {
-                content = tiffData
-            } else if let jpegData = pasteboard.data(
-                forType: NSPasteboard.PasteboardType("public.jpeg"))
-            {
-                content = jpegData
-            } else if let fileURLs = pasteboard.propertyList(forType: .fileURL) as? [String],
-                let firstURL = fileURLs.first,
-                let imageData = try? Data(contentsOf: URL(fileURLWithPath: firstURL))
-            {
-                content = imageData
-            } else {
-                return basicClipboardItem
-            }
-        case .url:
-            if let url = pasteboard.string(forType: .URL), let urlData = url.data(using: .utf8) {
-                content = urlData
-            } else {
-                return basicClipboardItem
-            }
-        case .color:
-            if let color = detectColor(from: pasteboard.string(forType: .string) ?? "") {
-                do {
-                    content = try NSKeyedArchiver.archivedData(
-                        withRootObject: color, requiringSecureCoding: true)
-                } catch {
-                    return basicClipboardItem
+            switch type {
+            case .image:
+                // First check for file URLs
+                if let files = pasteboard.propertyList(forType: .fileURL) as? [String],
+                   let firstFile = files.first {
+                    let fileURL = URL(fileURLWithPath: firstFile)
+                    if FileManager.default.fileExists(atPath: fileURL.path) {
+                        // Store minimal content for identification
+                        content = fileURL.absoluteString.data(using: .utf8) ?? Data()
+                        print("[DEBUG] Image file URL found: \(fileURL.path)")
+                        return ClipboardItem(
+                            id: UUID(),
+                            type: .image,
+                            content: content,
+                            copiedFromApplication: copiedFromApp,
+                            timestamp: Date(),
+                            contentDescriptionString: contentDescription,
+                            fileURL: fileURL
+                        )
+                    }
                 }
-            } else {
-                return basicClipboardItem
-            }
-        }
+                
+                // If no file URL, try to get image data directly
+                if let pngData = pasteboard.data(forType: .png) {
+                    content = pngData
+                    print("[DEBUG] PNG data found: \(pngData.count) bytes")
+                } else if let tiffData = pasteboard.data(forType: .tiff) {
+                    if let image = NSImage(data: tiffData),
+                       let pngData = image.pngData() {
+                        content = pngData
+                        print("[DEBUG] Converted TIFF to PNG: \(pngData.count) bytes")
+                    } else {
+                        content = tiffData
+                    }
+                }
 
-        return ClipboardItem(
-            id: UUID(),
-            type: type,
-            content: content,
-            copiedFromApplication: copiedFromApp,
-            timestamp: Date(),
-            contentDescriptionString: contentDescription
-        )
+            case .text:
+                if let string = pasteboard.string(forType: .string) {
+                    content = Data(string.utf8)
+                } else {
+                    return basicClipboardItem(copiedFromApp: copiedFromApp, description: contentDescription)
+                }
+                
+            case .url:
+                if let url = pasteboard.string(forType: .URL),
+                   let urlData = url.data(using: .utf8) {
+                    content = urlData
+                } else {
+                    return basicClipboardItem(copiedFromApp: copiedFromApp, description: contentDescription)
+                }
+                
+            case .color:
+                if let color = detectColor(from: contentDescription),
+                   let colorData = try? NSKeyedArchiver.archivedData(
+                    withRootObject: color, requiringSecureCoding: true) {
+                    content = colorData
+                } else {
+                    return basicClipboardItem(copiedFromApp: copiedFromApp, description: contentDescription)
+                }
+            }
+
+            return ClipboardItem(
+                id: UUID(),
+                type: type,
+                content: content,
+                copiedFromApplication: copiedFromApp,
+                timestamp: Date(),
+                contentDescriptionString: contentDescription,
+                fileURL: fileURL
+            )
+        }
     }
 
     private func getCopiedFromApplication() -> CopiedFromApplication {
@@ -203,20 +253,29 @@ class ClipboardManager: ObservableObject {
     }
 
     // MARK: - Add Item
-    func addClipboardItem(_ item: ClipboardItem) {
-        let newItem = ClipboardEntity(context: viewContext)
+    private func addClipboardItem(_ item: ClipboardItem, in context: NSManagedObjectContext) {
+        print("[DEBUG] Adding clipboard item to CoreData")
+        
+        let newItem = ClipboardEntity(context: context)
         newItem.id = item.id
         newItem.content = item.content
         newItem.timestamp = item.timestamp
         newItem.type = item.type.rawValue
         newItem.copiedFromApplication = try? item.copiedFromApplication.toData()
         newItem.contentDescriptionString = item.contentDescriptionString
-
+        newItem.fileURL = item.fileURL
+        
         do {
-            try viewContext.save()
-            fetchClipboardItems()
+            try context.save()
+            print("[DEBUG] Successfully saved clipboard item")
+            
+            // Update UI immediately
+            DispatchQueue.main.async { [weak self] in
+                self?.fetchClipboardItems()
+            }
         } catch {
-            print("Error saving context: \(error)")
+            print("[ERROR] Failed to save clipboard item: \(error)")
+            context.rollback()
         }
     }
 
@@ -226,44 +285,67 @@ class ClipboardManager: ObservableObject {
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \ClipboardEntity.timestamp, ascending: false)
         ]
-
-        do {
-            let results = try viewContext.fetch(request)
-            clipboardItems = results.map { entity in
-                let id = entity.id ?? UUID()  // Provide a default UUID if nil
-                let typeRawValue = entity.type ?? ClipboardItemType.text.rawValue  // Default to .text if nil
-                let content = entity.content ?? Data()  // Default to empty Data if nil
-                let timestamp = entity.timestamp ?? Date()  // Default to current date if nil
-                let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"  // Default to "Unknown" if nil
-
-                let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
-
-                let copiedFromApp: CopiedFromApplication
+        
+        request.fetchLimit = 50  // Reduced from 100
+        request.fetchBatchSize = 10  // Reduced from 20
+        
+        // Use background context for fetching
+        let backgroundContext = persistenceController.container.newBackgroundContext()
+        backgroundContext.perform { [weak self] in
+            guard let self = self else { return }
+            
+            autoreleasepool {
                 do {
-                    copiedFromApp = try CopiedFromApplication.fromData(
-                        entity.copiedFromApplication ?? Data())
+                    let results = try backgroundContext.fetch(request)
+                    let mappedItems = results.compactMap { entity -> ClipboardItem? in
+                        autoreleasepool {
+                            return self.mapEntityToClipboardItem(entity)
+                        }
+                    }
+                    
+                    DispatchQueue.main.async { [weak self] in
+                        self?.clipboardItems = mappedItems
+                        NotificationCenter.default.post(name: .pasteBoardCountNotification, object: results.count)
+                    }
+                    
+                    // Reset the context after use
+                    backgroundContext.reset()
                 } catch {
-                    print("Error decoding copiedFromApplication: \(error)")
-                    copiedFromApp = CopiedFromApplication(
-                        withApplication: NSRunningApplication())  // Provide a default value
+                    print("Error fetching clipboard items: \(error)")
                 }
-
-                return ClipboardItem(
-                    id: id,
-                    type: type,
-                    content: content,
-                    copiedFromApplication: copiedFromApp,
-                    timestamp: timestamp,
-                    contentDescriptionString: contentDescriptionString
-                )
             }
-
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .pasteBoardCountNotification, object: results.count)
-            }
-        } catch {
-            print("Error fetching clipboard items: \(error)")
         }
+    }
+
+    // Add a helper method to map entities
+    private func mapEntityToClipboardItem(_ entity: ClipboardEntity) -> ClipboardItem {
+        let id = entity.id ?? UUID()
+        let typeRawValue = entity.type ?? ClipboardItemType.text.rawValue
+        let content = entity.content ?? Data()
+        let timestamp = entity.timestamp ?? Date()
+        let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"
+        let fileURL = entity.fileURL
+
+        let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
+
+        let copiedFromApp: CopiedFromApplication
+        do {
+            copiedFromApp = try CopiedFromApplication.fromData(
+                entity.copiedFromApplication ?? Data())
+        } catch {
+            copiedFromApp = CopiedFromApplication(
+                withApplication: NSRunningApplication())
+        }
+
+        return ClipboardItem(
+            id: id,
+            type: type,
+            content: content,
+            copiedFromApplication: copiedFromApp,
+            timestamp: timestamp,
+            contentDescriptionString: contentDescriptionString,
+            fileURL: fileURL
+        )
     }
 
     // MARK: - Fetch Searched Items
@@ -284,6 +366,7 @@ class ClipboardManager: ObservableObject {
                 let content = entity.content ?? Data()  // Default to empty Data if nil
                 let timestamp = entity.timestamp ?? Date()  // Default to current date if nil
                 let contentDescriptionString = entity.contentDescriptionString ?? "Unknown"  // Default to "Unknown" if nil
+                let fileURL = entity.fileURL
 
                 let type = ClipboardItemType(rawValue: typeRawValue) ?? .text
 
@@ -302,7 +385,8 @@ class ClipboardManager: ObservableObject {
                     content: content,
                     copiedFromApplication: copiedFromApp,
                     timestamp: timestamp,
-                    contentDescriptionString: contentDescriptionString
+                    contentDescriptionString: contentDescriptionString,
+                    fileURL: fileURL
                 )
             }
             NotificationCenter.default.post(
@@ -350,5 +434,195 @@ class ClipboardManager: ObservableObject {
         } catch {
             print("Error deleting clipboard item: \(error)")
         }
+    }
+
+    // MARK: - Cleanup
+    func cleanup() {
+        // Invalidate timers
+        pasteboardTimer?.invalidate()
+        pasteboardTimer = nil
+        cleanupTimer?.invalidate()
+        cleanupTimer = nil
+        
+        // Clear data
+        autoreleasepool {
+            // Reset all contexts
+            viewContext.reset()
+            persistenceController.container.viewContext.reset()
+            
+            // Clear temporary data
+            clearTemporaryData()
+            
+            // Clear array
+            clipboardItems.removeAll()
+            
+            // Reset other properties
+            lastItemContentDescriptionString = ""
+            isProcessingClipboard = false
+            
+            // Clear thumbnail cache
+            ThumbnailService.shared.clearCache()
+        }
+    }
+
+    // Add this method
+    private func cleanupOldItems() {
+        guard clearItemsOlderThanHours > 0 else { return }
+        
+        let fetchRequest: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+        let cutoffDate = Date().addingTimeInterval(-Double(clearItemsOlderThanHours) * 3600)
+        fetchRequest.predicate = NSPredicate(format: "timestamp < %@", cutoffDate as NSDate)
+        
+        viewContext.perform { [weak self] in
+            guard let self = self else { return }
+            do {
+                let oldItems = try self.viewContext.fetch(fetchRequest)
+                let batchDelete = NSBatchDeleteRequest(objectIDs: oldItems.map { $0.objectID })
+                try self.viewContext.execute(batchDelete)
+                try self.viewContext.save()
+            } catch {
+                print("Failed to cleanup old items: \(error)")
+            }
+        }
+    }
+
+    private func setupCleanupTimer() {
+        cleanupTimer?.invalidate()
+        
+        cleanupTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            self?.performMemoryCleanup()
+            
+            // Clear thumbnail cache periodically
+            if let count = self?.clipboardItems.count, count > 20 {
+                ThumbnailService.shared.clearCache()
+            }
+        }
+        RunLoop.main.add(cleanupTimer!, forMode: .common)
+    }
+
+    private func performMemoryCleanup() {
+        autoreleasepool {
+            // Reset the view context
+            viewContext.reset()
+            
+            // Create a new background context for cleanup
+            let backgroundContext = persistenceController.container.newBackgroundContext()
+            backgroundContext.perform { [weak self] in
+                autoreleasepool {
+                    self?.cleanupOldItems()
+                    self?.removeExtraItemsIfNeeded()
+                }
+                backgroundContext.reset()
+            }
+            
+            // Clear temporary data
+            clearTemporaryData()
+        }
+    }
+
+    private func clearTemporaryData() {
+        autoreleasepool {
+            // Don't reset the view context, just refresh it
+            viewContext.refreshAllObjects()
+            
+            // Suggest memory cleanup to the system
+            #if DEBUG
+            print("Requesting memory cleanup")
+            #endif
+            
+            // Force a memory cleanup using Swift-friendly approach
+            autoreleasepool {
+                if #available(macOS 10.13, *) {
+                    Task { @MainActor in
+                        await Task.yield()
+                    }
+                }
+            }
+        }
+    }
+
+    func handleMemoryWarning() {
+        autoreleasepool {
+            // Don't reset the main view context, just refresh it
+            viewContext.refreshAllObjects()
+            
+            // Clear temporary data without resetting contexts
+            clearTemporaryData()
+            
+            // Refetch with minimal data using a background context
+            let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+            request.fetchLimit = 20
+            request.fetchBatchSize = 5
+            
+            let backgroundContext = persistenceController.container.newBackgroundContext()
+            backgroundContext.perform { [weak self] in
+                guard let self = self else { return }
+                
+                autoreleasepool {
+                    do {
+                        let results = try backgroundContext.fetch(request)
+                        let mappedItems = results.compactMap { entity -> ClipboardItem? in
+                            autoreleasepool {
+                                return self.mapEntityToClipboardItem(entity)
+                            }
+                        }
+                        
+                        DispatchQueue.main.async { [weak self] in
+                            self?.clipboardItems = mappedItems
+                        }
+                    } catch {
+                        print("Error handling memory warning: \(error)")
+                    }
+                    
+                    // Only reset the background context
+                    backgroundContext.reset()
+                }
+            }
+        }
+    }
+
+    // Add this helper method
+    private func compressImageData(_ image: NSImage) -> Data? {
+        return autoreleasepool { () -> Data? in
+            guard let tiffData = image.tiffRepresentation,
+                  let bitmap = NSBitmapImageRep(data: tiffData) else {
+                return nil
+            }
+            
+            // Resize if image is too large
+            let maxDimension: CGFloat = 1200
+            if image.size.width > maxDimension || image.size.height > maxDimension {
+                let scale = maxDimension / max(image.size.width, image.size.height)
+                bitmap.size = NSSize(
+                    width: image.size.width * scale,
+                    height: image.size.height * scale
+                )
+            }
+            
+            return bitmap.representation(using: .png, properties: [
+                .compressionFactor: 0.7
+            ])
+        }
+    }
+
+    // Add this helper method near other private methods
+    private func basicClipboardItem(copiedFromApp: CopiedFromApplication, description: String) -> ClipboardItem {
+        return ClipboardItem(
+            id: UUID(),
+            type: .text,
+            content: Data(),
+            copiedFromApplication: copiedFromApp,
+            timestamp: Date(),
+            contentDescriptionString: description,
+            fileURL: nil
+        )
+    }
+}
+
+private extension NSImage {
+    func pngData() -> Data? {
+        guard let tiffRepresentation = self.tiffRepresentation,
+              let bitmapImage = NSBitmapImageRep(data: tiffRepresentation) else { return nil }
+        return bitmapImage.representation(using: .png, properties: [:])
     }
 }
