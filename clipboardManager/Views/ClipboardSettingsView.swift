@@ -103,6 +103,16 @@ struct ClipboardSettingsView: View {
                                 Text(expirationDate, style: .date)
                             }
                         }
+                    } else {
+                        Button("Upgrade to Pro") {
+                            NotificationCenter.default.post(
+                                name: .showSubscriptionViewNotification,
+                                object: nil
+                            )
+                        }
+                        .controlSize(.large)
+                        .buttonStyle(.borderedProminent)
+                        .padding(.top, 8)
                     }
                     
                     #if DEBUG
