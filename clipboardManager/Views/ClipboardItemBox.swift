@@ -9,9 +9,7 @@ import SwiftUI
 
 struct ClipboardItemBox: View {
     var item: ClipboardItem
-    init(item: ClipboardItem) {
-        self.item = item
-    }
+    
     var body: some View {
         ZStack {
             Color.black
@@ -38,7 +36,7 @@ struct ClipboardItemBox: View {
                     Text("Color: \(item.contentDescriptionString)")
                         .font(.title)
                 }
-                    .ignoresSafeArea()
+                .ignoresSafeArea()
             )
         case .text:
             return AnyView(
@@ -50,45 +48,89 @@ struct ClipboardItemBox: View {
                         design: .monospaced) : .system(size: 13))
             )
         case .image:
-            print("Image data size: \(item.content.count) bytes")
-            if let nsImage = NSImage(data: item.content) {
-                print("NSImage size: \(nsImage.size)")
-                if let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) {
-                    print("CGImage size: \(CGSize(width: cgImage.width, height: cgImage.height))")
-                }
-                return AnyView(
-                    VStack {
-                        Text(item.contentDescriptionString)
-                            .frame(height: 20)
-                            
-                        Image(nsImage: nsImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: 180, maxHeight: 180)
+            return AnyView(
+                VStack(spacing: 8) {
+                    if let nsImage = NSImage(data: item.content) {
+                        if !item.contentDescriptionString.isEmpty {
+                            Text(item.contentDescriptionString)
+                                .font(.system(size: 12))
+                                .foregroundColor(.gray)
+                        }
+                        
+                        // Check if it's a file icon
+                        if nsImage.size.width <= 32 && nsImage.size.height <= 32 {
+                            // It's likely a file icon
+                            VStack(spacing: 12) {
+                                Image(nsImage: nsImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 64, height: 64)
+                                
+                                if let fileExtension = item.contentDescriptionString.split(separator: ".").last {
+                                    Text(".\(fileExtension)")
+                                        .font(.system(size: 14, design: .monospaced))
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding()
+                        } else {
+                            // It's a regular image
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: 250, maxHeight: 200)
+                                .cornerRadius(8)
+                        }
+                    } else {
+                        // Try to get file icon if it's a file path
+                        if let filePath = String(data: item.content, encoding: .utf8) {
+                            let workspace = NSWorkspace.shared
+                            let icon = workspace.icon(forFile: filePath)
+                            let url = URL(fileURLWithPath: filePath)
+                            VStack(spacing: 12) {
+                                Image(nsImage: icon)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 64, height: 64)
+                                
+                                if !url.pathExtension.isEmpty {
+                                    Text(".\(url.pathExtension)")
+                                        .font(.system(size: 14, design: .monospaced))
+                                        .foregroundColor(.gray)
+                                }
+                            }
+                            .padding()
+                        } else {
+                            Image(systemName: "doc.fill")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: 64, maxHeight: 64)
+                                .foregroundColor(.gray)
+                        }
                     }
-                    
-                )
-            } else {
-                return AnyView(
-                    Image(systemName: "photo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: 180, maxHeight: 180)
-                )
-            }
+                }
+                .padding(.horizontal, 10)
+            )
         case .url:
             if let url = URL(dataRepresentation: item.content, relativeTo: nil) {
                 return AnyView(
                     GeometryReader { geometry in
-                        HStack {
-                            Spacer()
+                        VStack(spacing: 8) {
                             URLPreview(url: url)
-                                .frame(width: geometry.size.width-20, height: geometry.size.height, alignment: .center)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            Spacer()
+                                .frame(
+                                    width: min(geometry.size.width - 20, 280),
+                                    height: 160
+                                )
+                                .cornerRadius(8)
+                            
+                            Text(url.absoluteString)
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundColor(.gray)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(height: 230)
                 )
             } else {
                 return AnyView(
@@ -99,7 +141,6 @@ struct ClipboardItemBox: View {
             }
         }
     }
-    
 }
 
 #Preview {
@@ -108,90 +149,46 @@ struct ClipboardItemBox: View {
     return ClipboardItemBox(item: ClipboardItem(id: UUID(), type: .url, content: data!, copiedFromApplication: .init(withApplication: NSRunningApplication()), timestamp: Date(), contentDescriptionString: ""))
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//struct ClipboardItemBox_Previews: PreviewProvider {
-//    static var previews: some View {
-//        GeometryReader { proxy in
-//            ClipboardItemBox(item: ClipboardItem(id: UUID(), text: """
-//DUMMY TEXT
-//
-//func didChangeDataSourceForRaces() {
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self else { return }
-//            // View model'de data yok ise empty view'ın gösterilmesi için istek fail etmiş gibi davranılır.
-//            guard self.viewModel.races.isEmpty == false else { return self.didFailureActiveHippodromesRequest(error: nil) }
-//            
-//            // Mevcutta gösterilen herhangi bir emty view var ise gizlenir.
-//            self.hideEmptyDataView()
-//            
-//            // Default olarak gizli olan komponentler data ile birlikte gözükür hale getirilir.
-//            self.racesTabView.isHidden = false // Hipodromların gösterildiği alan.
-//            
-//            // Set Races Datasource to tabView
-//            let datasource = self.viewModel.makeRaceMenuTabDatasource()
-//            self.racesTabView.reloadData(with: datasource)
-//            
-//            // Set Races selection item id
-//            let selectedRaceId = self.viewModel.getSelectedRaceIdIfAny()
-//            self.racesTabView.selectTab(itemId: selectedRaceId)
-//        }
-//    }
-//    
-//    func didFailureActiveHippodromesRequest(error: TJKServices.TJKError?) {
-//        DispatchQueue.main.async { [weak self] in
-//            guard let self else { return }
-//            // Empty view en üstte durduğu için altında kalan view'lar gözükmez.
-//            self.showEmptyDataView()
-//            
-//            // Exception var ise exceptionları göster.
-//            self.handleError(error)
-//        }
-//    }
-//    
-//    func setLoadingViewVisibility(_ status: Bool) {
-//        status ? LottieHUD.shared.show() : LottieHUD.shared.dismiss()
-//    }
-//
-//""", copiedFromApplication: CopiedFromApplication(withApplication: NSRunningApplication())))
-//        }
-//    }
-//}
+enum ClipboardContentType {
+    case text
+    case color
+    case image
+    case url
+    case code
+    case empty
+    
+    static func detect(from item: ClipboardItem) -> ClipboardContentType {
+        // Empty content check
+        if item.contentDescriptionString.isEmpty && item.content.isEmpty {
+            return .empty
+        }
+        
+        // URL detection
+        if let _ = URL(dataRepresentation: item.content, relativeTo: nil) {
+            return .url
+        }
+        
+        // Color detection
+        if let _ = detectColor(from: item.contentDescriptionString) {
+            return .color
+        }
+        
+        // Image detection
+        if let nsImage = NSImage(data: item.content),
+           nsImage.isValid {
+            return .image
+        }
+        
+        // Code detection (basic)
+        if item.contentDescriptionString.contains("{") ||
+           item.contentDescriptionString.contains("}") ||
+           item.contentDescriptionString.contains("func ") ||
+           item.contentDescriptionString.contains("class ") ||
+           item.contentDescriptionString.contains("struct ") {
+            return .code
+        }
+        
+        return .text
+    }
+}
 
