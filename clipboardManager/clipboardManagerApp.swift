@@ -102,28 +102,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func setupWindow() {
         print("[DEBUG] setup window start")
         let windowController = NSHostingView(rootView: containerView)
+        
         if let window = NSApplication.shared.windows.first {
             self.window = window
             self.window.contentView = windowController
             self.window.identifier = .init("appWindow")
-            self.window.styleMask = [.titled, .docModalWindow]
-            self.window.isMovable = false
-            self.window.titlebarAppearsTransparent = true
-            self.window.titleVisibility = .hidden
-            self.window.level = .popUpMenu
-
-            // Make sure window appears in full screen
-            self.window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-            if let screen = NSScreen.main {
-                self.window.setFrameOrigin(
-                    NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
-            }
-
-            self.window.makeKey()
-            self.window.orderFrontRegardless()
+            
+            configureWindowProperties(window)
+            positionWindowAtBottom(window)
+            
+            window.makeKey()
+            window.orderFrontRegardless()
             NSApplication.shared.activate(ignoringOtherApps: true)
-
         }
         print("[DEBUG] setup window end")
     }
@@ -183,53 +173,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self,
                   let window = self.window,
-                  let screen = NSScreen.main,
                   let contentView = window.contentView,
                   !NSApplication.shared.isActive else {
                 self?.isHandlingVisibilityChange = false
                 return
             }
             
-            // Basic window setup - similar to setupWindow
-            window.styleMask = [.titled, .docModalWindow]
-            window.titlebarAppearsTransparent = true
-            window.titleVisibility = .hidden
-            window.level = .popUpMenu
-            window.isMovable = false
+            configureWindowProperties(window)
+            positionWindowAtBottom(window)
             
-            // Set window behavior
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            
-            // Position window at the very bottom
-            window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
-            
-            // Reset and prepare layer
-            contentView.wantsLayer = true
-            contentView.layer?.removeAllAnimations()
+            prepareContentViewForAnimation(contentView)
             
             // Set initial state
-            let transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-            contentView.layer?.transform = transform
-            
-            // Show window
+            contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
             window.makeKeyAndOrderFront(nil)
             
-            // Use property animator for better performance
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.2
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                context.allowsImplicitAnimation = true
-                
-                // Animate to final position
-                contentView.layer?.transform = CATransform3DIdentity
-                
-            }, completionHandler: { [weak self] in
-                // Cleanup
-                contentView.layer?.removeAllAnimations()
+            animateContentView(contentView, isShowing: true, duration: 0.2) { [weak self] in
                 hotkeyForEscape.isPaused = false
                 hotkeyForSettings.isPaused = false
                 self?.isHandlingVisibilityChange = false
-            })
+            }
             
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
@@ -240,39 +203,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !isHandlingVisibilityChange else { return }
         isHandlingVisibilityChange = true
         
-        // Disable shortcuts immediately
         hotkeyForEscape.isPaused = true
         hotkeyForSettings.isPaused = true
         
         guard let window = self.window,
               window.isVisible,
               let contentView = window.contentView else {
-        isHandlingVisibilityChange = false
-        return
-    }
-    
-    DispatchQueue.main.async { [weak self] in
-        // Reset and prepare layer
-        contentView.wantsLayer = true
-        contentView.layer?.removeAllAnimations()
+            isHandlingVisibilityChange = false
+            return
+        }
         
-        // Use property animator for better performance
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.15
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            context.allowsImplicitAnimation = true
+        DispatchQueue.main.async { [weak self] in
+            self?.prepareContentViewForAnimation(contentView)
             
-            // Animate to hidden position
-            contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-            
-        }, completionHandler: { [weak self] in
-            // Cleanup and hide
-            contentView.layer?.removeAllAnimations()
-            NSApplication.shared.hide(nil)
-            self?.isHandlingVisibilityChange = false
-        })
+            self?.animateContentView(contentView, isShowing: false, duration: 0.15) { [weak self] in
+                NSApplication.shared.hide(nil)
+                self?.isHandlingVisibilityChange = false
+            }
+        }
     }
-}
 
     // MARK: - Preferences Clicked
     @objc private func preferencesClickedAction() {
@@ -448,5 +397,47 @@ extension NSWindow {
             self.level = .popUpMenu  // Highest level for modal windows
             NSApp.activate(ignoringOtherApps: true)
         }
+    }
+}
+
+// Add these private methods for window configuration
+private extension AppDelegate {
+    func configureWindowProperties(_ window: NSWindow) {
+        window.styleMask = [.titled, .docModalWindow]
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.level = .popUpMenu
+        window.isMovable = false
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    }
+    
+    func positionWindowAtBottom(_ window: NSWindow) {
+        guard let screen = NSScreen.main else { return }
+        window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+    }
+    
+    func prepareContentViewForAnimation(_ contentView: NSView) {
+        contentView.wantsLayer = true
+        contentView.layer?.removeAllAnimations()
+    }
+    
+    func animateContentView(_ contentView: NSView, 
+                           isShowing: Bool, 
+                           duration: TimeInterval, 
+                           completion: @escaping () -> Void) {
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = duration
+            context.timingFunction = CAMediaTimingFunction(name: isShowing ? .easeOut : .easeIn)
+            context.allowsImplicitAnimation = true
+            
+            let transform = isShowing ? 
+                CATransform3DIdentity : 
+                CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
+            contentView.layer?.transform = transform
+            
+        }, completionHandler: {
+            contentView.layer?.removeAllAnimations()
+            completion()
+        })
     }
 }
