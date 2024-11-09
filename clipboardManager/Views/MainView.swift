@@ -58,64 +58,6 @@ struct MainView: View {
         }
     }
     
-    private func setupKeyboardMonitoring() {
-        removeKeyboardMonitor()
-        
-        guard settings.enableKeyboardNavigation else { return }
-        
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            switch event.keyCode {
-            case 123: // Left Arrow
-                moveSelection(direction: -1)
-                return nil
-            case 124: // Right Arrow
-                moveSelection(direction: 1)
-                return nil
-            case 36: // Return/Enter
-                handleEnterKey()
-                return nil
-            default:
-                return event
-            }
-        }
-    }
-    
-    private func handleEnterKey() {
-        let items = clipboardManager.orderedItems
-        if !items.isEmpty {
-            let index = min(selectedItemIndex, items.count - 1)
-            let item = items[index]
-            
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            
-            switch item.type {
-            case .file, .video:
-                if let fileURL = item.fileURL {
-                    pasteboard.writeObjects([fileURL as NSURL])
-                }
-            case .image:
-                if let fileURL = item.fileURL,
-                   let image = NSImage(contentsOf: fileURL) {
-                    pasteboard.writeObjects([image])
-                }
-            default:
-                if let string = String(data: item.content, encoding: .utf8) {
-                    pasteboard.setString(string, forType: .string)
-                }
-            }
-            
-            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
-        }
-    }
-    
-    private func removeKeyboardMonitor() {
-        if let monitor = keyMonitor {
-            NSEvent.removeMonitor(monitor)
-            keyMonitor = nil
-        }
-    }
-    
     private func moveSelection(direction: Int) {
         let itemCount = clipboardManager.orderedItems.count
         guard itemCount > 0 else { return }
