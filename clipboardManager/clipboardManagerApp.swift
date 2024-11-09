@@ -57,6 +57,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private var subscriptionWindow: NSWindow?
 
+    // Add this property to AppDelegate class
+    private var isHandlingVisibilityChange = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         menu.delegate = self
@@ -174,60 +177,102 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Make App Visible
     @objc private func makeAppVisibleAction() {
-        let app = NSRunningApplication.current
-        guard !app.isActive else { return }
+        guard !isHandlingVisibilityChange else { return }
+        isHandlingVisibilityChange = true
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self,
-                  let window = self.window else { return }
-            
-            // Prepare window before showing
-            window.styleMask = [.titled]
-            window.titleVisibility = .hidden
-            window.level = .popUpMenu
-            window.identifier = .init("appWindow")
-            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            
-            // Position window off-screen
-            let screenHeight = NSScreen.main?.frame.height ?? 0
-            let offScreenY = -window.frame.height
-            window.setFrameOrigin(NSPoint(x: window.frame.origin.x, y: offScreenY))
-            
-            // Show window with animation
-            window.makeKeyAndOrderFront(nil)
-            
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = 0.3
-                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-                window.animator().setFrameOrigin(
-                    NSPoint(x: window.frame.origin.x, y: screenHeight - window.frame.height - 50)
-                )
-            })
-            
-            // Ensure the window is positioned correctly on the screen
-            if let screen = NSScreen.main {
-                window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+                  let window = self.window,
+                  let screen = NSScreen.main,
+                  let contentView = window.contentView,
+                  !NSApplication.shared.isActive else {
+                self?.isHandlingVisibilityChange = false
+                return
             }
             
-            // Enable keyboard shortcuts
-            hotkeyForEscape.isPaused = false
-            hotkeyForSettings.isPaused = false
+            // Basic window setup - similar to setupWindow
+            window.styleMask = [.titled, .docModalWindow]
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.level = .popUpMenu
+            window.isMovable = false
             
-            // Activate app
+            // Set window behavior
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            
+            // Position window at the very bottom
+            window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+            
+            // Reset and prepare layer
+            contentView.wantsLayer = true
+            contentView.layer?.removeAllAnimations()
+            
+            // Set initial state
+            let transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
+            contentView.layer?.transform = transform
+            
+            // Show window
+            window.makeKeyAndOrderFront(nil)
+            
+            // Use property animator for better performance
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                context.allowsImplicitAnimation = true
+                
+                // Animate to final position
+                contentView.layer?.transform = CATransform3DIdentity
+                
+            }, completionHandler: { [weak self] in
+                // Cleanup
+                contentView.layer?.removeAllAnimations()
+                hotkeyForEscape.isPaused = false
+                hotkeyForSettings.isPaused = false
+                self?.isHandlingVisibilityChange = false
+            })
+            
             NSApplication.shared.activate(ignoringOtherApps: true)
         }
     }
 
     // MARK: - Make App Hidden
     @objc func makeAppHiddenAction() {
+        guard !isHandlingVisibilityChange else { return }
+        isHandlingVisibilityChange = true
+        
+        // Disable shortcuts immediately
         hotkeyForEscape.isPaused = true
         hotkeyForSettings.isPaused = true
-        guard let window, window.isVisible else { return }
-        //        window.close()
-        NSApplication.shared.deactivate()
-        NSApplication.shared.hide(self)
-        print("DEBUG: ----- makeAppHiddenAction")
+        
+        guard let window = self.window,
+              window.isVisible,
+              let contentView = window.contentView else {
+        isHandlingVisibilityChange = false
+        return
     }
+    
+    DispatchQueue.main.async { [weak self] in
+        // Reset and prepare layer
+        contentView.wantsLayer = true
+        contentView.layer?.removeAllAnimations()
+        
+        // Use property animator for better performance
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            context.allowsImplicitAnimation = true
+            
+            // Animate to hidden position
+            contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
+            
+        }, completionHandler: { [weak self] in
+            // Cleanup and hide
+            contentView.layer?.removeAllAnimations()
+            NSApplication.shared.hide(nil)
+            self?.isHandlingVisibilityChange = false
+        })
+    }
+}
 
     // MARK: - Preferences Clicked
     @objc private func preferencesClickedAction() {
