@@ -176,47 +176,46 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc private func makeAppVisibleAction() {
         let app = NSRunningApplication.current
         guard !app.isActive else { return }
-        NSApplication.shared.activate(ignoringOtherApps: true)
-
-        guard let window = self.window else { return }
-
-        window.styleMask = [.titled]
-        window.titleVisibility = .hidden
-        window.level = .popUpMenu
-        window.identifier = .init("appWindow")
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        // Start the window off-screen at the bottom
-        let screenHeight = NSScreen.main?.frame.height ?? 0
-        let offScreenY = -window.frame.height  // Move the window off-screen
-        window.setFrameOrigin(NSPoint(x: window.frame.origin.x, y: offScreenY))
-
-        // Make the window key and order it front
-        DispatchQueue.main.async {
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  let window = self.window else { return }
+            
+            // Prepare window before showing
+            window.styleMask = [.titled]
+            window.titleVisibility = .hidden
+            window.level = .popUpMenu
+            window.identifier = .init("appWindow")
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            
+            // Position window off-screen
+            let screenHeight = NSScreen.main?.frame.height ?? 0
+            let offScreenY = -window.frame.height
+            window.setFrameOrigin(NSPoint(x: window.frame.origin.x, y: offScreenY))
+            
+            // Show window with animation
             window.makeKeyAndOrderFront(nil)
-            window.makeFirstResponder(window.contentView)  // Ensure content view is first responder
-
-            // Animate the window's position
-            NSAnimationContext.runAnimationGroup(
-                { context in
-                    context.duration = 0.5  // Duration of the animation
-                    context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)  // Animation timing
-
-                    // Set the final position of the window
-                    window.animator().setFrameOrigin(
-                        NSPoint(
-                            x: window.frame.origin.x, y: screenHeight - window.frame.height - 50))  // Adjust to your desired position
-                }, completionHandler: nil)
-
+            
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.3
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                window.animator().setFrameOrigin(
+                    NSPoint(x: window.frame.origin.x, y: screenHeight - window.frame.height - 50)
+                )
+            })
+            
             // Ensure the window is positioned correctly on the screen
             if let screen = NSScreen.main {
                 window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
             }
+            
+            // Enable keyboard shortcuts
+            hotkeyForEscape.isPaused = false
+            hotkeyForSettings.isPaused = false
+            
+            // Activate app
+            NSApplication.shared.activate(ignoringOtherApps: true)
         }
-        hotkeyForEscape.isPaused = false
-        hotkeyForSettings.isPaused = false
-        app.activate(options: [.activateIgnoringOtherApps])
-        print("DEBUG: ----- makeAppVisibleAction")
     }
 
     // MARK: - Make App Hidden

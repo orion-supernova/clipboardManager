@@ -59,4 +59,34 @@ extension NSImage {
         
         return NSColor(red: red, green: green, blue: blue, alpha: 1.0)
     }
+    func resized(to maxSize: CGSize) -> NSImage {
+            let ratio = min(maxSize.width / size.width, maxSize.height / size.height, 1)
+            let newSize = NSSize(width: size.width * ratio, height: size.height * ratio)
+            
+            let newImage = NSImage(size: newSize)
+            newImage.lockFocus()
+            NSGraphicsContext.current?.imageInterpolation = .high
+            draw(in: NSRect(origin: .zero, size: newSize),
+                 from: NSRect(origin: .zero, size: size),
+                 operation: .copy,
+                 fraction: 1.0)
+            newImage.unlockFocus()
+            
+            return newImage
+        }
+        
+        func optimizedData(maxSize: CGSize) -> Data? {
+            return autoreleasepool { () -> Data? in
+                let resized = self.resized(to: maxSize)
+                guard let tiffData = resized.tiffRepresentation,
+                      let bitmap = NSBitmapImageRep(data: tiffData) else {
+                    return nil
+                }
+                
+                return bitmap.representation(using: .png, properties: [
+                    .compressionFactor: 0.7,
+                    .interlaced: false
+                ])
+            }
+        }
 }

@@ -8,11 +8,15 @@
 import SwiftUI
 import AppKit
 
-struct ClipboardItemBox: View {
+struct ClipboardItemBox: View, Equatable {
     var item: ClipboardItem
     @EnvironmentObject var clipboardManager: ClipboardManager
     @State private var thumbnail: NSImage?
 
+    static func == (lhs: ClipboardItemBox, rhs: ClipboardItemBox) -> Bool {
+        lhs.item == rhs.item
+    }
+    
     init(item: ClipboardItem) {
         self.item = item
     }
@@ -179,6 +183,7 @@ struct AsyncImageView: View {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .drawingGroup() // Enable Metal rendering
             } else if isLoading {
                 ProgressView()
                     .frame(maxWidth: 180, maxHeight: 180)
@@ -192,18 +197,23 @@ struct AsyncImageView: View {
         .onAppear {
             loadImage()
         }
+        .onDisappear {
+            // Clear memory when view disappears
+            image = nil
+        }
     }
     
     private func loadImage() {
-        guard !url.absoluteString.isEmpty else { return }
+        guard image == nil, !url.absoluteString.isEmpty else { return }
         
         DispatchQueue.global(qos: .userInitiated).async {
             autoreleasepool {
                 do {
                     let imageData = try Data(contentsOf: url)
                     if let image = NSImage(data: imageData) {
+                        let resizedImage = image.resized(to: NSSize(width: 180, height: 180))
                         DispatchQueue.main.async {
-                            self.image = image
+                            self.image = resizedImage
                             self.isLoading = false
                         }
                     } else {

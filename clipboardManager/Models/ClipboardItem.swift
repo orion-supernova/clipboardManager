@@ -7,7 +7,7 @@
 
 import AppKit
 
-struct ClipboardItem: Identifiable {
+struct ClipboardItem: Identifiable, Equatable {
     let id: UUID
     let type: ClipboardItemType
     let content: Data
@@ -17,6 +17,12 @@ struct ClipboardItem: Identifiable {
     let fileURL: URL?
     let thumbnailURL: URL?
     let pasteboardItems: [(NSPasteboard.PasteboardType, Data)]
+    
+    static func == (lhs: ClipboardItem, rhs: ClipboardItem) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.type == rhs.type &&
+        lhs.contentDescriptionString == rhs.contentDescriptionString
+    }
 }
 
 enum ClipboardItemType: String {

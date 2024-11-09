@@ -320,12 +320,13 @@ struct ScrollablePasteboardItemsView: View {
                             emptySearchResultView
                         } else {
                             clipboardItemsListView
+                                .drawingGroup()
                         }
                     }
                 }
                 .onChange(of: selectedItemIndex) { _ in
                     if selectedItemIndex < clipboardManager.orderedItems.count {
-                        withAnimation {
+                        withAnimation(.easeInOut(duration: 0.2)) {
                             let item = clipboardManager.orderedItems[selectedItemIndex]
                             proxy.scrollTo(item.id, anchor: .center)
                         }
@@ -375,6 +376,7 @@ struct ScrollablePasteboardItemsView: View {
     private var clipboardItemsListView: some View {
         ForEach(Array(clipboardManager.orderedItems.enumerated()), id: \.1.id) { index, item in
             clipboardItemView(item: item, index: index)
+                .id(item.id)
         }
     }
     
