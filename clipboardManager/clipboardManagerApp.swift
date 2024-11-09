@@ -159,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func didBecomeActive() {
-        //                setupWindow()
+        // Removed print statement
     }
 
     @objc private func updateMenuBarItemCount(_ notification: NSNotification) {
@@ -201,20 +201,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
             
             // Setup event monitor before showing window
-            self.setupEventMonitor()
+            setupEventMonitor()
             
-            // Proper window activation sequence
-            window.orderFront(nil)
+            // First, make the window visible and activate app
+            window.orderFrontRegardless()
+            NSApplication.shared.unhide(nil)
             NSApplication.shared.activate(ignoringOtherApps: true)
+            
+            // Make window key and set first responder
+            window.makeKey()
+            window.makeFirstResponder(contentView)
+            
             // Perform animation
             animateContentView(contentView, isShowing: true, duration: 0.2) { [weak self] in
-                // Ensure window is key and active after animation
-                NSApp.activate(ignoringOtherApps: true)
-                window.makeKeyAndOrderFront(nil)
-                
                 // Re-enable hotkeys
                 hotkeyForEscape.isPaused = false
                 hotkeyForSettings.isPaused = false
+                
+                // Final activation to ensure focus
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                window.makeKey()
+                window.makeFirstResponder(contentView)
+                
                 self?.isHandlingVisibilityChange = false
             }
         }

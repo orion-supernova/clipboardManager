@@ -464,22 +464,30 @@ class ClipboardManager: ObservableObject {
                 withApplication: NSRunningApplication())
         }
         
-        // Decode pasteboardItems with nil check
+        // Decode pasteboardItems with safer approach
         var pasteboardItems: [(NSPasteboard.PasteboardType, Data)] = []
         if let itemsData = entity.value(forKey: "pasteboardItemsData") as? Data {
             do {
-                let decoded = try NSKeyedUnarchiver.unarchivedObject(
-                    ofClasses: [NSArray.self, NSString.self, NSData.self],
-                    from: itemsData
-                ) as? [[String: Any]]
+                let allowedClasses: [AnyClass] = [
+                    NSArray.self, 
+                    NSDictionary.self,  // Add this to allow dictionary
+                    NSString.self, 
+                    NSData.self
+                ]
                 
-                pasteboardItems = decoded?.compactMap {
-                    guard let typeString = $0["type"] as? String,
-                          let data = $0["data"] as? Data else { return nil }
-                    return (NSPasteboard.PasteboardType(typeString), data)
-                } ?? []
+                if let decoded = try NSKeyedUnarchiver.unarchivedObject(
+                    ofClasses: allowedClasses,
+                    from: itemsData
+                ) as? [[String: Any]] {
+                    pasteboardItems = decoded.compactMap {
+                        guard let typeString = $0["type"] as? String,
+                              let data = $0["data"] as? Data else { return nil }
+                        return (NSPasteboard.PasteboardType(typeString), data)
+                    }
+                }
             } catch {
-                print("Error decoding pasteboard items: \(error)")
+                // Just log the error without printing the full details
+                print("[DEBUG] Error decoding pasteboard items")
             }
         }
 
@@ -790,9 +798,13 @@ class ClipboardManager: ObservableObject {
     // Modify the visibility handling
     private func handleVisibilityChange(isVisible: Bool) {
         if isVisible {
-            resumeUpdates()
+            if !updatesPaused {
+                resumeUpdates()
+            }
         } else {
-            pauseUpdates()
+            if !updatesPaused {
+                pauseUpdates()
+            }
         }
     }
 
