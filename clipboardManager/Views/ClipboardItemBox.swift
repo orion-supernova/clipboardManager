@@ -179,13 +179,10 @@ struct LazyImageView: View {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .background(Color.gray.opacity(0.1))
                     .cornerRadius(8)
             } else if isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(8)
             } else {
                 Image(systemName: "photo.fill")
                     .resizable()
@@ -205,15 +202,22 @@ struct LazyImageView: View {
         }
         .onDisappear {
             isVisible = false
-            image = nil
-            isLoading = true
+            cancelLoad()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .cancelImageLoadsNotification)) { _ in
+            cancelLoad()
+        }
+    }
+    
+    private func cancelLoad() {
+        image = nil
+        isLoading = true
+        isVisible = false
     }
     
     private func loadImageIfNeeded() {
         guard image == nil, isVisible else { return }
         
-        // More aggressive delay during rapid scrolling
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [isVisible] in
             guard isVisible else { return }
             loadImage()
@@ -225,6 +229,7 @@ struct LazyImageView: View {
         
         DispatchQueue.global(qos: .utility).async {
             autoreleasepool {
+                guard isVisible else { return }
                 guard let originalImage = NSImage(contentsOf: url) else {
                     DispatchQueue.main.async {
                         self.isLoading = false
@@ -232,6 +237,7 @@ struct LazyImageView: View {
                     return
                 }
                 
+                guard isVisible else { return }
                 let resizedImage = resizeImage(originalImage, targetSize: NSSize(width: 250, height: 200))
                 Self.imageCache.setObject(resizedImage, forKey: url as NSURL)
                 
@@ -254,4 +260,9 @@ struct LazyImageView: View {
         
         return newImage
     }
+}
+
+// Add this notification name
+extension NSNotification.Name {
+    static let cancelImageLoadsNotification = NSNotification.Name("cancelImageLoadsNotification")
 }

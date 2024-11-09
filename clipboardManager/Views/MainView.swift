@@ -51,6 +51,11 @@ struct MainView: View {
                 clipboardManager.resumeUpdates()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .arrowKeyPressedNotification)) { notification in
+            if let direction = notification.object as? Int {
+                moveSelection(direction: direction)
+            }
+        }
     }
     
     private func setupKeyboardMonitoring() {
@@ -194,7 +199,6 @@ struct ScrollablePasteboardItemsView: View {
             }
             .frame(width: 300, height: 300)
             .id(item.id)
-            .opacity(isScrolling ? 0.6 : 1.0)
             .onAppear {
                 clipboardManager.preloadItem(item)
             }
@@ -411,6 +415,9 @@ struct ScrollablePasteboardItemsView: View {
         isScrolling = true
         clipboardManager.pauseUpdates()
         scrollDebouncer?.invalidate()
+        
+        // Immediately cancel any pending image loads
+        NotificationCenter.default.post(name: .cancelImageLoadsNotification, object: nil)
     }
     
     private func handleScrollEnd() {

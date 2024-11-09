@@ -63,6 +63,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Add this property to AppDelegate class
     private var isHandlingVisibilityChange = false
 
+    // In AppDelegate class, add this property
+    private var eventMonitor: Any?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         AppDelegate.instance = self
         menu.delegate = self
@@ -111,14 +114,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.window.contentView = windowController
             self.window.identifier = .init("appWindow")
             
+            // Configure window
             configureWindowProperties(window)
             positionWindowAtBottom(window)
             
-            window.makeKey()
-            window.orderFrontRegardless()
+            // Setup event monitor
+            setupEventMonitor()
+            
+            // Proper window activation sequence
+            window.orderFront(nil)
             NSApplication.shared.activate(ignoringOtherApps: true)
+            window.makeKey()
+            window.makeFirstResponder(window.contentView)
+            
+            print("[DEBUG] setup window end")
         }
-        print("[DEBUG] setup window end")
     }
     deinit {
         NotificationCenter.default.removeObserver(self)
@@ -182,21 +192,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 return
             }
             
+            // Configure window
             configureWindowProperties(window)
             positionWindowAtBottom(window)
             prepareContentViewForAnimation(contentView)
             
-            // Set initial state
+            // Set initial state for animation
             contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-            window.makeKeyAndOrderFront(nil)
             
+            // Setup event monitor before showing window
+            self.setupEventMonitor()
+            
+            // Proper window activation sequence
+            window.orderFront(nil)
+            
+            // Perform animation
             animateContentView(contentView, isShowing: true, duration: 0.2) { [weak self] in
+                // Ensure window is key and active after animation
+                NSApp.activate(ignoringOtherApps: true)
+                window.makeKeyAndOrderFront(nil)
+                
+                // Re-enable hotkeys
                 hotkeyForEscape.isPaused = false
                 hotkeyForSettings.isPaused = false
                 self?.isHandlingVisibilityChange = false
             }
-            
-            NSApplication.shared.activate(ignoringOtherApps: true)
         }
     }
 
@@ -205,8 +225,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !isHandlingVisibilityChange else { return }
         isHandlingVisibilityChange = true
         
+        // Disable hotkeys first
         hotkeyForEscape.isPaused = true
         hotkeyForSettings.isPaused = true
+        
+        // Remove event monitor
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
         
         guard let window = self.window,
               window.isVisible,
@@ -311,7 +338,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // NSWindowDelegate method
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
-
+        
+        // Remove event monitor
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+        
+        // Handle specific window closures
         if window == subscriptionWindow {
             subscriptionWindow = nil
             AppDelegate.windowControllers.removeAll { controller in
@@ -327,6 +361,39 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func applicationDidReceiveMemoryWarning(_ notification: Notification) {
         ClipboardManager.shared.handleMemoryWarning()
+    }
+
+    // Add this method to setup event monitoring
+    private func setupEventMonitor() {
+        // Remove existing monitor if any
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+        
+        // Create new monitor for key events
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self = self,
+                  let window = self.window,
+                  window.isKeyWindow else {
+                return event
+            }
+            
+            // Handle arrow keys
+            switch event.keyCode {
+            case 123: // Left Arrow
+                NotificationCenter.default.post(name: .arrowKeyPressedNotification, object: -1)
+                return nil
+            case 124: // Right Arrow
+                NotificationCenter.default.post(name: .arrowKeyPressedNotification, object: 1)
+                return nil
+            case 53: // Escape
+                self.makeAppHiddenAction()
+                return nil
+            default:
+                return event
+            }
+        }
     }
 }
 
@@ -376,6 +443,7 @@ extension NSNotification.Name {
     // ... other notification names ...
     static let showSubscriptionViewNotification = NSNotification.Name(
         "showSubscriptionViewNotification")
+    static let arrowKeyPressedNotification = NSNotification.Name("arrowKeyPressedNotification")
 }
 
 extension NSWindow {
@@ -411,6 +479,8 @@ private extension AppDelegate {
         window.level = .popUpMenu
         window.isMovable = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.acceptsMouseMovedEvents = true  // Add this to ensure mouse events
+        window.isReleasedWhenClosed = false    // Add this to prevent window deallocation
     }
     
     func positionWindowAtBottom(_ window: NSWindow) {
