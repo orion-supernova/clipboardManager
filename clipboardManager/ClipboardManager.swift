@@ -34,6 +34,8 @@ class ClipboardManager: ObservableObject {
     private var fetchDebouncer: Timer?
     private var lastFetchTime: Date = .distantPast
     private let minimumFetchInterval: TimeInterval = 0.3
+    private let imageCache = NSCache<NSURL, NSImage>()
+    private var updateDebouncer: Timer?
 
     // MARK: - Lifecycle
     private init(persistenceController: PersistenceController) {
@@ -762,12 +764,22 @@ class ClipboardManager: ObservableObject {
         pasteboardTimer?.invalidate()
         cleanupTimer?.invalidate()
         fetchDebouncer?.invalidate()
+        updateDebouncer?.invalidate()
+        
+        // Clear temporary resources
+        autoreleasepool {
+            imageCache.removeAllObjects()
+        }
     }
     
     func resumeUpdates() {
-        updatesPaused = false
-        setupTimer()
-        setupCleanupTimer()
+        updateDebouncer?.invalidate()
+        updateDebouncer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { [weak self] _ in
+            self?.updatesPaused = false
+            self?.setupTimer()
+            self?.setupCleanupTimer()
+            self?.fetchClipboardItems()
+        }
     }
 
     // Modify the visibility handling
@@ -777,6 +789,14 @@ class ClipboardManager: ObservableObject {
         } else {
             pauseUpdates()
         }
+    }
+
+    func preloadItem(_ item: ClipboardItem) {
+        // Implement preloading logic if needed
+    }
+    
+    func unloadItem(_ item: ClipboardItem) {
+        // Clean up resources for items that are no longer visible
     }
 }
 

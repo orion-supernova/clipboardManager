@@ -8,19 +8,12 @@
 import SwiftUI
 import AppKit
 
-struct ClipboardItemBox: View, Equatable {
+struct ClipboardItemBox: View {
     var item: ClipboardItem
     @EnvironmentObject var clipboardManager: ClipboardManager
     @State private var thumbnail: NSImage?
-    @State private var shouldUpdate = true
-
-    static func == (lhs: ClipboardItemBox, rhs: ClipboardItemBox) -> Bool {
-        lhs.item == rhs.item
-    }
+    @State private var isLoading = true
     
-    init(item: ClipboardItem) {
-        self.item = item
-    }
     var body: some View {
         ZStack {
             Color.black
@@ -45,37 +38,10 @@ struct ClipboardItemBox: View, Equatable {
                 Label("Delete", systemImage: "trash")
             }
         }
-        .onChange(of: item) { _ in
-            shouldUpdate = true
-        }
-        .onAppear {
-            shouldUpdate = true
-        }
-        .onDisappear {
-            shouldUpdate = false
-        }
     }
     
     func getCopiedItemView(for item: ClipboardItem) -> some View {
         switch item.type {
-        case .color:
-            return AnyView(
-                ZStack {
-                    Color(nsColor: detectColor(from: item.contentDescriptionString)!)
-                    Text("Color: \(item.contentDescriptionString)")
-                        .font(.title)
-                }
-                    .ignoresSafeArea()
-            )
-        case .text:
-            return AnyView(
-                Text(item.contentDescriptionString.isEmpty ? "#No Content#" : item.contentDescriptionString)
-                    .foregroundColor(Color.random())
-                    .font(item.contentDescriptionString.isEmpty ? .system(
-                        size: 30,
-                        weight: .bold,
-                        design: .monospaced) : .system(size: 13))
-            )
         case .image:
             return AnyView(
                 VStack(spacing: 8) {
@@ -103,6 +69,24 @@ struct ClipboardItemBox: View, Equatable {
                     }
                 }
                 .padding(.horizontal, 10)
+            )
+        case .color:
+            return AnyView(
+                ZStack {
+                    Color(nsColor: detectColor(from: item.contentDescriptionString)!)
+                    Text("Color: \(item.contentDescriptionString)")
+                        .font(.title)
+                }
+                    .ignoresSafeArea()
+            )
+        case .text:
+            return AnyView(
+                Text(item.contentDescriptionString.isEmpty ? "#No Content#" : item.contentDescriptionString)
+                    .foregroundColor(Color.random())
+                    .font(item.contentDescriptionString.isEmpty ? .system(
+                        size: 30,
+                        weight: .bold,
+                        design: .monospaced) : .system(size: 13))
             )
         case .url:
             if let url = URL(dataRepresentation: item.content, relativeTo: nil) {
@@ -132,7 +116,7 @@ struct ClipboardItemBox: View, Equatable {
                         .frame(height: 20)
                     
                     if let thumbnailURL = item.thumbnailURL {
-                        AsyncImageView(url: thumbnailURL)
+                        LazyImageView(url: thumbnailURL)
                             .frame(maxWidth: 180, maxHeight: 180)
                             .overlay(
                                 Image(systemName: "play.circle.fill")
@@ -179,78 +163,15 @@ struct ClipboardItemBox: View, Equatable {
             )
         }
     }
-    
 }
 
-// Add this helper view for async image loading
-struct AsyncImageView: View {
-    let url: URL
-    @State private var image: NSImage?
-    @State private var isLoading = true
-    @State private var error: Error?
-    
-    var body: some View {
-        Group {
-            if let image = image {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .drawingGroup() // Enable Metal rendering
-            } else if isLoading {
-                ProgressView()
-                    .frame(maxWidth: 180, maxHeight: 180)
-            } else {
-                Image(systemName: "photo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 180, maxHeight: 180)
-            }
-        }
-        .onAppear {
-            loadImage()
-        }
-        .onDisappear {
-            // Clear memory when view disappears
-            image = nil
-        }
-    }
-    
-    private func loadImage() {
-        guard image == nil, !url.absoluteString.isEmpty else { return }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            autoreleasepool {
-                do {
-                    let imageData = try Data(contentsOf: url)
-                    if let image = NSImage(data: imageData) {
-                        let resizedImage = image.resized(to: NSSize(width: 180, height: 180))
-                        DispatchQueue.main.async {
-                            self.image = resizedImage
-                            self.isLoading = false
-                        }
-                    } else {
-                        DispatchQueue.main.async {
-                            self.isLoading = false
-                            print("[ERROR] Could not create image from data")
-                        }
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        self.error = error
-                        self.isLoading = false
-                        print("[ERROR] Failed to load image: \(error)")
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Add this new view for lazy loading
+// Add this optimized image loading view
 struct LazyImageView: View {
     let url: URL
     @State private var image: NSImage?
     @State private var isLoading = true
+    @State private var isVisible = false
+    private static var imageCache = NSCache<NSURL, NSImage>()
     
     var body: some View {
         Group {
@@ -274,30 +195,63 @@ struct LazyImageView: View {
             }
         }
         .onAppear {
-            loadImage()
+            isVisible = true
+            if let cachedImage = Self.imageCache.object(forKey: url as NSURL) {
+                self.image = cachedImage
+                self.isLoading = false
+            } else {
+                loadImageIfNeeded()
+            }
         }
         .onDisappear {
-            // Clear memory when view disappears
+            isVisible = false
             image = nil
+            isLoading = true
+        }
+    }
+    
+    private func loadImageIfNeeded() {
+        guard image == nil, isVisible else { return }
+        
+        // More aggressive delay during rapid scrolling
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [isVisible] in
+            guard isVisible else { return }
+            loadImage()
         }
     }
     
     private func loadImage() {
         guard image == nil else { return }
         
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .utility).async {
             autoreleasepool {
-                if let image = NSImage(contentsOf: url) {
-                    DispatchQueue.main.async {
-                        self.image = image
-                        self.isLoading = false
-                    }
-                } else {
+                guard let originalImage = NSImage(contentsOf: url) else {
                     DispatchQueue.main.async {
                         self.isLoading = false
                     }
+                    return
+                }
+                
+                let resizedImage = resizeImage(originalImage, targetSize: NSSize(width: 250, height: 200))
+                Self.imageCache.setObject(resizedImage, forKey: url as NSURL)
+                
+                DispatchQueue.main.async {
+                    guard isVisible else { return }
+                    self.image = resizedImage
+                    self.isLoading = false
                 }
             }
         }
+    }
+    
+    private func resizeImage(_ image: NSImage, targetSize: NSSize) -> NSImage {
+        let targetRect = NSRect(origin: .zero, size: targetSize)
+        let newImage = NSImage(size: targetSize)
+        
+        newImage.lockFocus()
+        image.draw(in: targetRect, from: .zero, operation: .copy, fraction: 1.0)
+        newImage.unlockFocus()
+        
+        return newImage
     }
 }

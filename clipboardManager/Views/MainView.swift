@@ -170,6 +170,11 @@ struct ScrollablePasteboardItemsView: View {
     @StateObject var wrapper = ScrollablePasteboardItemsViewWrapper()
     @State private var searchDispatchWorkItem: DispatchWorkItem?
     @Binding var selectedItemIndex: Int
+    @State private var isHandlingVisibilityChange = false
+    
+    @State private var isScrolling = false
+    @State private var scrollDebouncer: Timer?
+    
     let scrollToIndex: (Int) -> Void
     
     private func clipboardItemView(item: ClipboardItem, index: Int) -> some View {
@@ -189,6 +194,13 @@ struct ScrollablePasteboardItemsView: View {
             }
             .frame(width: 300, height: 300)
             .id(item.id)
+            .opacity(isScrolling ? 0.6 : 1.0)
+            .onAppear {
+                clipboardManager.preloadItem(item)
+            }
+            .onDisappear {
+                clipboardManager.unloadItem(item)
+            }
     }
     
     private func handleItemTap(item: ClipboardItem, index: Int) {
@@ -314,7 +326,7 @@ struct ScrollablePasteboardItemsView: View {
             .frame(width: screenWidth, height: 70)
             
             ScrollViewReader { proxy in
-                ScrollView(.horizontal) {
+                ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: 10) {
                         Spacer()
                             .frame(width: 5)
@@ -322,23 +334,20 @@ struct ScrollablePasteboardItemsView: View {
                         if clipboardManager.clipboardItems.isEmpty && clipboardManager.isSearchFieldVisible {
                             emptySearchResultView
                         } else {
-                            clipboardItemsListView
-                                .drawingGroup()
+                            ForEach(Array(clipboardManager.orderedItems.enumerated()), id: \.1.id) { index, item in
+                                clipboardItemView(item: item, index: index)
+                                    .id(item.id)
+                                    .frame(width: 300, height: 300)
+                                    .layoutPriority(1)
+                            }
                         }
                     }
                 }
-                .onChange(of: selectedItemIndex) { _ in
-                    if selectedItemIndex < clipboardManager.orderedItems.count {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            let item = clipboardManager.orderedItems[selectedItemIndex]
-                            proxy.scrollTo(item.id, anchor: .center)
-                        }
-                    }
+                .onReceive(NotificationCenter.default.publisher(for: NSScrollView.willStartLiveScrollNotification)) { _ in
+                    handleScrollStart()
                 }
-                .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
-                    if let firstItem = clipboardManager.orderedItems.first {
-                        proxy.scrollTo(firstItem.id, anchor: .trailing)
-                    }
+                .onReceive(NotificationCenter.default.publisher(for: NSScrollView.didEndLiveScrollNotification)) { _ in
+                    handleScrollEnd()
                 }
             }
         }
@@ -376,13 +385,6 @@ struct ScrollablePasteboardItemsView: View {
         .frame(width: screenWidth)
     }
     
-    private var clipboardItemsListView: some View {
-        ForEach(Array(clipboardManager.orderedItems.enumerated()), id: \.1.id) { index, item in
-            clipboardItemView(item: item, index: index)
-                .id(item.id)
-        }
-    }
-    
     private var lockedOverlay: some View {
         ZStack {
             Color.black.opacity(0.7)
@@ -403,6 +405,22 @@ struct ScrollablePasteboardItemsView: View {
             name: .showSubscriptionViewNotification,
             object: nil
         )
+    }
+    
+    private func handleScrollStart() {
+        isScrolling = true
+        clipboardManager.pauseUpdates()
+        scrollDebouncer?.invalidate()
+    }
+    
+    private func handleScrollEnd() {
+        scrollDebouncer?.invalidate()
+        scrollDebouncer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: false) { _ in
+            DispatchQueue.main.async {
+                isScrolling = false
+                clipboardManager.resumeUpdates()
+            }
+        }
     }
 }
 
