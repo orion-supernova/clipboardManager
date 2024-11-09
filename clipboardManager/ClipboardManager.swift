@@ -30,6 +30,10 @@ class ClipboardManager: ObservableObject {
     private var pasteboardTimer: Timer?
     private var cleanupTimer: Timer?
     private var isProcessingClipboard = false
+    private var updatesPaused = false
+    private var fetchDebouncer: Timer?
+    private var lastFetchTime: Date = .distantPast
+    private let minimumFetchInterval: TimeInterval = 0.3
 
     // MARK: - Lifecycle
     private init(persistenceController: PersistenceController) {
@@ -371,6 +375,26 @@ class ClipboardManager: ObservableObject {
 
     // MARK: - Fetch All Items
     func fetchClipboardItems() {
+        // Cancel any pending fetch
+        fetchDebouncer?.invalidate()
+        
+        // Check if we're within the minimum interval
+        let now = Date()
+        if now.timeIntervalSince(lastFetchTime) < minimumFetchInterval {
+            // Schedule a delayed fetch
+            fetchDebouncer = Timer.scheduledTimer(withTimeInterval: minimumFetchInterval, repeats: false) { [weak self] _ in
+                self?.performFetch()
+            }
+            return
+        }
+        
+        performFetch()
+    }
+    
+    private func performFetch() {
+        // Update last fetch time
+        lastFetchTime = Date()
+        
         let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \ClipboardEntity.timestamp, ascending: false)
@@ -378,8 +402,6 @@ class ClipboardManager: ObservableObject {
         
         let backgroundContext = persistenceController.container.newBackgroundContext()
         backgroundContext.perform { [weak self] in
-            guard let self = self else { return }
-            
             autoreleasepool {
                 do {
                     let results = try backgroundContext.fetch(request)
@@ -387,17 +409,19 @@ class ClipboardManager: ObservableObject {
                     var newOrder: [String] = []
                     
                     for entity in results {
-                        let item = self.mapEntityToClipboardItem(entity)
-                        let key = item.contentDescriptionString
-                        newItems[key] = item
-                        if !newOrder.contains(key) {
-                            newOrder.append(key)
+                        let item = self?.mapEntityToClipboardItem(entity)
+                        if let item = item {
+                            let key = item.contentDescriptionString
+                            newItems[key] = item
+                            if !newOrder.contains(key) {
+                                newOrder.append(key)
+                            }
                         }
                     }
                     
                     DispatchQueue.main.async {
-                        self.clipboardItems = newItems
-                        self.itemOrder = newOrder
+                        self?.clipboardItems = newItems
+                        self?.itemOrder = newOrder
                         NotificationCenter.default.post(
                             name: .pasteBoardCountNotification,
                             object: newOrder.count
@@ -731,6 +755,28 @@ class ClipboardManager: ObservableObject {
     // Add a method to get ordered items
     var orderedItems: [ClipboardItem] {
         return itemOrder.compactMap { clipboardItems[$0] }
+    }
+
+    func pauseUpdates() {
+        updatesPaused = true
+        pasteboardTimer?.invalidate()
+        cleanupTimer?.invalidate()
+        fetchDebouncer?.invalidate()
+    }
+    
+    func resumeUpdates() {
+        updatesPaused = false
+        setupTimer()
+        setupCleanupTimer()
+    }
+
+    // Modify the visibility handling
+    private func handleVisibilityChange(isVisible: Bool) {
+        if isVisible {
+            resumeUpdates()
+        } else {
+            pauseUpdates()
+        }
     }
 }
 

@@ -49,6 +49,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var timer: Timer!
     private let pasteboard: NSPasteboard = .general
     private(set) var window: NSWindow!
+    private var isAnimating = false
+    private var shouldFetchAfterAnimation = false
+    private var clipboardManager = ClipboardManager.shared
 
     static private(set) var instance: AppDelegate!
     private lazy var statusBarItem = NSStatusBar.system.statusItem(
@@ -181,7 +184,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             
             configureWindowProperties(window)
             positionWindowAtBottom(window)
-            
             prepareContentViewForAnimation(contentView)
             
             // Set initial state
@@ -425,19 +427,46 @@ private extension AppDelegate {
                            isShowing: Bool, 
                            duration: TimeInterval, 
                            completion: @escaping () -> Void) {
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = duration
-            context.timingFunction = CAMediaTimingFunction(name: isShowing ? .easeOut : .easeIn)
-            context.allowsImplicitAnimation = true
+        // Set animating flag
+        isAnimating = true
+        
+        // Cancel any ongoing animations
+        contentView.layer?.removeAllAnimations()
+        
+        // Optimize layer updates
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        
+        // Configure animation
+        let animation = CABasicAnimation(keyPath: "transform")
+        animation.duration = duration
+        animation.timingFunction = CAMediaTimingFunction(name: isShowing ? .easeOut : .easeIn)
+        animation.fromValue = contentView.layer?.transform
+        animation.toValue = isShowing ? 
+            CATransform3DIdentity : 
+            CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
+        animation.isRemovedOnCompletion = true
+        
+        // Set completion handler
+        CATransaction.setCompletionBlock { [weak self, weak contentView] in
+            contentView?.layer?.removeAllAnimations()
+            self?.isAnimating = false
             
-            let transform = isShowing ? 
-                CATransform3DIdentity : 
-                CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-            contentView.layer?.transform = transform
+            // Check if we need to fetch after animation
+            if self?.shouldFetchAfterAnimation == true {
+                self?.shouldFetchAfterAnimation = false
+                DispatchQueue.main.async {
+                    self?.clipboardManager.fetchClipboardItems()
+                }
+            }
             
-        }, completionHandler: {
-            contentView.layer?.removeAllAnimations()
             completion()
-        })
+        }
+        
+        // Apply animation
+        contentView.layer?.add(animation, forKey: "transform")
+        contentView.layer?.transform = animation.toValue as! CATransform3D
+        
+        CATransaction.commit()
     }
 }

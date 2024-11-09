@@ -12,6 +12,7 @@ struct ClipboardItemBox: View, Equatable {
     var item: ClipboardItem
     @EnvironmentObject var clipboardManager: ClipboardManager
     @State private var thumbnail: NSImage?
+    @State private var shouldUpdate = true
 
     static func == (lhs: ClipboardItemBox, rhs: ClipboardItemBox) -> Bool {
         lhs.item == rhs.item
@@ -37,10 +38,21 @@ struct ClipboardItemBox: View, Equatable {
         .cornerRadius(10)
         .contextMenu {
             Button(action: {
-                clipboardManager.deleteClipboardItem(withId: item.id)
+                withAnimation(.easeOut(duration: 0.2)) {
+                    clipboardManager.deleteClipboardItem(withId: item.id)
+                }
             }) {
                 Label("Delete", systemImage: "trash")
             }
+        }
+        .onChange(of: item) { _ in
+            shouldUpdate = true
+        }
+        .onAppear {
+            shouldUpdate = true
+        }
+        .onDisappear {
+            shouldUpdate = false
         }
     }
     

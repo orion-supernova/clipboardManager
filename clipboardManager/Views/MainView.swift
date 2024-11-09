@@ -21,6 +21,9 @@ struct MainView: View {
     @State private var keyMonitor: Any?
     @State private var searchText = ""
     
+    // Add this to optimize view updates
+    @Environment(\.scenePhase) private var scenePhase
+    
     var body: some View {
         GeometryReader { reader in
             ZStack {
@@ -28,14 +31,7 @@ struct MainView: View {
                     .ignoresSafeArea()
                 
                 if clipboardManager.orderedItems.isEmpty, !clipboardManager.isSearchFieldVisible {
-                    ZStack {
-                        RadialGradient(colors: [
-                            Color.purple.opacity(0.5),
-                            Color.black.opacity(1)
-                        ], center: .center, startRadius: 1, endRadius: 450)
-                        Text("No Clipboard Items")
-                            .font(.system(size: 24, weight: .bold, design: .monospaced))
-                    }
+                    EmptyStateView()
                 } else {
                     ScrollablePasteboardItemsView(
                         selectedItemIndex: $selectedItemIndex,
@@ -44,24 +40,17 @@ struct MainView: View {
                     .environmentObject(clipboardManager)
                 }
             }
-            .onReceive(publisher) { _ in
-                clipboardManager.clearAllItems()
-            }
-            .onAppear {
-                setupKeyboardMonitoring()
-            }
-            .onDisappear {
-                removeKeyboardMonitor()
-            }
-            .onChange(of: settings.enableKeyboardNavigation) { newValue in
-                if newValue {
-                    setupKeyboardMonitoring()
-                } else {
-                    removeKeyboardMonitor()
-                }
-            }
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
+        // Optimize updates when window is not visible
+        .onChange(of: scenePhase) { phase in
+            if phase != .active {
+                // Pause expensive updates when not visible
+                clipboardManager.pauseUpdates()
+            } else {
+                clipboardManager.resumeUpdates()
+            }
+        }
     }
     
     private func setupKeyboardMonitoring() {
@@ -146,6 +135,20 @@ struct MainView: View {
             name: .showSubscriptionViewNotification,
             object: nil
         )
+    }
+}
+
+// Extract EmptyStateView for better performance
+struct EmptyStateView: View {
+    var body: some View {
+        ZStack {
+            RadialGradient(colors: [
+                Color.purple.opacity(0.5),
+                Color.black.opacity(1)
+            ], center: .center, startRadius: 1, endRadius: 450)
+            Text("No Clipboard Items")
+                .font(.system(size: 24, weight: .bold, design: .monospaced))
+        }
     }
 }
 
