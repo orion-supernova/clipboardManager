@@ -205,7 +205,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             
             // Proper window activation sequence
             window.orderFront(nil)
-            
+            NSApplication.shared.activate(ignoringOtherApps: true)
             // Perform animation
             animateContentView(contentView, isShowing: true, duration: 0.2) { [weak self] in
                 // Ensure window is key and active after animation

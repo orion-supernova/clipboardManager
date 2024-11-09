@@ -281,8 +281,9 @@ class ClipboardManager: ObservableObject {
         
         // Check if item already exists
         if clipboardItems[key] != nil {
-            // Move existing item to front
-            moveItemToFront(key)
+            DispatchQueue.main.async { [weak self] in
+                self?.moveItemToFront(key)
+            }
             return
         }
         
@@ -340,15 +341,18 @@ class ClipboardManager: ObservableObject {
     }
 
     private func moveItemToFront(_ contentDescription: String) {
-        guard clipboardItems[contentDescription] != nil else { return }
-        
-        // Remove from current position
-        itemOrder.removeAll { $0 == contentDescription }
-        // Add to front
-        itemOrder.insert(contentDescription, at: 0)
-        
-        // Update Core Data order
-        updateItemOrder()
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self,
+                  self.clipboardItems[contentDescription] != nil else { return }
+            
+            // Remove from current position
+            self.itemOrder.removeAll { $0 == contentDescription }
+            // Add to front
+            self.itemOrder.insert(contentDescription, at: 0)
+            
+            // Update Core Data order
+            self.updateItemOrder()
+        }
     }
 
     private func updateItemOrder() {
@@ -421,6 +425,7 @@ class ClipboardManager: ObservableObject {
                         }
                     }
                     
+                    // Move UI updates to main thread
                     DispatchQueue.main.async {
                         self?.clipboardItems = newItems
                         self?.itemOrder = newOrder
