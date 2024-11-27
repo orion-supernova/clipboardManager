@@ -116,18 +116,34 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.window.contentView = windowController
             self.window.identifier = .init("appWindow")
             
-            // Configure window
+            // Configure window with proper level and properties
+            window.level = .statusBar
             configureWindowProperties(window)
+            
+            // Position window at bottom
             positionWindowAtBottom(window)
             
             // Setup event monitor
             setupEventMonitor()
             
             // Proper window activation sequence
-            window.orderFront(nil)
+            window.orderFrontRegardless()
             NSApplication.shared.activate(ignoringOtherApps: true)
             window.makeKey()
             window.makeFirstResponder(window.contentView)
+            
+            // Force window to maintain its level and position after a brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                guard let self = self else { return }
+                window.level = .statusBar
+                self.positionWindowAtBottom(window)
+                
+                // Ensure window is still active
+                window.orderFrontRegardless()
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                window.makeKey()
+                window.makeFirstResponder(window.contentView)
+            }
             
             print("[DEBUG] setup window end")
         }
@@ -188,40 +204,54 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         isHandlingVisibilityChange = true
         
         guard let window = self.window,
-              let contentView = window.contentView,
-              !NSApplication.shared.isActive else {
-            self.isHandlingVisibilityChange = false
+              let contentView = window.contentView else {
+            isHandlingVisibilityChange = false
             return
         }
         
-        // Configure window
-        configureWindowProperties(window)
-        positionWindowAtBottom(window)
-        prepareContentViewForAnimation(contentView)
+        // Configure window with highest level
+        window.level = .statusBar
+        window.isMovable = false
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         
-        // Set initial state for animation
+        // Position window and activate before animation
+        positionWindowAtBottom(window)
+        window.orderFrontRegardless()
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        window.makeKey()
+        
+        // Prepare for animation
+        prepareContentViewForAnimation(contentView)
         contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
         
-        // First, make the window visible and activate app
-        NSApplication.shared.unhide(nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        
-        // Make window key and set first responder
-        window.makeKey()
-        window.makeFirstResponder(contentView)
-        window.orderFrontRegardless()
+        // Setup event monitor before animation
         self.setupEventMonitor()
+        
         // Perform animation
-        animateContentView(contentView, isShowing: true, duration: 0.2) {
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            contentView.animator().layer?.transform = CATransform3DIdentity
+        }) { [weak self] in
+            guard let self = self else { return }
+            
+            // Ensure window is still at correct position and level after animation
+            window.level = .statusBar
+            self.positionWindowAtBottom(window)
+            
+            // Ensure proper window activation after animation
+            window.orderFrontRegardless()
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            window.makeKey()
+            window.makeFirstResponder(contentView)
+            
             // Re-enable hotkeys
             hotkeyForEscape.isPaused = false
             hotkeyForSettings.isPaused = false
-                            
             
-            window.orderFrontRegardless()
+            // Reset handling flag
             self.isHandlingVisibilityChange = false
         }
-
     }
 
     // MARK: - Make App Hidden
@@ -451,6 +481,7 @@ extension NSNotification.Name {
     static let showSubscriptionViewNotification = NSNotification.Name(
         "showSubscriptionViewNotification")
     static let arrowKeyPressedNotification = NSNotification.Name("arrowKeyPressedNotification")
+    static let windowDidBecomeReady = NSNotification.Name("windowDidBecomeReady")
 }
 
 extension NSWindow {
@@ -480,19 +511,40 @@ extension NSWindow {
 // Add these private methods for window configuration
 private extension AppDelegate {
     func configureWindowProperties(_ window: NSWindow) {
-        window.styleMask = [.titled, .docModalWindow]
+        window.styleMask = [.titled, .miniaturizable]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.level = .popUpMenu
         window.isMovable = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.acceptsMouseMovedEvents = true  // Add this to ensure mouse events
-        window.isReleasedWhenClosed = false    // Add this to prevent window deallocation
+        window.acceptsMouseMovedEvents = true
+        window.isReleasedWhenClosed = false
+        window.hidesOnDeactivate = false
     }
     
     func positionWindowAtBottom(_ window: NSWindow) {
         guard let screen = NSScreen.main else { return }
-        window.setFrameOrigin(NSPoint(x: screen.visibleFrame.minX, y: screen.frame.minY))
+        let currentFrame = window.frame
+        
+        // Use frame.minY instead of visibleFrame.minY to ignore the Dock
+        let bottomY = screen.frame.minY
+        
+        // Center horizontally using frame instead of visibleFrame
+        let centerX = screen.frame.midX - (currentFrame.width / 2)
+        
+        // Always ensure highest window level
+        window.level = .statusBar
+        
+        window.setFrame(
+            NSRect(
+                x: centerX,
+                y: bottomY,
+                width: currentFrame.width,
+                height: currentFrame.height
+            ),
+            display: true,
+            animate: false
+        )
     }
     
     func prepareContentViewForAnimation(_ contentView: NSView) {
