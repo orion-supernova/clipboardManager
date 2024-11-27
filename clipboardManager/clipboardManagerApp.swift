@@ -441,19 +441,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             switch event.keyCode {
             case 123: // Left Arrow
                 NotificationCenter.default.post(name: .arrowKeyPressedNotification, object: -1)
-                return event
+                return nil
             case 124: // Right Arrow
                 NotificationCenter.default.post(name: .arrowKeyPressedNotification, object: 1)
-                return event
+                return nil
             case 53: // Escape
                 self.makeAppHiddenAction()
-                return event
+                return nil
             case 36: // Enter
                 if let selectedItem = self.clipboardManager.orderedItems.indices.contains(self.clipboardManager.selectedItemIndex) ? 
                     self.clipboardManager.orderedItems[self.clipboardManager.selectedItemIndex] : nil {
                     self.clipboardManager.handleItemTap(item: selectedItem, index: self.clipboardManager.selectedItemIndex)
                 }
-                return event
+                return nil
             default:
                 return event
             }
