@@ -296,6 +296,15 @@ struct ScrollablePasteboardItemsView: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSScrollView.didEndLiveScrollNotification)) { _ in
                     handleScrollEnd()
                 }
+                .onChange(of: selectedItemIndex) { _ in
+                    if selectedItemIndex < clipboardManager.orderedItems.count {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            let item = clipboardManager.orderedItems[selectedItemIndex]
+                            proxy.scrollTo(item.id, anchor: .center)
+                        }
+                    }
+                }
+                
             }
         }
     }

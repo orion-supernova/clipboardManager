@@ -105,6 +105,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.setupWindow()
         }
     }
+    
+    // MARK: - SETUP WINDOW
     @objc func setupWindow() {
         print("[DEBUG] setup window start")
         let windowController = NSHostingView(rootView: containerView)
@@ -178,48 +180,51 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Private Actions
 
-    // MARK: - Make App Visible
+    
+    
+    // MARK: - MAKE APP VISIBLE
     @objc private func makeAppVisibleAction() {
         guard !isHandlingVisibilityChange else { return }
         isHandlingVisibilityChange = true
         
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self,
-                  let window = self.window,
-                  let contentView = window.contentView,
-                  !NSApplication.shared.isActive else {
-                self?.isHandlingVisibilityChange = false
-                return
-            }
+        guard let window = self.window,
+              let contentView = window.contentView,
+              !NSApplication.shared.isActive else {
+            self.isHandlingVisibilityChange = false
+            return
+        }
+        
+        // Configure window
+        configureWindowProperties(window)
+        positionWindowAtBottom(window)
+        prepareContentViewForAnimation(contentView)
+        
+        // Set initial state for animation
+        contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
+        
+        // First, make the window visible and activate app
+        NSApplication.shared.unhide(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        
+        // Make window key and set first responder
+        window.makeKey()
+        window.makeFirstResponder(contentView)
+        
+        // Perform animation
+        animateContentView(contentView, isShowing: true, duration: 0.2) {
+            // Re-enable hotkeys
+            hotkeyForEscape.isPaused = false
+            hotkeyForSettings.isPaused = false
+                            
             
-            // Configure window
-            configureWindowProperties(window)
-            positionWindowAtBottom(window)
-            prepareContentViewForAnimation(contentView)
-            
-            // Set initial state for animation
-            contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-            
-            // First, make the window visible and activate app
-            NSApplication.shared.unhide(nil)
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            
-            // Make window key and set first responder
             window.makeKey()
             window.makeFirstResponder(contentView)
+            self.setupEventMonitor()
+            window.orderFrontRegardless()
             
-            // Perform animation
-            animateContentView(contentView, isShowing: true, duration: 0.2) {
-                // Re-enable hotkeys
-                hotkeyForEscape.isPaused = false
-                hotkeyForSettings.isPaused = false
-                                
-                self.isHandlingVisibilityChange = false
-                
-                self.setupEventMonitor()
-                window.orderFrontRegardless()
-            }
+            self.isHandlingVisibilityChange = false
         }
+
     }
 
     // MARK: - Make App Hidden
@@ -392,6 +397,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             case 53: // Escape
                 self.makeAppHiddenAction()
                 return nil
+            case 36: // Enter
+                let pasteEvent = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true) // 9 corresponds to "V" key
+                pasteEvent?.flags = .maskCommand // Add the Command key modifier
+                pasteEvent?.post(tap: .cgAnnotatedSessionEventTap)
+
+                let releaseEvent = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: false) // Release "V"
+                releaseEvent?.flags = .maskCommand // Keep Command key modifier during release
+                releaseEvent?.post(tap: .cgAnnotatedSessionEventTap)
+
+                return nil
+
             default:
                 return event
             }
