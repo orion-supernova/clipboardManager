@@ -13,7 +13,7 @@ import Carbon
 class KeyPressHelper {
     static let shared = KeyPressHelper()
     
-    func simulateKeyPressWithCommand(keyCode: UInt16) {
+    private func simulateKeyPressWithCommand(keyCode: UInt16) {
 
         let eventSource = CGEventSource(stateID: .combinedSessionState)
         let eventDown = CGEvent(keyboardEventSource: eventSource, virtualKey: CGKeyCode(keyCode), keyDown: true)!
@@ -48,7 +48,7 @@ class KeyPressHelper {
 
     }
 
-    func getKeyboardCharacter(for keyCode: UInt16) -> String {
+    private func getKeyboardCharacter(for keyCode: UInt16) -> String {
         guard let source = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
               let layoutData = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData),
               let keyboardLayout = unsafeBitCast(layoutData, to: CFData.self) as Data? else {

@@ -298,7 +298,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Text selected from clipboard
     @objc private func textSelectedFromClipboardAction(_ setuptimer: NSNotification) {
         makeAppHiddenAction()
-        KeyPressHelper.shared.simulateKeyPressWithCommand(keyCode: KeyCode.v)
+        KeyPressHelper.shared.performPasteActionWithGettingVKey()
     }
 
     @objc private func showSubscriptionWindow() {
@@ -395,9 +395,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.makeAppHiddenAction()
                 return nil
             case 36: // Enter
+                makeAppHiddenAction()
                 KeyPressHelper.shared.performPasteActionWithGettingVKey()
                 return nil
-
             default:
                 return event
             }

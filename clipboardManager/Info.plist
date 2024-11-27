@@ -8,5 +8,9 @@
 	<string></string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>This app needs to send Apple Events to perform paste operations.</string>
+	<key>Privacy - Accessibility Usage Description</key>
+	<string>This app needs accessibility permissions to simulate keyboard shortcuts for paste operations.</string>
 </dict>
 </plist>
