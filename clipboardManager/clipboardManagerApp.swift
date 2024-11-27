@@ -301,7 +301,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - Text selected from clipboard
     @objc private func textSelectedFromClipboardAction(_ setuptimer: NSNotification) {
         makeAppHiddenAction()
-        KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
+        KeyPressHelper.shared.simulateKeyPressWithCommand(keyCode: KeyCode.v)
     }
 
     @objc private func showSubscriptionWindow() {
@@ -398,14 +398,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.makeAppHiddenAction()
                 return nil
             case 36: // Enter
-                let pasteEvent = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true) // 9 corresponds to "V" key
-                pasteEvent?.flags = .maskCommand // Add the Command key modifier
-                pasteEvent?.post(tap: .cgAnnotatedSessionEventTap)
-
-                let releaseEvent = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: false) // Release "V"
-                releaseEvent?.flags = .maskCommand // Keep Command key modifier during release
-                releaseEvent?.post(tap: .cgAnnotatedSessionEventTap)
-
+//                KeyPressHelper.shared.performPasteActionWithGettingVKey()
+                performPasteAction()
                 return nil
 
             default:
@@ -414,7 +408,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 }
-
 // MARK: - Extension App Delegate
 extension AppDelegate: ApplicationMenuDelegate {
 

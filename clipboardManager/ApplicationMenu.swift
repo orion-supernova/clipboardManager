@@ -61,13 +61,6 @@ class ApplicationMenu: NSObject {
     }
 
     // MARK: - Actions
-    @objc func copyToClipboardAction(sender: NSMenuItem) {
-        let pasteBoard = NSPasteboard.general
-        pasteBoard.clearContents()
-        pasteBoard.setString(sender.title,forType :.string)
-        KeyPressHelper.simulateKeyPressWithCommand(keyCode: KeyCode.v)
-    }
-
     @objc func preferencesAction(sender: NSMenuItem) {
         NotificationCenter.default.post(name: .preferencesClickedNotification, object: nil)
     }

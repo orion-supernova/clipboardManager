@@ -82,7 +82,9 @@ struct SubscriptionStatusSection: View {
                 DebugControls(subscriptionManager: subscriptionManager)
                 #endif
             }
+            .frame(maxWidth: .infinity)
             .padding()
+            
         }
     }
 }
