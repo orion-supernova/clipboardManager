@@ -13,11 +13,11 @@ struct clipboardManagerHelperApp: App {
         let mainAppIdentifier = "com.walhallaa.clipboardManager" // Change this to your main app's identifier
 
         // Launch the main application
-        if let mainAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mainAppIdentifier) {
-            NSWorkspace.shared.open(mainAppURL)
-        } else {
-            print("Main application not found.")
-        }
+//        if let mainAppURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: mainAppIdentifier) {
+//            NSWorkspace.shared.open(mainAppURL)
+//        } else {
+//            print("Main application not found.")
+//        }
 
         // Terminate the helper application
         NSApp.terminate(nil)

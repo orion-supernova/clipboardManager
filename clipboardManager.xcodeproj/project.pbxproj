@@ -27,8 +27,6 @@
 		54A3238429CA36D000F3E2F3 /* KeyPressHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A3238329CA36D000F3E2F3 /* KeyPressHelper.swift */; };
 		54A76B892C5D852300AEBD9E /* NSImage+Color.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A76B882C5D852300AEBD9E /* NSImage+Color.swift */; };
 		54A76B8D2C5E634C00AEBD9E /* URLPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54A76B8C2C5E634C00AEBD9E /* URLPreview.swift */; };
-		54A76B902C5E797900AEBD9E /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 54A76B8F2C5E797900AEBD9E /* RevenueCat */; };
-		54A76B922C5E797900AEBD9E /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 54A76B912C5E797900AEBD9E /* RevenueCatUI */; };
 		54B6C8822C4E799F00106CFA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54B6C8812C4E799F00106CFA /* StoreKit.framework */; };
 		54B6C8A72C4FAF6C00106CFA /* ContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8A62C4FAF6C00106CFA /* ContainerView.swift */; };
 		54B6C8A92C4FB59C00106CFA /* ClipboardManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8A82C4FB59C00106CFA /* ClipboardManager.swift */; };
@@ -105,10 +103,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				54A76B922C5E797900AEBD9E /* RevenueCatUI in Frameworks */,
 				5434D12229C1CB60009DF037 /* HotKey in Frameworks */,
 				54B6C8822C4E799F00106CFA /* StoreKit.framework in Frameworks */,
-				54A76B902C5E797900AEBD9E /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,8 +269,6 @@
 			name = clipboardManager;
 			packageProductDependencies = (
 				5434D12129C1CB60009DF037 /* HotKey */,
-				54A76B8F2C5E797900AEBD9E /* RevenueCat */,
-				54A76B912C5E797900AEBD9E /* RevenueCatUI */,
 			);
 			productName = clipboardManager;
 			productReference = 5434D10929C1C433009DF037 /* Mahmut Clipboard.app */;
@@ -309,7 +303,6 @@
 			mainGroup = 5434D10029C1C433009DF037;
 			packageReferences = (
 				5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */,
-				54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			productRefGroup = 5434D10A29C1C433009DF037 /* Products */;
 			projectDirPath = "";
@@ -683,14 +676,6 @@
 				minimumVersion = 0.0.0;
 			};
 		};
-		54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.2.2;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -698,16 +683,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5434D12029C1CB60009DF037 /* XCRemoteSwiftPackageReference "HotKey" */;
 			productName = HotKey;
-		};
-		54A76B8F2C5E797900AEBD9E /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCat;
-		};
-		54A76B912C5E797900AEBD9E /* RevenueCatUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 54A76B8E2C5E797900AEBD9E /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 

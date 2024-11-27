@@ -200,11 +200,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // Set initial state for animation
             contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
             
-            // Setup event monitor before showing window
-            setupEventMonitor()
-            
             // First, make the window visible and activate app
-            window.orderFrontRegardless()
             NSApplication.shared.unhide(nil)
             NSApplication.shared.activate(ignoringOtherApps: true)
             
@@ -213,17 +209,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             window.makeFirstResponder(contentView)
             
             // Perform animation
-            animateContentView(contentView, isShowing: true, duration: 0.2) { [weak self] in
+            animateContentView(contentView, isShowing: true, duration: 0.2) {
                 // Re-enable hotkeys
                 hotkeyForEscape.isPaused = false
                 hotkeyForSettings.isPaused = false
+                                
+                self.isHandlingVisibilityChange = false
                 
-                // Final activation to ensure focus
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                window.makeKey()
-                window.makeFirstResponder(contentView)
-                
-                self?.isHandlingVisibilityChange = false
+                self.setupEventMonitor()
+                window.orderFrontRegardless()
             }
         }
     }

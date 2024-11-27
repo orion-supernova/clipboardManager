@@ -93,6 +93,7 @@ struct EmptyStateView: View {
                 Color.purple.opacity(0.5),
                 Color.black.opacity(1)
             ], center: .center, startRadius: 1, endRadius: 450)
+            .ignoresSafeArea()
             Text("No Clipboard Items")
                 .font(.system(size: 24, weight: .bold, design: .monospaced))
         }

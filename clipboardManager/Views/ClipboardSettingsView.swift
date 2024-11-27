@@ -50,19 +50,20 @@ struct GeneralSettingsSection: View {
     var body: some View {
         GroupBox(label: Text("General Settings").bold()) {
             VStack(alignment: .leading, spacing: 12) {
-                Toggle("Launch at login", isOn: $settings.launchAtLogin)
-                    .onChange(of: settings.launchAtLogin) { newValue in
-                        if newValue {
-                            addToLaunchItems()
-                        } else {
-                            removeFromLaunchItems()
-                        }
-                    }
-                Divider()
+//                Toggle("Launch at login", isOn: $settings.launchAtLogin)
+//                    .onChange(of: settings.launchAtLogin) { newValue in
+//                        if newValue {
+//                            addToLaunchItems()
+//                        } else {
+//                            removeFromLaunchItems()
+//                        }
+//                    }
+//                Divider()
                 
                 RetainClipsSection(settings: settings)
                 KeyboardNavigationSection(settings: settings)
             }
+            .frame(maxWidth: .infinity)
             .padding()
         }
     }
