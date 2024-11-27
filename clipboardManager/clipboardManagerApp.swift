@@ -209,7 +209,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Make window key and set first responder
         window.makeKey()
         window.makeFirstResponder(contentView)
-        
+        window.orderFrontRegardless()
+        self.setupEventMonitor()
         // Perform animation
         animateContentView(contentView, isShowing: true, duration: 0.2) {
             // Re-enable hotkeys
@@ -217,11 +218,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             hotkeyForSettings.isPaused = false
                             
             
-            window.makeKey()
-            window.makeFirstResponder(contentView)
-            self.setupEventMonitor()
             window.orderFrontRegardless()
-            
             self.isHandlingVisibilityChange = false
         }
 
@@ -398,8 +395,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.makeAppHiddenAction()
                 return nil
             case 36: // Enter
-//                KeyPressHelper.shared.performPasteActionWithGettingVKey()
-                performPasteAction()
+                KeyPressHelper.shared.performPasteActionWithGettingVKey()
                 return nil
 
             default:
