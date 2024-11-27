@@ -214,18 +214,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.isMovable = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         
-        // Position window and activate before animation
+        // Position window
         positionWindowAtBottom(window)
-        window.orderFrontRegardless()
+        
+        // Ensure proper window and app activation sequence before animation
         NSApplication.shared.activate(ignoringOtherApps: true)
+        window.orderFrontRegardless()
         window.makeKey()
+        window.makeFirstResponder(contentView)
+        
+        // Setup event monitor
+        self.setupEventMonitor()
         
         // Prepare for animation
         prepareContentViewForAnimation(contentView)
         contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-        
-        // Setup event monitor before animation
-        self.setupEventMonitor()
         
         // Perform animation
         NSAnimationContext.runAnimationGroup({ context in
@@ -235,22 +238,43 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }) { [weak self] in
             guard let self = self else { return }
             
-            // Ensure window is still at correct position and level after animation
-            window.level = .statusBar
-            self.positionWindowAtBottom(window)
-            
-            // Ensure proper window activation after animation
-            window.orderFrontRegardless()
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            window.makeKey()
-            window.makeFirstResponder(contentView)
-            
-            // Re-enable hotkeys
-            hotkeyForEscape.isPaused = false
-            hotkeyForSettings.isPaused = false
-            
-            // Reset handling flag
-            self.isHandlingVisibilityChange = false
+            // Force activation on main thread after animation
+            DispatchQueue.main.async {
+                // Ensure window is at correct position and level
+                window.level = .statusBar
+                self.positionWindowAtBottom(window)
+                
+                // Force app and window activation
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                window.orderFrontRegardless()
+                
+                // Force key window and first responder status
+                if !window.isKeyWindow {
+                    window.makeKey()
+                }
+                if window.firstResponder != contentView {
+                    window.makeFirstResponder(contentView)
+                }
+                
+                // Re-enable hotkeys
+                hotkeyForEscape.isPaused = false
+                hotkeyForSettings.isPaused = false
+                
+                // Reset handling flag
+                self.isHandlingVisibilityChange = false
+                
+                // Post notification that window is ready
+                NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
+                
+                // Double-check activation after a brief delay
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    if !window.isKeyWindow {
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                        window.makeKey()
+                        window.makeFirstResponder(contentView)
+                    }
+                }
+            }
         }
     }
 

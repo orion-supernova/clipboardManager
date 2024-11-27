@@ -55,6 +55,17 @@ struct MainView: View {
                 moveSelection(direction: direction)
             }
         }
+        // Add observer for window ready notification
+        .onReceive(NotificationCenter.default.publisher(for: .windowDidBecomeReady)) { _ in
+            // Force window activation and first responder status
+            DispatchQueue.main.async {
+                if let window = NSApplication.shared.windows.first {
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                    window.makeKey()
+                    window.makeFirstResponder(window.contentView)
+                }
+            }
+        }
     }
 
     // MARK: - MOVE SELECTION
