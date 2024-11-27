@@ -824,6 +824,47 @@ class ClipboardManager: ObservableObject {
             print("ClipboardManager: Selection updated to", index)
         }
     }
+
+    // Add this method to handle item taps globally
+    @MainActor
+    func handleItemTap(item: ClipboardItem, index: Int) {
+        let subscriptionManager = SubscriptionManager.shared
+        
+        if !subscriptionManager.isSubscribed && index >= 3 {
+            NotificationCenter.default.post(name: .showSubscriptionViewNotification, object: nil)
+        } else {
+            // Update selection
+            updateSelection(index)
+            
+            // Copy to pasteboard
+            copyItemToPasteboard(item)
+            
+            // Notify for paste action
+            NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: nil)
+        }
+    }
+    
+    // Move copyItemToPasteboard to ClipboardManager
+    private func copyItemToPasteboard(_ item: ClipboardItem) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        
+        switch item.type {
+        case .file, .video:
+            if let fileURL = item.fileURL {
+                pasteboard.writeObjects([fileURL as NSURL])
+            }
+        case .image:
+            if let fileURL = item.fileURL,
+               let image = NSImage(contentsOf: fileURL) {
+                pasteboard.writeObjects([image])
+            }
+        default:
+            if let string = String(data: item.content, encoding: .utf8) {
+                pasteboard.setString(string, forType: .string)
+            }
+        }
+    }
 }
 
 private extension NSImage {

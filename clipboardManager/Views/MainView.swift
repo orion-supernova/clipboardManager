@@ -151,7 +151,7 @@ struct ScrollablePasteboardItemsView: View {
                 }
             )
             .onTapGesture {
-                handleItemTap(item: item, index: index)
+                clipboardManager.handleItemTap(item: item, index: index)
             }
             .frame(width: 300, height: 300)
             .id(item.id)
@@ -161,43 +161,6 @@ struct ScrollablePasteboardItemsView: View {
             .onDisappear {
                 clipboardManager.unloadItem(item)
             }
-    }
-
-    // MARK: - HANDLE TAP ITEM
-    private func handleItemTap(item: ClipboardItem, index: Int) {
-        if !subscriptionManager.isSubscribed && index >= 3 {
-            showSubscriptionView()
-        } else {
-            // Update selection through ClipboardManager
-            clipboardManager.updateSelection(index)
-            
-            // Copy to pasteboard and notify
-            copyItemToPasteboard(item)
-            NotificationCenter.default.post(
-                name: .textSelectedFromClipboardNotification, object: nil)
-        }
-    }
-
-    private func copyItemToPasteboard(_ item: ClipboardItem) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-
-        switch item.type {
-        case .file, .video:
-            if let fileURL = item.fileURL {
-                pasteboard.writeObjects([fileURL as NSURL])
-            }
-        case .image:
-            if let fileURL = item.fileURL,
-                let image = NSImage(contentsOf: fileURL)
-            {
-                pasteboard.writeObjects([image])
-            }
-        default:
-            if let string = String(data: item.content, encoding: .utf8) {
-                pasteboard.setString(string, forType: .string)
-            }
-        }
     }
 
     var body: some View {
