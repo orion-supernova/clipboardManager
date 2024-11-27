@@ -511,7 +511,7 @@ extension NSWindow {
 // Add these private methods for window configuration
 private extension AppDelegate {
     func configureWindowProperties(_ window: NSWindow) {
-        window.styleMask = [.titled]
+        window.styleMask = [.titled, .miniaturizable]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.level = .popUpMenu

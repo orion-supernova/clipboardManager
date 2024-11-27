@@ -20,6 +20,7 @@ class ClipboardManager: ObservableObject {
     @Published var launchAtLogin: Bool!
     @Published var retainCount: Int!
     @Published var clearItemsOlderThanHours: Int!
+    @Published private(set) var selectedItemIndex: Int = 0
     
     private let persistenceController: PersistenceController
     private var viewContext: NSManagedObjectContext {
@@ -814,6 +815,14 @@ class ClipboardManager: ObservableObject {
     
     func unloadItem(_ item: ClipboardItem) {
         // Clean up resources for items that are no longer visible
+    }
+
+    // Add this method to update selection
+    func updateSelection(_ index: Int) {
+        DispatchQueue.main.async {
+            self.selectedItemIndex = index
+            print("ClipboardManager: Selection updated to", index)
+        }
     }
 }
 
