@@ -222,7 +222,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
         // Perform animation
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.15
+            context.duration = 0.25
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             contentView.animator().layer?.transform = CATransform3DIdentity
         }) { [weak self] in
@@ -253,8 +253,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 // Reset handling flag
                 self.isHandlingVisibilityChange = false
                 
-                // Post notification that window is ready
-//                NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
+                DispatchQueue.main.asyncAfter(deadline: .now()+0.2) {
+                    // Post notification that window is ready
+                    NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
+                }
             }
         }
     }
@@ -551,7 +553,7 @@ private extension AppDelegate {
                 height: currentFrame.height
             ),
             display: true,
-            animate: false
+            animate: true
         )
     }
     
