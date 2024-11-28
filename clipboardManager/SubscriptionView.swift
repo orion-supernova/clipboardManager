@@ -8,30 +8,60 @@
 import SwiftUI
 import StoreKit
 
-enum PremiumFeature: CaseIterable {
-    case unlimited, search
+enum AppFeature: Identifiable {
+    case clipboardStorage, clipboardAccess, smartDetection, pasteAnywhere, smartSearch
+    
+    var id: String { title }
     
     var title: String {
         switch self {
-        case .unlimited: return "Unlimited Access to History"
-        case .search: return "Smart Search"
-//        case .keyboard: return "Quick Access"
+        case .clipboardStorage: return "Clipboard Storage"
+        case .clipboardAccess: return "Clipboard History Access"
+        case .smartDetection: return "Smart Content Detection"
+        case .pasteAnywhere: return "Paste Anywhere"
+        case .smartSearch: return "Smart Search"
         }
     }
     
     var icon: String {
         switch self {
-        case .unlimited: return "infinity.circle.fill"
-        case .search: return "magnifyingglass.circle.fill"
-//        case .keyboard: return "command.circle.fill"
+        case .clipboardStorage: return "square.and.arrow.down.fill"
+        case .clipboardAccess: return "list.clipboard.fill"
+        case .smartDetection: return "wand.and.stars"
+        case .pasteAnywhere: return "command.circle.fill"
+        case .smartSearch: return "magnifyingglass.circle.fill"
         }
     }
     
     var description: String {
         switch self {
-        case .unlimited: return "Never lose your copied items"
-        case .search: return "Find anything instantly"
-//        case .keyboard: return "Access clipboard with shortcuts"
+        case .clipboardStorage: return "Store unlimited clipboard items"
+        case .clipboardAccess: return "Access your clipboard history"
+        case .smartDetection: return "Auto-detect colors, images, files & more"
+        case .pasteAnywhere: return "Paste text in any application"
+        case .smartSearch: return "Find anything instantly in your history"
+        }
+    }
+    
+    var freeAccess: String {
+        switch self {
+        case .clipboardAccess: return "3 items"
+        case .clipboardStorage, .pasteAnywhere, .smartDetection: return "✓"
+        case .smartSearch: return "—"
+        }
+    }
+    
+    var proAccess: String {
+        switch self {
+        case .clipboardAccess: return "Unlimited"
+        default: return "✓"
+        }
+    }
+    
+    var isPremium: Bool {
+        switch self {
+        case .clipboardStorage, .pasteAnywhere, .smartDetection: return false
+        case .clipboardAccess, .smartSearch: return true
         }
     }
 }
@@ -88,9 +118,9 @@ struct SubscriptionView: View {
                 )
             )
             
-            VStack(spacing: 20) {
+            VStack(spacing: 30) {
                 // Title Bar
-                Text("Unlock Premium Features")
+                Text("Upgrade to Premium")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(
                         LinearGradient(
@@ -102,8 +132,8 @@ struct SubscriptionView: View {
                     .offset(y: isAnimating ? 0 : -30)
                     .opacity(isAnimating ? 1 : 0)
                 
-                // Features Grid
-                featuresSection
+                // Feature Comparison
+                FeatureComparisonView()
                     .offset(y: isAnimating ? 0 : 50)
                     .opacity(isAnimating ? 1 : 0)
                 
@@ -142,16 +172,12 @@ struct SubscriptionView: View {
                 }
             }
         }
-        .frame(width: 800, height: 600)
+//        .frame(width: 800, height: 800)
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {
                 isAnimating = true
             }
         }
-    }
-    
-    private var featuresSection: some View {
-        FeatureCardsContainer(isAnimating: isAnimating)
     }
     
     private var subscriptionPlans: some View {
@@ -311,90 +337,6 @@ struct SubscriptionView: View {
 //    #endif
 }
 
-struct FeatureCardsContainer: View {
-    let isAnimating: Bool
-    @Namespace private var animation
-    @State private var hoveredFeature: PremiumFeature?
-    
-    var body: some View {
-        HStack(spacing: 25) {
-            ForEach(Array(PremiumFeature.allCases.enumerated()), id: \.element.title) { index, feature in
-                FeatureCard(
-                    feature: feature,
-                    isVisible: isAnimating,
-                    delay: Double(index) * 0.2,
-                    namespace: animation,
-                    isHovered: hoveredFeature == feature
-                )
-                .onHover { isHovered in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        hoveredFeature = isHovered ? feature : nil
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct FeatureCard: View {
-    let feature: PremiumFeature
-    let isVisible: Bool
-    let delay: Double
-    let namespace: Namespace.ID
-    let isHovered: Bool
-    
-    var body: some View {
-        VStack(spacing: 10) {
-            // Icon with matched geometry effect
-            Image(systemName: feature.icon)
-                .font(.system(size: 28))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .padding(2)
-                .background(
-                    Circle()
-                        .fill(SubscriptionColors.cardBg)
-                        .matchedGeometryEffect(id: "circle\(feature.title)", in: namespace)
-                        .shadow(
-                            color: SubscriptionColors.accent.opacity(0.3),
-                            radius: isHovered ? 8 : 0
-                        )
-                )
-            
-            VStack(spacing: 8) {
-                Text(feature.title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(SubscriptionColors.text)
-                
-                Text(feature.description)
-                    .font(.system(size: 14, design: .rounded))
-                    .foregroundColor(SubscriptionColors.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(width: 300)
-        .padding(.vertical, 20)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(SubscriptionColors.cardBg)
-                    .matchedGeometryEffect(id: "card\(feature.title)", in: namespace)
-                
-                AnimatedBorder(isHovered: isHovered)
-            }
-        )
-        .scaleEffect(isVisible ? 1 : 0.8)
-        .opacity(isVisible ? 1 : 0)
-        .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(delay), value: isVisible)
-    }
-}
-
-// Add this new view for the animated border
 struct AnimatedBorder: View {
     let isHovered: Bool
     
@@ -419,7 +361,7 @@ struct AnimatedBorder: View {
             
             // Traveling highlight
             RoundedRectangle(cornerRadius: 20)
-                .trim(from: trimStart, to: trimStart + 0.15) // Shorter, more elegant line
+                .trim(from: trimStart, to: trimStart + 0.15)
                 .stroke(
                     LinearGradient(
                         colors: [
@@ -437,12 +379,12 @@ struct AnimatedBorder: View {
                     )
                 )
                 .opacity(isHovered ? 0.8 : 0)
-                .blur(radius: 0.5) // Subtle blur for glow effect
+                .blur(radius: 0.5)
         }
         .onChange(of: isHovered) { newValue in
             if newValue {
                 withAnimation(
-                    .linear(duration: 1.5) // Slightly faster animation
+                    .linear(duration: 1.5)
                     .repeatForever(autoreverses: false)
                 ) {
                     trimStart = 1.0
@@ -452,6 +394,82 @@ struct AnimatedBorder: View {
                     trimStart = 0
                 }
             }
+        }
+    }
+}
+
+struct FeatureComparisonView: View {
+    let features = [
+        AppFeature.clipboardStorage,
+        AppFeature.clipboardAccess,
+        AppFeature.smartDetection,
+        AppFeature.pasteAnywhere,
+        AppFeature.smartSearch
+    ]
+    
+    var body: some View {
+        VStack {
+//            Text("Features")
+//                .font(.system(size: 24, weight: .bold, design: .rounded))
+//                .foregroundColor(SubscriptionColors.text)
+            
+            VStack(spacing: 20) {
+                // Header
+                HStack(spacing: 0) {
+                    Text("Feature")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 300, alignment: .leading)
+                    Text("Free")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 100)
+                    Text("Premium")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 100)
+                }
+                .foregroundColor(SubscriptionColors.textSecondary)
+                
+                Divider()
+                    .padding(.vertical, 8)
+                
+                // Feature rows
+                ForEach(features) { feature in
+                    HStack(spacing: 0) {
+                        // Feature description
+                        HStack(spacing: 12) {
+                            Image(systemName: feature.icon)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(feature.title)
+                                    .foregroundColor(SubscriptionColors.text)
+                                Text(feature.description)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(SubscriptionColors.textSecondary)
+                            }
+                        }
+                        .frame(width: 300, alignment: .leading)
+                        
+                        // Free tier access
+                        Text(feature.freeAccess)
+                            .foregroundColor(feature.freeAccess == "✓" ? .green : SubscriptionColors.textSecondary)
+                            .frame(width: 100)
+                        
+                        // Pro tier access
+                        Text(feature.proAccess)
+                            .foregroundColor(feature.proAccess == "✓" ? .green : SubscriptionColors.textSecondary)
+                            .frame(width: 100)
+                    }
+                }
+            }
+            .padding(24)
+            .background(SubscriptionColors.cardBg)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 }
@@ -561,19 +579,17 @@ struct SubscriptionPlanCard: View {
     private func getSubscriptionDescription() -> String {
         guard let subscription = product.subscription else { return "" }
         
-        let price = product.price
         let unit = subscription.subscriptionPeriod.unit
-        let unitCount = subscription.subscriptionPeriod.value
         
         switch unit {
         case .month:
-            return "Pro access to all features.\nRenews Monthly."
+            return "Pro access with unlimited clipboard history.\nRenews Monthly."
         case .week:
-            return "Pro access to all features\nRenews Weekly."
+            return "Pro access with unlimited clipboard history.\nRenews Weekly."
         case .day:
-            return "Pro access to all features.\nRenews Weekly."
+            return "Pro access with unlimited clipboard history.\nRenews Weekly."
         case .year:
-            return "No description"
+            return "Pro access with unlimited clipboard history.\nRenews Yearly."
         @unknown default:
             return "No description"
         }
