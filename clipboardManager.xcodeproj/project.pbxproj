@@ -574,7 +574,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -592,7 +592,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -609,7 +609,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 21;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -627,7 +627,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 12.0;
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.walhallaa.clipboardManager;
 				PRODUCT_NAME = "Mahmut Clipboard";
 				SWIFT_EMIT_LOC_STRINGS = YES;
