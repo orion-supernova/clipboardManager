@@ -9,13 +9,13 @@ import SwiftUI
 import StoreKit
 
 enum PremiumFeature: CaseIterable {
-    case unlimited, search, keyboard
+    case unlimited, search
     
     var title: String {
         switch self {
-        case .unlimited: return "Unlimited History"
+        case .unlimited: return "Unlimited Access to History"
         case .search: return "Smart Search"
-        case .keyboard: return "Quick Access"
+//        case .keyboard: return "Quick Access"
         }
     }
     
@@ -23,7 +23,7 @@ enum PremiumFeature: CaseIterable {
         switch self {
         case .unlimited: return "infinity.circle.fill"
         case .search: return "magnifyingglass.circle.fill"
-        case .keyboard: return "command.circle.fill"
+//        case .keyboard: return "command.circle.fill"
         }
     }
     
@@ -31,7 +31,7 @@ enum PremiumFeature: CaseIterable {
         switch self {
         case .unlimited: return "Never lose your copied items"
         case .search: return "Find anything instantly"
-        case .keyboard: return "Access clipboard with shortcuts"
+//        case .keyboard: return "Access clipboard with shortcuts"
         }
     }
 }
@@ -456,7 +456,7 @@ struct AnimatedBorder: View {
     }
 }
 
-// Update the SubscriptionPlanCard with new styling
+// MARK: - PLAN CARD
 struct SubscriptionPlanCard: View {
     let product: Product
     let isSelected: Bool
@@ -492,12 +492,12 @@ struct SubscriptionPlanCard: View {
                         )
                     )
                 
-                Text("/month")
+                Text("\(product.displayPrice)/month")
                     .font(.system(size: 14, design: .rounded))
                     .foregroundColor(SubscriptionColors.textSecondary)
             }
             
-            PremiumButton("Subscribe", action: onPurchase)
+            PremiumButton(product.subscription?.introductoryOffer != nil ? "Try For Free" : "Subscribe", action: onPurchase)
         }
         .padding(24)
         .background(
@@ -517,8 +517,13 @@ struct SubscriptionPlanCard: View {
             }
         }
     }
+    
+    private func getMonthlyPrice() {
+        
+    }
 }
 
+// MARK: - PREMIUM BUTTON
 struct PremiumButton: View {
     let title: String
     let action: () -> Void
@@ -629,12 +634,6 @@ struct FooterButtonStyle: ButtonStyle {
     }
 }
 
-
-
-
-
-
-
-
-
-
+#Preview {
+    SubscriptionView()
+}
