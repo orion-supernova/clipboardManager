@@ -118,7 +118,7 @@ struct SubscriptionView: View {
                 )
             )
             
-            VStack(spacing: 30) {
+            VStack(spacing: 24) {
                 // Title Bar
                 Text("Upgrade to Pro Access")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -146,14 +146,13 @@ struct SubscriptionView: View {
                         .opacity(isAnimating ? 1 : 0)
                 }
                 
-                Spacer()
-                
-                // Footer
+                // Footer (removed Spacer() before footer)
                 footerSection
                     .offset(y: isAnimating ? 0 : 30)
                     .opacity(isAnimating ? 1 : 0)
+                    .padding(.top, 8) // Added small top padding instead of Spacer
             }
-            .padding(40)
+            .padding(32) // Reduced padding from 40 to 32
             
             // Success overlay
             if subscriptionManager.isSubscribed {
@@ -172,7 +171,6 @@ struct SubscriptionView: View {
                 }
             }
         }
-//        .frame(width: 800, height: 800)
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {
                 isAnimating = true
@@ -273,68 +271,6 @@ struct SubscriptionView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 30)
     }
-    
-//    #if DEBUG
-//    private var debugControls: some View {
-//        ScrollView(.vertical, showsIndicators: true) {
-//            GroupBox(label: Text("Debug Controls").bold()) {
-//                VStack(spacing: 16) {
-//                    HStack(spacing: 20) {
-//                        Button("Set Monthly") {
-//                            subscriptionManager.setDebugSubscriptionStatus(
-//                                isSubscribed: true,
-//                                tier: .monthly
-//                            )
-//                        }
-//                        .buttonStyle(DebugButtonStyle())
-//                                                
-//                        Button("Cancel Sub") {
-//                            subscriptionManager.cancelDebugSubscription()
-//                        }
-//                        .buttonStyle(DebugButtonStyle(isDestructive: true))
-//                    }
-//                    
-//                    // Add more debug controls here if needed
-//                    Text("Debug Info:")
-//                        .font(.caption)
-//                        .foregroundColor(.secondary)
-//                    Text("Current Tier: \(subscriptionManager.currentTier?.displayName ?? "None")")
-//                        .font(.caption)
-//                    Text("Is Subscribed: \(subscriptionManager.isSubscribed ? "Yes" : "No")")
-//                        .font(.caption)
-//                    if let date = subscriptionManager.subscriptionExpirationDate {
-//                        Text("Expires: \(date, style: .date)")
-//                            .font(.caption)
-//                    }
-//                }
-//                .padding(8)
-//            }
-//            .frame(maxHeight: 200)  // Limit the height
-//            .padding(.top, 20)
-//        }
-//    }
-//
-//    struct DebugButtonStyle: ButtonStyle {
-//        var isDestructive: Bool = false
-//        
-//        func makeBody(configuration: Configuration) -> some View {
-//            configuration.label
-//                .font(.system(size: 13, weight: .medium, design: .rounded))
-//                .foregroundColor(isDestructive ? .red : SubscriptionColors.accent)
-//                .padding(.horizontal, 12)
-//                .padding(.vertical, 6)
-//                .background(
-//                    RoundedRectangle(cornerRadius: 6)
-//                        .stroke(
-//                            isDestructive ? Color.red.opacity(0.3) : SubscriptionColors.accent.opacity(0.3),
-//                            lineWidth: 1
-//                        )
-//                )
-//                .opacity(configuration.isPressed ? 0.8 : 1.0)
-//                .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-//        }
-//    }
-//    #endif
 }
 
 struct AnimatedBorder: View {
@@ -467,7 +403,7 @@ struct FeatureRow: View {
 }
 
 // Update TravelingBorder to accept isHovered parameter:
-struct TravelingBorder: View {
+struct NotTravelingBorder: View {
     @State private var trimStart: CGFloat = 0
     let isHovered: Bool
     
@@ -487,28 +423,6 @@ struct TravelingBorder: View {
                     lineWidth: 1.5
                 )
                 .opacity(isHovered ? 0.4 : 0.2)
-            
-            // Traveling light
-            RoundedRectangle(cornerRadius: 16)
-                .trim(from: trimStart, to: trimStart + (isHovered ? 0.3 : 0.2))
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            SubscriptionColors.accent.opacity(0),
-                            SubscriptionColors.accent,
-                            SubscriptionColors.secondary,
-                            SubscriptionColors.secondary.opacity(0)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    style: StrokeStyle(
-                        lineWidth: isHovered ? 3 : 2,
-                        lineCap: .round
-                    )
-                )
-                .opacity(isHovered ? 0.8 : 0.5)
-                .blur(radius: isHovered ? 1.0 : 0.5)
         }
         .onAppear {
             withAnimation(
@@ -542,7 +456,7 @@ struct FeatureComparisonView: View {
     @State private var isHovered = false
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             // Header
             HStack(spacing: 0) {
                 Text("Feature")
@@ -573,8 +487,8 @@ struct FeatureComparisonView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(SubscriptionColors.cardBg)
                 
-                // Animated border
-                TravelingBorder(isHovered: isHovered)
+                // Border
+                NotTravelingBorder(isHovered: isHovered)
             }
         )
         .scaleEffect(isHovered ? 1.01 : 1.0)
