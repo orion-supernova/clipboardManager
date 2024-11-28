@@ -117,11 +117,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.window.identifier = .init("appWindow")
             
             // Configure window with proper level and properties
-            window.level = .statusBar
             configureWindowProperties(window)
-            
-            // Position window at bottom
-            positionWindowAtBottom(window)
             
             // Setup event monitor
             setupEventMonitor()
@@ -135,7 +131,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // Force window to maintain its level and position after a brief delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
                 guard let self = self else { return }
-                window.level = .statusBar
+                window.level = .popUpMenu
                 self.positionWindowAtBottom(window)
                 
                 // Ensure window is still active
@@ -210,18 +206,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         
         // Configure window with highest level
-        window.level = .statusBar
+        window.level = .popUpMenu
         window.isMovable = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         
         // Position window
         positionWindowAtBottom(window)
-        
-        // Ensure proper window and app activation sequence before animation
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        window.orderFrontRegardless()
-        window.makeKey()
-        window.makeFirstResponder(contentView)
         
         // Setup event monitor
         self.setupEventMonitor()
@@ -229,7 +219,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         // Prepare for animation
         prepareContentViewForAnimation(contentView)
         contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-        
+        NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
         // Perform animation
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.15
@@ -241,7 +231,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             // Force activation on main thread after animation
             DispatchQueue.main.async {
                 // Ensure window is at correct position and level
-                window.level = .statusBar
+                window.level = .popUpMenu
                 self.positionWindowAtBottom(window)
                 
                 // Force app and window activation
@@ -264,16 +254,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 self.isHandlingVisibilityChange = false
                 
                 // Post notification that window is ready
-                NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
-                
-                // Double-check activation after a brief delay
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    if !window.isKeyWindow {
-                        NSApplication.shared.activate(ignoringOtherApps: true)
-                        window.makeKey()
-                        window.makeFirstResponder(contentView)
-                    }
-                }
+//                NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
             }
         }
     }
@@ -305,6 +286,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             
             self?.animateContentView(contentView, isShowing: false, duration: 0.15) { [weak self] in
                 NSApplication.shared.hide(nil)
+                NSApp.hide(nil)
                 self?.isHandlingVisibilityChange = false
             }
         }
@@ -537,7 +519,7 @@ extension NSWindow {
 // Add these private methods for window configuration
 private extension AppDelegate {
     func configureWindowProperties(_ window: NSWindow) {
-        window.styleMask = [.titled, .miniaturizable]
+        window.styleMask = [.titled]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.level = .popUpMenu
@@ -559,7 +541,7 @@ private extension AppDelegate {
         let centerX = screen.frame.midX - (currentFrame.width / 2)
         
         // Always ensure highest window level
-        window.level = .statusBar
+        window.level = .popUpMenu
         
         window.setFrame(
             NSRect(
