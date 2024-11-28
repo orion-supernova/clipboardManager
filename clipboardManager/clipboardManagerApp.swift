@@ -109,38 +109,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // MARK: - SETUP WINDOW
     @objc func setupWindow() {
         print("[DEBUG] setup window start")
-        let windowController = NSHostingView(rootView: containerView)
         
         if let window = NSApplication.shared.windows.first {
             self.window = window
-            self.window.contentView = windowController
-            self.window.identifier = .init("appWindow")
+            window.identifier = .init("appWindow")
             
-            // Configure window with proper level and properties
+            // Configure window properties
             configureWindowProperties(window)
             
             // Setup event monitor
             setupEventMonitor()
             
-            // Proper window activation sequence
-            window.orderFrontRegardless()
-            NSApplication.shared.activate(ignoringOtherApps: true)
-            window.makeKey()
-            window.makeFirstResponder(window.contentView)
+            // Activate window with consistent method
+            activateWindow(window)
             
-            // Force window to maintain its level and position after a brief delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-                guard let self = self else { return }
-                window.level = .popUpMenu
-                self.positionWindowAtBottom(window)
-                
-                // Ensure window is still active
-                window.orderFrontRegardless()
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                window.makeKey()
-                window.makeFirstResponder(window.contentView)
-            }
-            
+            makeAppVisibleAction()
             print("[DEBUG] setup window end")
         }
     }
@@ -199,52 +182,43 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !isHandlingVisibilityChange else { return }
         isHandlingVisibilityChange = true
         
-        guard let window = self.window,
-              let contentView = window.contentView else {
-            isHandlingVisibilityChange = false
-            return
-        }
+        print("[DEBUG] make app visible start")
         
-        // Configure window with highest level
-        window.level = .popUpMenu
-        window.isMovable = false
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        
-        // Position window
-        positionWindowAtBottom(window)
-        
-        // Setup event monitor
-        self.setupEventMonitor()
-        
-        // Prepare for animation
-        prepareContentViewForAnimation(contentView)
-        contentView.layer?.transform = CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
-        NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
-        // Perform animation
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.25
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            contentView.animator().layer?.transform = CATransform3DIdentity
-        }) { [weak self] in
-            guard let self = self else { return }
+        if let window = NSApplication.shared.windows.first(where: { $0.identifier?.rawValue == "appWindow" }) {
+            // Create fresh hosting view first
+            let windowController = NSHostingView(rootView: containerView)
             
-            // Force activation on main thread after animation
-            DispatchQueue.main.async {
-                // Ensure window is at correct position and level
+            // Configure window with proper level and properties
+            window.level = .popUpMenu
+            window.identifier = .init("appWindow")
+            window.contentView = windowController
+            
+            // Configure window properties
+            configureWindowProperties(window)
+            
+            // Setup event monitor
+            setupEventMonitor()
+            
+            // First activation sequence
+            window.orderFrontRegardless()
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            window.makeKey()
+            window.makeFirstResponder(windowController)
+            
+            // Position window after activation
+            positionWindowAtBottom(window)
+            
+            // Double-check activation and position
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                // Reaffirm window level and position
                 window.level = .popUpMenu
                 self.positionWindowAtBottom(window)
                 
-                // Force app and window activation
-                NSApplication.shared.activate(ignoringOtherApps: true)
+                // Reaffirm activation status
                 window.orderFrontRegardless()
-                
-                // Force key window and first responder status
-                if !window.isKeyWindow {
-                    window.makeKey()
-                }
-                if window.firstResponder != contentView {
-                    window.makeFirstResponder(contentView)
-                }
+                NSApplication.shared.activate(ignoringOtherApps: true)
+                window.makeKey()
+                window.makeFirstResponder(windowController)
                 
                 // Re-enable hotkeys
                 hotkeyForEscape.isPaused = false
@@ -253,10 +227,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 // Reset handling flag
                 self.isHandlingVisibilityChange = false
                 
-                DispatchQueue.main.asyncAfter(deadline: .now()+0.2) {
-                    // Post notification that window is ready
-                    NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
-                }
+                print("[DEBUG] make app visible end")
             }
         }
     }
@@ -441,6 +412,40 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             default:
                 return event
             }
+        }
+    }
+
+    // Add this new method for consistent window activation
+    private func activateWindow(_ window: NSWindow) {
+        // First, configure window level and create content
+        window.level = .popUpMenu
+        let windowController = NSHostingView(rootView: containerView)
+        window.contentView = windowController
+        
+        // First activation sequence
+        window.orderFrontRegardless()
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        window.makeKey()
+        window.makeFirstResponder(windowController)
+        
+        // Position window after initial activation
+        positionWindowAtBottom(window)
+        
+        // Double-check activation and position after a brief delay
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Reaffirm window level
+            window.level = .popUpMenu
+            
+            // Reaffirm activation status
+            window.orderFrontRegardless()
+            NSApplication.shared.activate(ignoringOtherApps: true)
+            window.makeKey()
+            window.makeFirstResponder(windowController)
+            
+            // Final position check
+            self.positionWindowAtBottom(window)
         }
     }
 }
