@@ -108,7 +108,7 @@ struct EmptyStateView: View {
                 ], center: .center, startRadius: 1, endRadius: 450
             )
             .ignoresSafeArea()
-            Text("No Clipboard Items")
+            Text("No clipboard items, just copy anything you want!")
                 .font(.system(size: 24, weight: .bold, design: .monospaced))
         }
     }

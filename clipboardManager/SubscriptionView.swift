@@ -88,7 +88,7 @@ struct SubscriptionView: View {
                 )
             )
             
-            VStack(spacing: 30) {
+            VStack(spacing: 20) {
                 // Title Bar
                 Text("Unlock Premium Features")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -344,7 +344,7 @@ struct FeatureCard: View {
     let isHovered: Bool
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 10) {
             // Icon with matched geometry effect
             Image(systemName: feature.icon)
                 .font(.system(size: 28))
@@ -355,7 +355,7 @@ struct FeatureCard: View {
                         endPoint: .bottomTrailing
                     )
                 )
-                .frame(width: 56, height: 56)
+                .padding(2)
                 .background(
                     Circle()
                         .fill(SubscriptionColors.cardBg)
@@ -377,8 +377,8 @@ struct FeatureCard: View {
                     .multilineTextAlignment(.center)
             }
         }
-        .padding(24)
-        .frame(maxWidth: .infinity)
+        .frame(width: 300)
+        .padding(.vertical, 20)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
@@ -471,10 +471,12 @@ struct SubscriptionPlanCard: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(SubscriptionColors.text)
                 
-                Text(product.description)
-                    .font(.system(size: 14, design: .rounded))
+                Text(getSubscriptionDescription())
+                    .font(.system(size: 12, design: .rounded))
                     .foregroundColor(SubscriptionColors.textSecondary)
-            }
+                    .multilineTextAlignment(.leading)
+                    
+            }.frame(height: 70)
             
             Spacer()
             
@@ -491,10 +493,15 @@ struct SubscriptionPlanCard: View {
                             endPoint: .trailing
                         )
                     )
-                
-                Text("\(product.displayPrice)/month")
-                    .font(.system(size: 14, design: .rounded))
-                    .foregroundColor(SubscriptionColors.textSecondary)
+                if product.subscription?.subscriptionPeriod.unit == .month {
+                    Text("Includes a 3 day trial. Then \(product.price)/month.")
+                        .font(.system(size: 12, design: .rounded))
+                        .foregroundColor(SubscriptionColors.textSecondary)
+                } else {
+                    Text("\(getMonthlyPrice())/month approx.")
+                        .font(.system(size: 12, design: .rounded))
+                        .foregroundColor(SubscriptionColors.textSecondary)
+                }
             }
             
             PremiumButton(product.subscription?.introductoryOffer != nil ? "Try For Free" : "Subscribe", action: onPurchase)
@@ -518,8 +525,58 @@ struct SubscriptionPlanCard: View {
         }
     }
     
-    private func getMonthlyPrice() {
+    private func getMonthlyPrice() -> String {
+        guard let subscription = product.subscription else { return "" }
         
+        let price = product.price
+        let unit = subscription.subscriptionPeriod.unit
+        let unitCount = subscription.subscriptionPeriod.value
+        
+        // Convert to monthly price if needed
+        let monthlyPrice: Decimal
+        switch unit {
+        case .month:
+            monthlyPrice = price
+            print("Unit Count Month", unitCount)
+        case .year:
+            monthlyPrice = price / Decimal(12 * unitCount)
+            print("Unit Count Year", unitCount)
+        case .week:
+            monthlyPrice = price * Decimal(52) / Decimal(12 * unitCount)
+            print("Unit Count Week", unitCount)
+        case .day:
+            monthlyPrice = price * Decimal(4)
+            print("Unit Count Day", unitCount)
+        @unknown default:
+            monthlyPrice = price
+        }
+        
+        // Format the price
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = product.priceFormatStyle.locale
+        
+        return formatter.string(from: monthlyPrice as NSDecimalNumber) ?? ""
+    }
+    private func getSubscriptionDescription() -> String {
+        guard let subscription = product.subscription else { return "" }
+        
+        let price = product.price
+        let unit = subscription.subscriptionPeriod.unit
+        let unitCount = subscription.subscriptionPeriod.value
+        
+        switch unit {
+        case .month:
+            return "Pro access to all features.\nRenews Monthly."
+        case .week:
+            return "Pro access to all features\nRenews Weekly."
+        case .day:
+            return "Pro access to all features.\nRenews Weekly."
+        case .year:
+            return "No description"
+        @unknown default:
+            return "No description"
+        }
     }
 }
 

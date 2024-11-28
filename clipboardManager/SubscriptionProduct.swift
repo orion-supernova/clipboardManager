@@ -38,8 +38,8 @@ class SubscriptionManager: ObservableObject {
     @Published private(set) var subscriptionExpirationDate: Date?
     
     private let productIdentifiers = Set([
-        "mahmutclipboard_099_1m_3d0",
-        "com.walhallaa.clipboardManager.pro.weekly"
+        "com.walhallaa.clipboardManager.pro.weekly",
+        "mahmutclipboard_099_1m_3d0"
     ])
     
     #if DEBUG
@@ -75,7 +75,7 @@ class SubscriptionManager: ObservableObject {
     func fetchProducts() async {
         isLoading = true
         do {
-            subscriptions = try await Product.products(for: productIdentifiers)
+            subscriptions = try await Product.products(for: productIdentifiers).sorted(by: { $0.price < $1.price })
             isLoading = false
         } catch {
             print("Failed to fetch products:", error)
