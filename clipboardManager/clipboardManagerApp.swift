@@ -227,6 +227,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 // Reset handling flag
                 self.isHandlingVisibilityChange = false
                 
+                NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
                 print("[DEBUG] make app visible end")
             }
         }
