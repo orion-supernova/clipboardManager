@@ -398,6 +398,138 @@ struct AnimatedBorder: View {
     }
 }
 
+struct FeatureRow: View {
+    let feature: AppFeature
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Feature description
+            HStack(spacing: 12) {
+                Image(systemName: feature.icon)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(feature.title)
+                        .foregroundColor(SubscriptionColors.text)
+                    Text(feature.description)
+                        .font(.system(size: 12))
+                        .foregroundColor(SubscriptionColors.textSecondary)
+                }
+            }
+            .frame(width: 300, alignment: .leading)
+            
+            // Free tier access
+            Text(feature.freeAccess)
+                .foregroundColor(feature.freeAccess == "✓" ? .green : SubscriptionColors.textSecondary)
+                .frame(width: 100)
+            
+            // Pro tier access
+            Text(feature.proAccess)
+                .foregroundColor(feature.proAccess == "✓" ? .green : SubscriptionColors.textSecondary)
+                .frame(width: 100)
+        }
+        .padding(12)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(SubscriptionColors.cardBg.opacity(isHovered ? 1 : 0))
+                
+                // Animated border
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                SubscriptionColors.accent,
+                                SubscriptionColors.secondary
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                    .opacity(isHovered ? 0.5 : 0)
+            }
+        )
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .onHover { hovering in
+            withAnimation(.spring(response: 0.3)) {
+                isHovered = hovering
+            }
+        }
+    }
+}
+
+// Update TravelingBorder to accept isHovered parameter:
+struct TravelingBorder: View {
+    @State private var trimStart: CGFloat = 0
+    let isHovered: Bool
+    
+    var body: some View {
+        ZStack {
+            // Static border
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SubscriptionColors.accent,
+                            SubscriptionColors.secondary
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+                .opacity(isHovered ? 0.4 : 0.2)
+            
+            // Traveling light
+            RoundedRectangle(cornerRadius: 16)
+                .trim(from: trimStart, to: trimStart + (isHovered ? 0.3 : 0.2))
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            SubscriptionColors.accent.opacity(0),
+                            SubscriptionColors.accent,
+                            SubscriptionColors.secondary,
+                            SubscriptionColors.secondary.opacity(0)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    style: StrokeStyle(
+                        lineWidth: isHovered ? 3 : 2,
+                        lineCap: .round
+                    )
+                )
+                .opacity(isHovered ? 0.8 : 0.5)
+                .blur(radius: isHovered ? 1.0 : 0.5)
+        }
+        .onAppear {
+            withAnimation(
+                .linear(duration: isHovered ? 2 : 3)
+                .repeatForever(autoreverses: false)
+            ) {
+                trimStart = 1.0
+            }
+        }
+        .onChange(of: isHovered) { newValue in
+            withAnimation(
+                .linear(duration: newValue ? 2 : 3)
+                .repeatForever(autoreverses: false)
+            ) {
+                trimStart = 1.0
+            }
+        }
+    }
+}
+
+// Update FeatureComparisonView to include hover state:
 struct FeatureComparisonView: View {
     let features = [
         AppFeature.clipboardStorage,
@@ -406,6 +538,8 @@ struct FeatureComparisonView: View {
         AppFeature.pasteAnywhere,
         AppFeature.smartSearch
     ]
+    
+    @State private var isHovered = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -422,49 +556,33 @@ struct FeatureComparisonView: View {
                     .frame(width: 100)
             }
             .foregroundColor(SubscriptionColors.textSecondary)
+            .padding(.horizontal, 12)
             
             Divider()
                 .padding(.vertical, 8)
             
-            // Feature rows
+            // Feature rows with hover animation
             ForEach(features) { feature in
-                HStack(spacing: 0) {
-                    // Feature description
-                    HStack(spacing: 12) {
-                        Image(systemName: feature.icon)
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(feature.title)
-                                .foregroundColor(SubscriptionColors.text)
-                            Text(feature.description)
-                                .font(.system(size: 12))
-                                .foregroundColor(SubscriptionColors.textSecondary)
-                        }
-                    }
-                    .frame(width: 300, alignment: .leading)
-                    
-                    // Free tier access
-                    Text(feature.freeAccess)
-                        .foregroundColor(feature.freeAccess == "✓" ? .green : SubscriptionColors.textSecondary)
-                        .frame(width: 100)
-                    
-                    // Pro tier access
-                    Text(feature.proAccess)
-                        .foregroundColor(feature.proAccess == "✓" ? .green : SubscriptionColors.textSecondary)
-                        .frame(width: 100)
-                }
+                FeatureRow(feature: feature)
             }
         }
         .padding(24)
-        .background(SubscriptionColors.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .background(
+            ZStack {
+                // Background
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(SubscriptionColors.cardBg)
+                
+                // Animated border
+                TravelingBorder(isHovered: isHovered)
+            }
+        )
+        .scaleEffect(isHovered ? 1.01 : 1.0)
+        .onHover { hovering in
+            withAnimation(.spring(response: 0.3)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 
