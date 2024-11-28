@@ -120,7 +120,7 @@ struct SubscriptionView: View {
             
             VStack(spacing: 30) {
                 // Title Bar
-                Text("Upgrade to Premium")
+                Text("Upgrade to Pro Access")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundStyle(
                         LinearGradient(
@@ -408,69 +408,63 @@ struct FeatureComparisonView: View {
     ]
     
     var body: some View {
-        VStack {
-//            Text("Features")
-//                .font(.system(size: 24, weight: .bold, design: .rounded))
-//                .foregroundColor(SubscriptionColors.text)
+        VStack(spacing: 20) {
+            // Header
+            HStack(spacing: 0) {
+                Text("Feature")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 300, alignment: .leading)
+                Text("Free")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 100)
+                Text("Pro")
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 100)
+            }
+            .foregroundColor(SubscriptionColors.textSecondary)
             
-            VStack(spacing: 20) {
-                // Header
+            Divider()
+                .padding(.vertical, 8)
+            
+            // Feature rows
+            ForEach(features) { feature in
                 HStack(spacing: 0) {
-                    Text("Feature")
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 300, alignment: .leading)
-                    Text("Free")
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 100)
-                    Text("Premium")
-                        .font(.system(size: 14, weight: .medium))
-                        .frame(width: 100)
-                }
-                .foregroundColor(SubscriptionColors.textSecondary)
-                
-                Divider()
-                    .padding(.vertical, 8)
-                
-                // Feature rows
-                ForEach(features) { feature in
-                    HStack(spacing: 0) {
-                        // Feature description
-                        HStack(spacing: 12) {
-                            Image(systemName: feature.icon)
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
+                    // Feature description
+                    HStack(spacing: 12) {
+                        Image(systemName: feature.icon)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [SubscriptionColors.accent, SubscriptionColors.secondary],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
                                 )
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(feature.title)
-                                    .foregroundColor(SubscriptionColors.text)
-                                Text(feature.description)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(SubscriptionColors.textSecondary)
-                            }
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(feature.title)
+                                .foregroundColor(SubscriptionColors.text)
+                            Text(feature.description)
+                                .font(.system(size: 12))
+                                .foregroundColor(SubscriptionColors.textSecondary)
                         }
-                        .frame(width: 300, alignment: .leading)
-                        
-                        // Free tier access
-                        Text(feature.freeAccess)
-                            .foregroundColor(feature.freeAccess == "✓" ? .green : SubscriptionColors.textSecondary)
-                            .frame(width: 100)
-                        
-                        // Pro tier access
-                        Text(feature.proAccess)
-                            .foregroundColor(feature.proAccess == "✓" ? .green : SubscriptionColors.textSecondary)
-                            .frame(width: 100)
                     }
+                    .frame(width: 300, alignment: .leading)
+                    
+                    // Free tier access
+                    Text(feature.freeAccess)
+                        .foregroundColor(feature.freeAccess == "✓" ? .green : SubscriptionColors.textSecondary)
+                        .frame(width: 100)
+                    
+                    // Pro tier access
+                    Text(feature.proAccess)
+                        .foregroundColor(feature.proAccess == "✓" ? .green : SubscriptionColors.textSecondary)
+                        .frame(width: 100)
                 }
             }
-            .padding(24)
-            .background(SubscriptionColors.cardBg)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+        .padding(24)
+        .background(SubscriptionColors.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
@@ -484,45 +478,61 @@ struct SubscriptionPlanCard: View {
     
     var body: some View {
         HStack(spacing: 24) {
+            // Left side - Title and Description
             VStack(alignment: .leading, spacing: 8) {
                 Text(product.displayName)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(SubscriptionColors.text)
+                    .lineLimit(1)
                 
                 Text(getSubscriptionDescription())
                     .font(.system(size: 12, design: .rounded))
                     .foregroundColor(SubscriptionColors.textSecondary)
-                    .multilineTextAlignment(.leading)
-                    
-            }.frame(height: 70)
-            
-            Spacer()
-            
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(product.displayPrice)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [
-                                SubscriptionColors.priceGradient1,
-                                SubscriptionColors.priceGradient2
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                if product.subscription?.subscriptionPeriod.unit == .month {
-                    Text("Includes a 3 day trial. Then \(product.price)/month.")
-                        .font(.system(size: 12, design: .rounded))
-                        .foregroundColor(SubscriptionColors.textSecondary)
-                } else {
-                    Text("\(getMonthlyPrice())/month approx.")
-                        .font(.system(size: 12, design: .rounded))
-                        .foregroundColor(SubscriptionColors.textSecondary)
-                }
+                    .fixedSize(horizontal: false, vertical: true) // Allows text to wrap properly
+                    .lineLimit(2)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 70)
             
-            PremiumButton(product.subscription?.introductoryOffer != nil ? "Try For Free" : "Subscribe", action: onPurchase)
+            // Right side - Price and Button
+            HStack(spacing: 20) {
+                // Price section
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(product.displayPrice)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    SubscriptionColors.priceGradient1,
+                                    SubscriptionColors.priceGradient2
+                                ],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                    
+                    if product.subscription?.subscriptionPeriod.unit == .month {
+                        Text("3 day free trial")
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundColor(SubscriptionColors.textSecondary)
+                        Text("Then \(product.displayPrice)/month")
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundColor(SubscriptionColors.textSecondary)
+                    } else {
+                        Text("\(getMonthlyPrice())/month")
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundColor(SubscriptionColors.textSecondary)
+                    }
+                }
+                .frame(width: 120)
+                
+                // Subscribe button with flexible width
+                PremiumButton(
+                    product.subscription?.introductoryOffer != nil ? "Try Free" : "Subscribe",
+                    action: onPurchase
+                )
+                .frame(minWidth: 100, maxWidth: 130)
+            }
         }
         .padding(24)
         .background(
@@ -530,7 +540,6 @@ struct SubscriptionPlanCard: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(SubscriptionColors.cardBg)
                 
-                // Use a slightly modified border for subscription cards
                 AnimatedBorder(isHovered: isHovered)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
             }
@@ -583,13 +592,13 @@ struct SubscriptionPlanCard: View {
         
         switch unit {
         case .month:
-            return "Pro access with unlimited clipboard history.\nRenews Monthly."
+            return "Pro access with all features. Renews monthly."
         case .week:
-            return "Pro access with unlimited clipboard history.\nRenews Weekly."
+            return "Pro access with all features. Renews weekly."
         case .day:
-            return "Pro access with unlimited clipboard history.\nRenews Weekly."
+            return "Pro access with all features. Renews daily."
         case .year:
-            return "Pro access with unlimited clipboard history.\nRenews Yearly."
+            return "Pro access with all features. Renews yearly."
         @unknown default:
             return "No description"
         }
@@ -610,10 +619,12 @@ struct PremiumButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.system(size: 14, weight: .semibold, design: .rounded)) // Reduced font size
                 .foregroundColor(.white)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+                .lineLimit(1)
+                .padding(.horizontal, 16) // Reduced horizontal padding
+                .padding(.vertical, 10)   // Slightly reduced vertical padding
+                .frame(maxWidth: .infinity) // Allow button to take available width
                 .background(
                     LinearGradient(
                         colors: [
