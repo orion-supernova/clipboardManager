@@ -156,6 +156,7 @@ struct ScrollablePasteboardItemsView: View {
             .frame(width: 300, height: 300)
             .id(item.id)
             .onAppear {
+                removeFromLaunchItems()
                 clipboardManager.preloadItem(item)
             }
             .onDisappear {

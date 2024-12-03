@@ -72,14 +72,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         statusBarItem.menu = menu.createMenu()
         addObservers()
         setupWindow()
-        
+
         // Setup keyboard shortcuts
         hotkeyForInterfaceVisibility.keyDownHandler = handleAppShortcut
         hotkeyForEscape.keyDownHandler = makeAppHiddenAction
         hotkeyForSettings.keyDownHandler = { [weak self] in
             self?.preferencesClickedAction()
         }
-        
+
         // Set up window level observer for StoreKit authentication window
         NSWindow.swizzleKeyWindow()
     }
@@ -105,24 +105,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             self.setupWindow()
         }
     }
-    
+
     // MARK: - SETUP WINDOW
     @objc func setupWindow() {
         print("[DEBUG] setup window start")
-        
+
         if let window = NSApplication.shared.windows.first {
             self.window = window
             window.identifier = .init("appWindow")
-            
+
             // Configure window properties
             configureWindowProperties(window)
-            
+
             // Setup event monitor
             setupEventMonitor()
-            
+
             // Activate window with consistent method
             activateWindow(window)
-            
+
             makeAppVisibleAction()
             print("[DEBUG] setup window end")
         }
@@ -175,58 +175,58 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     // MARK: - Private Actions
 
-    
-    
     // MARK: - MAKE APP VISIBLE
     @objc private func makeAppVisibleAction() {
         guard !isHandlingVisibilityChange else { return }
         isHandlingVisibilityChange = true
-        
+
         print("[DEBUG] make app visible start")
-        
-        if let window = NSApplication.shared.windows.first(where: { $0.identifier?.rawValue == "appWindow" }) {
+
+        if let window = NSApplication.shared.windows.first(where: {
+            $0.identifier?.rawValue == "appWindow"
+        }) {
             // Create fresh hosting view first
             let windowController = NSHostingView(rootView: containerView)
-            
+
             // Configure window with proper level and properties
             window.level = .popUpMenu
             window.identifier = .init("appWindow")
             window.contentView = windowController
-            
+
             // Configure window properties
             configureWindowProperties(window)
-            
+
             // Setup event monitor
             setupEventMonitor()
-            
+
             // First activation sequence
             window.orderFrontRegardless()
             NSApplication.shared.activate(ignoringOtherApps: true)
             window.makeKey()
             window.makeFirstResponder(windowController)
-            
+
             // Position window after activation
             positionWindowAtBottom(window)
-            
+
             // Double-check activation and position
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 // Reaffirm window level and position
                 window.level = .popUpMenu
                 self.positionWindowAtBottom(window)
-                
+
                 // Reaffirm activation status
                 window.orderFrontRegardless()
                 NSApplication.shared.activate(ignoringOtherApps: true)
                 window.makeKey()
                 window.makeFirstResponder(windowController)
-                
+
                 // Re-enable hotkeys
                 hotkeyForEscape.isPaused = false
                 hotkeyForSettings.isPaused = false
-                
+
                 // Reset handling flag
                 self.isHandlingVisibilityChange = false
-                
+
                 NotificationCenter.default.post(name: .windowDidBecomeReady, object: nil)
                 print("[DEBUG] make app visible end")
             }
@@ -237,27 +237,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     @objc func makeAppHiddenAction() {
         guard !isHandlingVisibilityChange else { return }
         isHandlingVisibilityChange = true
-        
+
         // Disable hotkeys first
         hotkeyForEscape.isPaused = true
         hotkeyForSettings.isPaused = true
-        
+
         // Remove event monitor
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
         }
-        
+
         guard let window = self.window,
-              window.isVisible,
-              let contentView = window.contentView else {
+            window.isVisible,
+            let contentView = window.contentView
+        else {
             isHandlingVisibilityChange = false
             return
         }
-        
+
         DispatchQueue.main.async { [weak self] in
             self?.prepareContentViewForAnimation(contentView)
-            
+
             self?.animateContentView(contentView, isShowing: false, duration: 0.15) { [weak self] in
                 NSApplication.shared.hide(nil)
                 NSApp.hide(nil)
@@ -352,13 +353,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // NSWindowDelegate method
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
-        
+
         // Remove event monitor
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
         }
-        
+
         // Handle specific window closures
         if window == subscriptionWindow {
             subscriptionWindow = nil
@@ -384,30 +385,36 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
         }
-        
+
         // Create new monitor for key events
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self = self,
-                  let window = self.window,
-                  window.isKeyWindow else {
+                let window = self.window,
+                window.isKeyWindow
+            else {
                 return event
             }
-            
+
             // Handle arrow keys
             switch event.keyCode {
-            case 123: // Left Arrow
+            case 123:  // Left Arrow
                 NotificationCenter.default.post(name: .arrowKeyPressedNotification, object: -1)
                 return nil
-            case 124: // Right Arrow
+            case 124:  // Right Arrow
                 NotificationCenter.default.post(name: .arrowKeyPressedNotification, object: 1)
                 return nil
-            case 53: // Escape
+            case 53:  // Escape
                 self.makeAppHiddenAction()
                 return nil
-            case 36: // Enter
-                if let selectedItem = self.clipboardManager.orderedItems.indices.contains(self.clipboardManager.selectedItemIndex) ? 
-                    self.clipboardManager.orderedItems[self.clipboardManager.selectedItemIndex] : nil {
-                    self.clipboardManager.handleItemTap(item: selectedItem, index: self.clipboardManager.selectedItemIndex)
+            case 36:  // Enter
+                if let selectedItem =
+                    self.clipboardManager.orderedItems.indices.contains(
+                        self.clipboardManager.selectedItemIndex)
+                    ? self.clipboardManager.orderedItems[self.clipboardManager.selectedItemIndex]
+                    : nil
+                {
+                    self.clipboardManager.handleItemTap(
+                        item: selectedItem, index: self.clipboardManager.selectedItemIndex)
                 }
                 return nil
             default:
@@ -422,29 +429,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.level = .popUpMenu
         let windowController = NSHostingView(rootView: containerView)
         window.contentView = windowController
-        
+
         // First activation sequence
         window.orderFrontRegardless()
         NSApplication.shared.activate(ignoringOtherApps: true)
         window.makeKey()
         window.makeFirstResponder(windowController)
-        
+
         // Position window after initial activation
         positionWindowAtBottom(window)
-        
+
         // Double-check activation and position after a brief delay
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             // Reaffirm window level
             window.level = .popUpMenu
-            
+
             // Reaffirm activation status
             window.orderFrontRegardless()
             NSApplication.shared.activate(ignoringOtherApps: true)
             window.makeKey()
             window.makeFirstResponder(windowController)
-            
+
             // Final position check
             self.positionWindowAtBottom(window)
         }
@@ -504,18 +511,18 @@ extension NSWindow {
     static func swizzleKeyWindow() {
         let originalSelector = #selector(NSWindow.makeKeyAndOrderFront(_:))
         let swizzledSelector = #selector(NSWindow.swizzled_makeKeyAndOrderFront(_:))
-        
+
         let originalMethod = class_getInstanceMethod(NSWindow.self, originalSelector)
         let swizzledMethod = class_getInstanceMethod(NSWindow.self, swizzledSelector)
-        
+
         if let originalMethod = originalMethod, let swizzledMethod = swizzledMethod {
             method_exchangeImplementations(originalMethod, swizzledMethod)
         }
     }
-    
+
     @objc func swizzled_makeKeyAndOrderFront(_ sender: Any?) {
         self.swizzled_makeKeyAndOrderFront(sender)
-        
+
         // Check if this is a StoreKit authentication window
         if self.title.contains("Store") {
             self.level = .popUpMenu  // Highest level for modal windows
@@ -525,8 +532,8 @@ extension NSWindow {
 }
 
 // Add these private methods for window configuration
-private extension AppDelegate {
-    func configureWindowProperties(_ window: NSWindow) {
+extension AppDelegate {
+    fileprivate func configureWindowProperties(_ window: NSWindow) {
         window.styleMask = [.titled]
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
@@ -537,20 +544,20 @@ private extension AppDelegate {
         window.isReleasedWhenClosed = false
         window.hidesOnDeactivate = false
     }
-    
-    func positionWindowAtBottom(_ window: NSWindow) {
+
+    fileprivate func positionWindowAtBottom(_ window: NSWindow) {
         guard let screen = NSScreen.main else { return }
         let currentFrame = window.frame
-        
+
         // Use frame.minY instead of visibleFrame.minY to ignore the Dock
         let bottomY = screen.frame.minY
-        
+
         // Center horizontally using frame instead of visibleFrame
         let centerX = screen.frame.midX - (currentFrame.width / 2)
-        
+
         // Always ensure highest window level
         window.level = .popUpMenu
-        
+
         window.setFrame(
             NSRect(
                 x: centerX,
@@ -562,41 +569,43 @@ private extension AppDelegate {
             animate: true
         )
     }
-    
-    func prepareContentViewForAnimation(_ contentView: NSView) {
+
+    fileprivate func prepareContentViewForAnimation(_ contentView: NSView) {
         contentView.wantsLayer = true
         contentView.layer?.removeAllAnimations()
     }
-    
-    func animateContentView(_ contentView: NSView, 
-                           isShowing: Bool, 
-                           duration: TimeInterval, 
-                           completion: @escaping () -> Void) {
+
+    fileprivate func animateContentView(
+        _ contentView: NSView,
+        isShowing: Bool,
+        duration: TimeInterval,
+        completion: @escaping () -> Void
+    ) {
         // Set animating flag
         isAnimating = true
-        
+
         // Cancel any ongoing animations
         contentView.layer?.removeAllAnimations()
-        
+
         // Optimize layer updates
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        
+
         // Configure animation
         let animation = CABasicAnimation(keyPath: "transform")
         animation.duration = duration
         animation.timingFunction = CAMediaTimingFunction(name: isShowing ? .easeOut : .easeIn)
         animation.fromValue = contentView.layer?.transform
-        animation.toValue = isShowing ? 
-            CATransform3DIdentity : 
-            CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
+        animation.toValue =
+            isShowing
+            ? CATransform3DIdentity : CATransform3DMakeTranslation(0, -contentView.frame.height, 0)
         animation.isRemovedOnCompletion = true
-        
+
         // Set completion handler
         CATransaction.setCompletionBlock { [weak self, weak contentView] in
             contentView?.layer?.removeAllAnimations()
             self?.isAnimating = false
-            
+
             // Check if we need to fetch after animation
             if self?.shouldFetchAfterAnimation == true {
                 self?.shouldFetchAfterAnimation = false
@@ -604,14 +613,14 @@ private extension AppDelegate {
                     self?.clipboardManager.fetchClipboardItems()
                 }
             }
-            
+
             completion()
         }
-        
+
         // Apply animation
         contentView.layer?.add(animation, forKey: "transform")
         contentView.layer?.transform = animation.toValue as! CATransform3D
-        
+
         CATransaction.commit()
     }
 }
