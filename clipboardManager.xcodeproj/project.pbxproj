@@ -451,7 +451,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 60;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -486,7 +486,7 @@
 				CODE_SIGN_ENTITLEMENTS = clipboardManager/Resources/clipboardManager.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 60;
+				CURRENT_PROJECT_VERSION = 62;
 				DEVELOPMENT_ASSET_PATHS = "\"clipboardManager/Preview Content\"";
 				DEVELOPMENT_TEAM = 37TC2VKVJ6;
 				ENABLE_HARDENED_RUNTIME = YES;
