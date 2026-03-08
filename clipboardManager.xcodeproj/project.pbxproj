@@ -23,6 +23,7 @@
 		54A76B922C5E797900AEBD9E /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 54A76B912C5E797900AEBD9E /* RevenueCatUI */; };
 		54B6C87D2C4E6EFE00106CFA /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C87C2C4E6EFE00106CFA /* PaywallView.swift */; };
 		54B6C87F2C4E6FE500106CFA /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C87E2C4E6FE500106CFA /* PurchaseManager.swift */; };
+		C1C1C1C1C1C1C1C1C1C1C1C1 /* ClipboardModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = C2C2C2C2C2C2C2C2C2C2C2C2 /* ClipboardModel.xcdatamodeld */; };
 		54B6C8822C4E799F00106CFA /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 54B6C8812C4E799F00106CFA /* StoreKit.framework */; };
 		54B6C8A72C4FAF6C00106CFA /* ContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8A62C4FAF6C00106CFA /* ContainerView.swift */; };
 		54B6C8AE2C4FDF2E00106CFA /* CopiedFromApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B6C8AD2C4FDF2E00106CFA /* CopiedFromApplication.swift */; };
@@ -85,6 +86,7 @@
 		A5E5E5E5E5E5E5E5E5E5E5E5 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		A7E7E7E7E7E7E7E7E7E7E7E7 /* ClipboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardViewModel.swift; sourceTree = "<group>"; };
 		A8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ClipboardEntity+Mapping.swift"; sourceTree = "<group>"; };
+		C3C3C3C3C3C3C3C3C3C3C3C3 /* ClipboardModel.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = ClipboardModel.xcdatamodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -211,6 +213,7 @@
 			isa = PBXGroup;
 			children = (
 				5434D11029C1C433009DF037 /* Assets.xcassets */,
+				C2C2C2C2C2C2C2C2C2C2C2C2 /* ClipboardModel.xcdatamodeld */,
 				5434D11A29C1C433009DF037 /* clipboardManager.entitlements */,
 			);
 			path = Resources;
@@ -381,6 +384,7 @@
 				B8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift in Sources */,
 				54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */,
 				54B6C87F2C4E6FE500106CFA /* PurchaseManager.swift in Sources */,
+				C1C1C1C1C1C1C1C1C1C1C1C1 /* ClipboardModel.xcdatamodeld in Sources */,
 				54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */,
 				54E32CBE29C4ED5C004772B5 /* CopiedAppLogoView.swift in Sources */,
 				54A3238229CA369800F3E2F3 /* KeyCodes.swift in Sources */,
@@ -704,6 +708,19 @@
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCVersionGroup section */
+		C2C2C2C2C2C2C2C2C2C2C2C2 /* ClipboardModel.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				C3C3C3C3C3C3C3C3C3C3C3C3 /* ClipboardModel.xcdatamodel */,
+			);
+			currentVersion = C3C3C3C3C3C3C3C3C3C3C3C3 /* ClipboardModel.xcdatamodel */;
+			path = ClipboardModel.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		5434D12129C1CB60009DF037 /* HotKey */ = {
