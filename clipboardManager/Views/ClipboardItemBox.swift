@@ -8,8 +8,8 @@
 import SwiftUI
 
 struct ClipboardItemBox: View {
-    var item: ClipboardItem
-    init(item: ClipboardItem) {
+    var item: ClipboardEntry
+    init(item: ClipboardEntry) {
         self.item = item
     }
     var body: some View {
@@ -29,7 +29,7 @@ struct ClipboardItemBox: View {
         .cornerRadius(10)
     }
     
-    func getCopiedItemView(for item: ClipboardItem) -> some View {
+    func getCopiedItemView(for item: ClipboardEntry) -> some View {
         switch item.type {
         case .color:
             return AnyView(
@@ -104,8 +104,8 @@ struct ClipboardItemBox: View {
 
 #Preview {
     let url = URL(string: "https://www.youtube.com")
-    let data = url?.dataRepresentation
-    return ClipboardItemBox(item: ClipboardItem(id: UUID(), type: .url, content: data!, copiedFromApplication: .init(withApplication: NSRunningApplication()), timestamp: Date(), contentDescriptionString: ""))
+    let data = url?.dataRepresentation ?? Data()
+    return ClipboardItemBox(item: ClipboardEntry(type: .url, content: data, contentDescriptionString: "https://www.youtube.com", copiedFromApplicationTitle: "Safari", copiedFromApplicationPID: 0))
 }
 
 

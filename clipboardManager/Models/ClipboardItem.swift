@@ -15,11 +15,3 @@ struct ClipboardItem: Identifiable, Codable {
     let timestamp: Date
     let contentDescriptionString: String
 }
-
-
-enum ClipboardItemType: String, Codable {
-    case text
-    case image
-    case url
-    case color
-}

@@ -14,11 +14,7 @@ struct ClipboardSettingsView: View {
 //    @StateObject var wrapper =  ClipboardSettingsViewWrapper() // Only calling this function is enough since everytime it changes, the UI redraws itself.
                                                                //No need to call its variables somewhere.
     @Environment(\.controlActiveState) private var controlActiveState
-    @StateObject var settings = ClipboardSettings.shared
-    
-    init() {
-print("SETTİNGS INIT")
-    }
+    @EnvironmentObject var settings: SettingsStore
     
     var body: some View {
         VStack(spacing: 20) {
@@ -173,6 +169,7 @@ struct KeyboardShortcutView: View {
 
 #Preview {
     ClipboardSettingsView()
+        .environmentObject(SettingsStore())
 }
 
 // MARK: - Wrapper

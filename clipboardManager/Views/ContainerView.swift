@@ -6,15 +6,16 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ContainerView: View {
-    @StateObject var clipboardManager = ClipboardManager.shared
+    @EnvironmentObject var viewModel: ClipboardViewModel
     @Environment(\.controlActiveState) private var controlActiveState
     
     var body: some View {
         VStack {
             MainView()
-                .environmentObject(clipboardManager)
+                .environmentObject(viewModel)
         }
         .onChange(of: controlActiveState) { newValue in
             switch newValue {
@@ -22,7 +23,6 @@ struct ContainerView: View {
                 print("ACTTIIIVIA")
             case .inactive:
                 print("INACTTIIIIVEEE")
-                break
             default:
                 print("Unknownnnnn")
             }
@@ -32,4 +32,14 @@ struct ContainerView: View {
 
 #Preview {
     ContainerView()
+        .environmentObject(
+            ClipboardViewModel(
+                repository: ClipboardRepository(context: ModelContext(try! ModelContainer(for: ClipboardEntry.self))),
+                clipboardService: ClipboardService(
+                    repository: ClipboardRepository(context: ModelContext(try! ModelContainer(for: ClipboardEntry.self))),
+                    settings: SettingsStore()
+                ),
+                settings: SettingsStore()
+            )
+        )
 }

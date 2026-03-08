@@ -17,6 +17,11 @@ struct CopiedFromApplication: Codable {
         self.applicationTitle = application.localizedName
         self.applicationProcessIdentifier = application.processIdentifier
     }
+
+    init(applicationTitle: String?, applicationProcessIdentifier: Int32?) {
+        self.applicationTitle = applicationTitle
+        self.applicationProcessIdentifier = applicationProcessIdentifier
+    }
     
     // MARK: - Public Methods
     func getApplication() -> NSRunningApplication? {

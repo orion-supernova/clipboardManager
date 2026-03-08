@@ -6,10 +6,10 @@
 //
 
 import SwiftUI
-import CoreData
+import SwiftData
 
 struct MainView: View {
-    @EnvironmentObject var clipboardManager: ClipboardManager
+    @EnvironmentObject var viewModel: ClipboardViewModel
     @Environment(\.controlActiveState) private var controlActiveState
     let publisher = NotificationCenter.default.publisher(for: .allItemsClearedNotification)
     var body: some View {
@@ -18,7 +18,7 @@ struct MainView: View {
                 VisualEffectView(material: .popover, blendingMode: .withinWindow)
                     .ignoresSafeArea()
                 
-                if clipboardManager.clipboardItems.isEmpty, clipboardManager.isSearchFieldVisible == false {
+                if viewModel.items.isEmpty, viewModel.isSearchFieldVisible == false {
                     ZStack {
                         RadialGradient(colors: [
                             Color.purple
@@ -30,35 +30,37 @@ struct MainView: View {
                     }
                 } else {
                     ScrollablePasteboardItemsView()
-                        .environmentObject(clipboardManager)
+                        .environmentObject(viewModel)
                 }
             }
             .onReceive(publisher) { _ in
-                clipboardManager.clipboardItems.removeAll()
+                viewModel.items.removeAll()
             }
         }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
-    }
-    
-    func refreshClipboardItems() {
-        clipboardManager.fetchClipboardItems()
     }
 }
 
 #Preview {
     MainView()
-        .environmentObject(ClipboardManager.shared)
+        .environmentObject(
+            ClipboardViewModel(
+                repository: ClipboardRepository(context: ModelContext(try! ModelContainer(for: ClipboardEntry.self))),
+                clipboardService: ClipboardService(
+                    repository: ClipboardRepository(context: ModelContext(try! ModelContainer(for: ClipboardEntry.self))),
+                    settings: SettingsStore()
+                ),
+                settings: SettingsStore()
+            )
+        )
 }
 
 struct ScrollablePasteboardItemsView: View {
     
-    @EnvironmentObject var clipboardManager: ClipboardManager
+    @EnvironmentObject var viewModel: ClipboardViewModel
 
     @State private var searchText = ""
-    @State private var items = ["Item 1", "Item 2"]
     @FocusState private var isFocused: Bool
-    @State private var isSearchFieldVisible = false
-    @StateObject var wrapper = ScrollablePasteboardItemsViewWrapper()
     @State private var searchDispatchWorkItem: DispatchWorkItem?
     
     var body: some View {
@@ -104,14 +106,14 @@ struct ScrollablePasteboardItemsView: View {
                 
                 HStack(spacing: 0) {
                     Spacer()
-                    if clipboardManager.isSearchFieldVisible {
+                    if viewModel.isSearchFieldVisible {
                         Button {
-                            guard !searchText.isEmpty else { clipboardManager.isSearchFieldVisible = false; return }
-                                DispatchQueue.main.async {
-                                    searchText = ""
-                                    clipboardManager.isSearchFieldVisible = false
-                                    clipboardManager.fetchClipboardItems()
-                                }
+                            guard !searchText.isEmpty else { viewModel.isSearchFieldVisible = false; return }
+                            DispatchQueue.main.async {
+                                searchText = ""
+                                viewModel.isSearchFieldVisible = false
+                                viewModel.refresh()
+                            }
                         } label: {
                             Image(systemName: "xmark")
                                 .resizable()
@@ -132,7 +134,7 @@ struct ScrollablePasteboardItemsView: View {
                         
                     } else {
                         Button {
-                            clipboardManager.isSearchFieldVisible = true
+                            viewModel.isSearchFieldVisible = true
                         } label: {
                             Image(systemName: "magnifyingglass")
                                 .resizable()
@@ -152,7 +154,7 @@ struct ScrollablePasteboardItemsView: View {
                         Spacer()
                             .frame(width: 5)
                         
-                        if clipboardManager.clipboardItems.isEmpty, clipboardManager.isSearchFieldVisible {
+                        if viewModel.items.isEmpty, viewModel.isSearchFieldVisible {
                             HStack {
                                 Spacer()
                                 Text("No items found contains ''\(searchText)''")
@@ -162,14 +164,10 @@ struct ScrollablePasteboardItemsView: View {
                             }
                             .frame(width: screenWidth)
                         } else {
-                            ForEach(clipboardManager.clipboardItems) { item in
+                            ForEach(viewModel.items) { item in
                                 ClipboardItemBox(item: item)
                                     .onTapGesture {
-                                        let pasteBoard = NSPasteboard.general
-                                        pasteBoard.clearContents()
-                                        pasteBoard.setString(item.contentDescriptionString, forType: .string)
-                                        print("DEBUG: -----", item.contentDescriptionString)
-                                        NotificationCenter.default.post(name: .textSelectedFromClipboardNotification, object: item)
+                                        viewModel.selectItem(item)
                                     }
                                     .frame(width: 300, height: 300)
                                     .id(item.id)
@@ -178,52 +176,23 @@ struct ScrollablePasteboardItemsView: View {
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
-                    proxy.scrollTo(clipboardManager.clipboardItems.first?.id, anchor: .trailing)
+                    proxy.scrollTo(viewModel.items.first?.id, anchor: .trailing)
                 }
             }
         }
     }
     private func debounceSearch(text: String) {
-        // Cancel the previous work item if it exists
         searchDispatchWorkItem?.cancel()
-        
-        // Create a new work item with the search functionality
-        let newWorkItem = DispatchWorkItem { [weak clipboardManager] in
+        let newWorkItem = DispatchWorkItem { [weak viewModel] in
             if text.isEmpty {
-                clipboardManager?.isSearchFieldVisible = false
-                clipboardManager?.fetchClipboardItems()
+                viewModel?.isSearchFieldVisible = false
+                viewModel?.refresh()
             } else {
-                clipboardManager?.isSearchFieldVisible = true
-                clipboardManager?.fetchClipboardItems(withSearchText: text.lowercased())
+                viewModel?.isSearchFieldVisible = true
+                viewModel?.search(text.lowercased())
             }
         }
-        
-        // Store the new work item
         searchDispatchWorkItem = newWorkItem
-        
-        // Execute the work item after a delay (e.g., 300 milliseconds)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: newWorkItem)
-    }
-}
-
-class ScrollablePasteboardItemsViewWrapper: ObservableObject {
-    // MARK: - Properties
-    @Published var isSearchFieldVisible: Bool = false
-    
-    // MARK: - Lifecycle
-    init () {
-        NotificationCenter.default.addObserver(self, selector: #selector(hmm(_:)), name: .isSearchFieldVisibleNotification, object: nil)
-    }
-    
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-    
-    // MARK: - Private Methods
-    @objc private func hmm (_ notification: NSNotification) {
-        if let object = notification.object as? Bool {
-            print(object)
-            isSearchFieldVisible = object
-        }
     }
 }

@@ -7,28 +7,44 @@
 
 import SwiftUI
 import HotKey
+import SwiftData
 
 @main
 struct clipboardManagerApp: App {
     
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @Environment(\.managedObjectContext) var managedObjectContext
     
-    var containerView: ContainerView!
+    private let container: ModelContainer
+    private let repository: ClipboardRepository
+    private let settings: SettingsStore
+    private let clipboardService: ClipboardService
+    private let viewModel: ClipboardViewModel
     
     // MARK: - Lifecycle
     init() {
-        self.containerView = appDelegate.containerView
+        container = try! ModelContainer(for: ClipboardEntry.self)
+        let context = ModelContext(container)
+        repository = ClipboardRepository(context: context)
+        settings = SettingsStore()
+        clipboardService = ClipboardService(repository: repository, settings: settings)
+        LegacyCoreDataMigrator.migrateIfNeeded(into: repository)
+        viewModel = ClipboardViewModel(repository: repository, clipboardService: clipboardService, settings: settings)
+        
+        AppDelegate.repository = repository
+        AppDelegate.viewModel = viewModel
+        AppDelegate.settings = settings
+        AppDelegate.modelContainer = container
     }
     
     // MARK: - Body
     var body: some Scene {
         WindowGroup {
-            self.containerView
+            ContainerView()
                 .fixedSize()
-                .environment(\.managedObjectContext, appDelegate.persistenceController.container.viewContext)
+                .environmentObject(viewModel)
         }
+        .modelContainer(container)
     }
 }
 
@@ -38,8 +54,10 @@ var hotkeyForEscape = HotKey(key: .escape, modifiers: [])
 class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Public Properties
-    let persistenceController = PersistenceController.shared
-    var containerView = ContainerView()
+    static var repository: ClipboardRepository!
+    static var viewModel: ClipboardViewModel!
+    static var settings: SettingsStore!
+    static var modelContainer: ModelContainer!
     static var windowControllers: [NSWindowController] = []
     private var preferencesWindow: NSWindow?
     
@@ -56,6 +74,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         AppDelegate.instance = self
         menu.delegate = self
         statusBarItem.menu = menu.createMenu()
+        setMenuBarText(count: AppDelegate.repository?.count() ?? 0)
         addObservers()
         setupWindow()
         hotkeyForInterfaceVisibility.keyDownHandler = handleAppShortcut
@@ -86,7 +105,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     @objc func setupWindow() {
         print("[DEBUG] setup window start")
-        let windowController = NSHostingView(rootView: containerView)
+        let windowController = NSHostingView(rootView: ContainerView().environmentObject(AppDelegate.viewModel))
         if let window = NSApplication.shared.windows.first {
             self.window = window
             self.window.contentView = windowController
@@ -132,13 +151,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func updateMenuBarItemCount(_ notification: NSNotification) {
-        let fetchRequest: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
-        do {
-            let count = try persistenceController.container.viewContext.count(for: fetchRequest)
-            setMenuBarText(count: count)
-        } catch {
-            print("Error fetching clipboard item count: \(error)")
-        }
+        let count = AppDelegate.repository?.count() ?? 0
+        setMenuBarText(count: count)
     }
     
     private func setMenuBarText(count: Int) {
@@ -223,7 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             
             preferencesWindow.title = "Clipboard Settings"
             preferencesWindow.center()
-            preferencesWindow.contentView = NSHostingView(rootView: ClipboardSettingsView())
+            preferencesWindow.contentView = NSHostingView(rootView: ClipboardSettingsView().environmentObject(AppDelegate.settings))
             
             NSApplication.shared.activate(ignoringOtherApps: true)
             preferencesWindow.makeKeyAndOrderFront(nil)
@@ -254,33 +268,9 @@ extension AppDelegate: ApplicationMenuDelegate {
     func didTapClearAllButton() {
         showCustomAlertWithTwoButtons(title: "Warning", message: "Are you sure you want to delete all items inside your clipboard?\n This action can NOT be reversed or undone.") { [weak self] in
             guard let self else { return }
-            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = ClipboardEntity.fetchRequest()
-            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-            
-            do {
-                try persistenceController.container.viewContext.execute(deleteRequest)
-                try persistenceController.container.viewContext.save()
-            } catch {
-                print("Error deleting clipboard items: \(error)")
-            }
+            AppDelegate.viewModel?.clearAll()
             setMenuBarText(count: 0)
             NotificationCenter.default.post(name: .allItemsClearedNotification, object: nil)
-        }
-    }
-}
-
-// MARK: - PersistenceController
-class PersistenceController {
-    static let shared = PersistenceController()
-    
-    let container: NSPersistentContainer
-    
-    init() {
-        container = NSPersistentContainer(name: "ClipboardModel")
-        container.loadPersistentStores { (storeDescription, error) in
-            if let error = error as NSError? {
-                fatalError("Unresolved error \(error), \(error.userInfo)")
-            }
         }
     }
 }
