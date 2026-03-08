@@ -7,7 +7,7 @@
 
 import SwiftUI
 import HotKey
-import SwiftData
+import CoreData
 
 @main
 struct clipboardManagerApp: App {
@@ -15,7 +15,6 @@ struct clipboardManagerApp: App {
     // MARK: - Public Properties
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
-    private let container: ModelContainer
     private let repository: ClipboardRepository
     private let settings: SettingsStore
     private let clipboardService: ClipboardService
@@ -23,18 +22,15 @@ struct clipboardManagerApp: App {
     
     // MARK: - Lifecycle
     init() {
-        container = try! ModelContainer(for: ClipboardEntry.self)
-        let context = ModelContext(container)
+        let context = PersistenceController.shared.container.viewContext
         repository = ClipboardRepository(context: context)
         settings = SettingsStore()
         clipboardService = ClipboardService(repository: repository, settings: settings)
-        LegacyCoreDataMigrator.migrateIfNeeded(into: repository)
         viewModel = ClipboardViewModel(repository: repository, clipboardService: clipboardService, settings: settings)
         
         AppDelegate.repository = repository
         AppDelegate.viewModel = viewModel
         AppDelegate.settings = settings
-        AppDelegate.modelContainer = container
     }
     
     // MARK: - Body
@@ -44,7 +40,6 @@ struct clipboardManagerApp: App {
                 .fixedSize()
                 .environmentObject(viewModel)
         }
-        .modelContainer(container)
     }
 }
 
@@ -57,7 +52,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     static var repository: ClipboardRepository!
     static var viewModel: ClipboardViewModel!
     static var settings: SettingsStore!
-    static var modelContainer: ModelContainer!
     static var windowControllers: [NSWindowController] = []
     private var preferencesWindow: NSWindow?
     
@@ -271,6 +265,22 @@ extension AppDelegate: ApplicationMenuDelegate {
             AppDelegate.viewModel?.clearAll()
             setMenuBarText(count: 0)
             NotificationCenter.default.post(name: .allItemsClearedNotification, object: nil)
+        }
+    }
+}
+
+// MARK: - PersistenceController
+final class PersistenceController {
+    static let shared = PersistenceController()
+    
+    let container: NSPersistentContainer
+    
+    init() {
+        container = NSPersistentContainer(name: "ClipboardModel")
+        container.loadPersistentStores { (storeDescription, error) in
+            if let error = error as NSError? {
+                fatalError("Unresolved error \(error), \(error.userInfo)")
+            }
         }
     }
 }

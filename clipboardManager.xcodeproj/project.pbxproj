@@ -31,6 +31,7 @@
 		54C2FE442C80F726000D209C /* ViewExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C2FE432C80F726000D209C /* ViewExtension.swift */; };
 		54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74ED829C240A3004769D2 /* ApplicationMenu.swift */; };
 		54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54D74EDF29C25D90004769D2 /* StorageHelper.swift */; };
+		B8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift */; };
 		54E32CB829C4DBC3004772B5 /* Color+HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CB729C4DBC3004772B5 /* Color+HexColor.swift */; };
 		54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CB929C4E507004772B5 /* VisualEffectView.swift */; };
 		54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54E32CBB29C4E743004772B5 /* ClipboardItemBox.swift */; };
@@ -41,7 +42,6 @@
 		B3E3E3E3E3E3E3E3E3E3E3E3 /* ClipboardRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3E3E3E3E3E3E3E3E3E3E3E3 /* ClipboardRepository.swift */; };
 		B4E4E4E4E4E4E4E4E4E4E4E4 /* ClipboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E4E4E4E4E4E4E4E4E4E4E4 /* ClipboardService.swift */; };
 		B5E5E5E5E5E5E5E5E5E5E5E5 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5E5E5E5E5E5E5E5E5E5E5E5 /* SettingsStore.swift */; };
-		B6E6E6E6E6E6E6E6E6E6E6E6 /* LegacyCoreDataMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6E6E6E6E6E6E6E6E6E6E6E6 /* LegacyCoreDataMigrator.swift */; };
 		B7E7E7E7E7E7E7E7E7E7E7E7 /* ClipboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E7E7E7E7E7E7E7E7E7E7E7 /* ClipboardViewModel.swift */; };
 /* End PBXBuildFile section */
 
@@ -82,8 +82,8 @@
 		A3E3E3E3E3E3E3E3E3E3E3E3 /* ClipboardRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardRepository.swift; sourceTree = "<group>"; };
 		A4E4E4E4E4E4E4E4E4E4E4E4 /* ClipboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardService.swift; sourceTree = "<group>"; };
 		A5E5E5E5E5E5E5E5E5E5E5E5 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
-		A6E6E6E6E6E6E6E6E6E6E6E6 /* LegacyCoreDataMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyCoreDataMigrator.swift; sourceTree = "<group>"; };
 		A7E7E7E7E7E7E7E7E7E7E7E7 /* ClipboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardViewModel.swift; sourceTree = "<group>"; };
+		A8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ClipboardEntity+Mapping.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -195,7 +195,6 @@
 				A3E3E3E3E3E3E3E3E3E3E3E3 /* ClipboardRepository.swift */,
 				A4E4E4E4E4E4E4E4E4E4E4E4 /* ClipboardService.swift */,
 				A5E5E5E5E5E5E5E5E5E5E5E5 /* SettingsStore.swift */,
-				A6E6E6E6E6E6E6E6E6E6E6E6 /* LegacyCoreDataMigrator.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -212,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				54D74EDF29C25D90004769D2 /* StorageHelper.swift */,
+				A8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift */,
 				54B953EF29C3B5F300990FAC /* Constants.swift */,
 				54E32CB929C4E507004772B5 /* VisualEffectView.swift */,
 				54A3238129CA369800F3E2F3 /* KeyCodes.swift */,
@@ -369,13 +369,13 @@
 				B3E3E3E3E3E3E3E3E3E3E3E3 /* ClipboardRepository.swift in Sources */,
 				B4E4E4E4E4E4E4E4E4E4E4E4 /* ClipboardService.swift in Sources */,
 				B5E5E5E5E5E5E5E5E5E5E5E5 /* SettingsStore.swift in Sources */,
-				B6E6E6E6E6E6E6E6E6E6E6E6 /* LegacyCoreDataMigrator.swift in Sources */,
 				54B6C87D2C4E6EFE00106CFA /* PaywallView.swift in Sources */,
 				54B6C8A72C4FAF6C00106CFA /* ContainerView.swift in Sources */,
 				541C55C02CCBC618006E29B5 /* CustomButton.swift in Sources */,
 				54C2FE442C80F726000D209C /* ViewExtension.swift in Sources */,
 				54D74ED929C240A3004769D2 /* ApplicationMenu.swift in Sources */,
 				54D74EE029C25D90004769D2 /* StorageHelper.swift in Sources */,
+				B8E8E8E8E8E8E8E8E8E8E8E8 /* ClipboardEntity+Mapping.swift in Sources */,
 				54E32CBA29C4E507004772B5 /* VisualEffectView.swift in Sources */,
 				54B6C87F2C4E6FE500106CFA /* PurchaseManager.swift in Sources */,
 				54E32CBC29C4E743004772B5 /* ClipboardItemBox.swift in Sources */,

@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import SwiftData
 
 struct ContainerView: View {
     @EnvironmentObject var viewModel: ClipboardViewModel
@@ -34,9 +33,9 @@ struct ContainerView: View {
     ContainerView()
         .environmentObject(
             ClipboardViewModel(
-                repository: ClipboardRepository(context: ModelContext(try! ModelContainer(for: ClipboardEntry.self))),
+                repository: ClipboardRepository(context: PersistenceController.shared.container.viewContext),
                 clipboardService: ClipboardService(
-                    repository: ClipboardRepository(context: ModelContext(try! ModelContainer(for: ClipboardEntry.self))),
+                    repository: ClipboardRepository(context: PersistenceController.shared.container.viewContext),
                     settings: SettingsStore()
                 ),
                 settings: SettingsStore()

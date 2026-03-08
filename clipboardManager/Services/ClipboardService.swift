@@ -101,9 +101,11 @@ final class ClipboardService {
         }
 
         return ClipboardEntry(
+            id: UUID(),
             type: type,
             content: content,
             contentDescriptionString: contentDescription,
+            timestamp: Date(),
             copiedFromApplicationTitle: copiedFromApp.applicationTitle,
             copiedFromApplicationPID: copiedFromApp.applicationProcessIdentifier
         )

@@ -105,7 +105,7 @@ struct ClipboardItemBox: View {
 #Preview {
     let url = URL(string: "https://www.youtube.com")
     let data = url?.dataRepresentation ?? Data()
-    return ClipboardItemBox(item: ClipboardEntry(type: .url, content: data, contentDescriptionString: "https://www.youtube.com", copiedFromApplicationTitle: "Safari", copiedFromApplicationPID: 0))
+    return ClipboardItemBox(item: ClipboardEntry(id: UUID(), type: .url, content: data, contentDescriptionString: "https://www.youtube.com", timestamp: Date(), copiedFromApplicationTitle: "Safari", copiedFromApplicationPID: 0))
 }
 
 
