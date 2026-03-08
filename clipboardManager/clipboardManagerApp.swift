@@ -26,9 +26,7 @@ struct clipboardManagerApp: App {
     var body: some Scene {
         WindowGroup {
             self.containerView
-                .fixedSize()
-                .environment(
-                    \.managedObjectContext, appDelegate.persistenceController.container.viewContext)
+                .environment(\.managedObjectContext, appDelegate.persistenceController.container.viewContext)
         }
     }
 }
@@ -82,6 +80,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         // Set up window level observer for StoreKit authentication window
         NSWindow.swizzleKeyWindow()
+        
+        if let userInfo = notification.userInfo {
+            // NSApplication.launchIsDefaultLaunchKey indicates if launched by user (true) or system (false)
+            let isUserLaunch = userInfo[NSApplication.launchIsDefaultUserInfoKey] as? Bool ?? false
+            
+            if !isUserLaunch {
+                UserDefaults.standard.set(isUserLaunch, forKey: "isUserLaunch")
+                
+            }
+        }
     }
 
     // MARK: - Public Methods

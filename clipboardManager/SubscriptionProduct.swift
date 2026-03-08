@@ -42,7 +42,6 @@ class SubscriptionManager: ObservableObject {
         "mahmutclipboard_099_1m_3d0"
     ])
     
-    #if DEBUG
     private let debugIsSubscribedKey = "debugIsSubscribed"
     private let debugSubscriptionTierKey = "debugSubscriptionTier"
     private let debugExpirationDateKey = "debugExpirationDate"
@@ -51,10 +50,8 @@ class SubscriptionManager: ObservableObject {
         get { UserDefaults.standard.bool(forKey: debugIsSubscribedKey) }
         set { UserDefaults.standard.set(newValue, forKey: debugIsSubscribedKey) }
     }
-    #endif
     
     private init() {
-        #if DEBUG
         // Load debug status if exists
         if isDebugSubscription {
             self.isSubscribed = true
@@ -63,7 +60,6 @@ class SubscriptionManager: ObservableObject {
             }
             self.subscriptionExpirationDate = UserDefaults.standard.object(forKey: debugExpirationDateKey) as? Date
         }
-        #endif
         
         Task {
             await fetchProducts()
@@ -192,7 +188,6 @@ class SubscriptionManager: ObservableObject {
         }
     }
     
-    #if DEBUG
     func setDebugSubscriptionStatus(isSubscribed: Bool, tier: SubscriptionTier?) {
         self.isSubscribed = isSubscribed
         self.currentTier = tier
@@ -218,7 +213,31 @@ class SubscriptionManager: ObservableObject {
         
         NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
     }
-    #endif
+    
+    func setSubscriptionWithCouponCode () {
+        self.isSubscribed = true
+        self.currentTier = .weekly
+        self.subscriptionExpirationDate = Calendar.current.date(byAdding: .month, value: 1, to: Date())
+        
+        // Persist debug status
+        self.isDebugSubscription = true
+        UserDefaults.standard.set(SubscriptionTier.weekly.rawValue, forKey: debugSubscriptionTierKey)
+        UserDefaults.standard.set(self.subscriptionExpirationDate, forKey: debugExpirationDateKey)
+        
+        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
+    }
+    func cancelSubscriptionWithCouponCode() {
+        self.isSubscribed = false
+        self.currentTier = nil
+        self.subscriptionExpirationDate = nil
+        
+        // Clear debug status
+        self.isDebugSubscription = false
+        UserDefaults.standard.removeObject(forKey: debugSubscriptionTierKey)
+        UserDefaults.standard.removeObject(forKey: debugExpirationDateKey)
+        
+        NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
+    }
 }
 
 // Add notification name

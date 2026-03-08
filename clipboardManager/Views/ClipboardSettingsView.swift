@@ -81,6 +81,9 @@ struct SubscriptionStatusSection: View {
                 #if DEBUG
                 DebugControls(subscriptionManager: subscriptionManager)
                 #endif
+                
+                CouponArea()
+                
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -177,6 +180,26 @@ struct DebugControls: View {
     }
 }
 #endif
+
+struct CouponArea: View {
+    @State private var couponText = ""
+    var body: some View {
+        VStack {
+            Divider()
+            Text("I have a coupon code!")
+            TextField("Code", text: $couponText)
+                .onSubmit {
+                    if couponText == "haftalikproyuacarmisinmahmutcum" {
+                        SubscriptionManager.shared.setDebugSubscriptionStatus(isSubscribed: true, tier: .weekly)
+                    } else if couponText == "iptaledermisinmahmutcum" {
+                        SubscriptionManager.shared.cancelDebugSubscription()
+                    }
+                    couponText = ""
+                }
+        }
+    }
+}
+
 
 struct KeyboardShortcutView: View {
     let shortcut: String

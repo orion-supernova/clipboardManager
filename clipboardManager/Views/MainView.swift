@@ -24,7 +24,6 @@ struct MainView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        GeometryReader { reader in
             ZStack {
                 VisualEffectView(material: .popover, blendingMode: .withinWindow)
                     .ignoresSafeArea()
@@ -38,7 +37,6 @@ struct MainView: View {
                     .environmentObject(clipboardManager)
                 }
             }
-        }
         .frame(width: screenWidth, height: screenHeight, alignment: .center)
         // Optimize updates when window is not visible
         .onChange(of: scenePhase) { phase in
