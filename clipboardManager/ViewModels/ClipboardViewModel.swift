@@ -41,6 +41,13 @@ final class ClipboardViewModel: ObservableObject {
                 self?.refresh()
             }
             .store(in: &cancellables)
+
+        NotificationCenter.default.publisher(for: .refreshClipboardItems)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.items = self?.repository.fetchAll() ?? []
+            }
+            .store(in: &cancellables)
     }
 
     func refresh() {

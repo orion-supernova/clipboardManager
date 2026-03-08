@@ -38,6 +38,7 @@ final class ClipboardService {
             self.repository.trimRetainCount(self.settings.retainCount)
             self.repository.removeItemsOlderThan(hours: self.settings.clearItemsOlderThanHours)
 
+            NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
             NotificationCenter.default.post(name: .pasteBoardCountNotification, object: self.repository.count())
         }
     }
@@ -60,7 +61,11 @@ final class ClipboardService {
             if let string = pasteboard.string(forType: .string) {
                 content = Data(string.utf8)
             } else {
-                return ClipboardEntry(type: .text, content: Data(), contentDescriptionString: contentDescription,
+                return ClipboardEntry(id: UUID(),
+                                      type: .text,
+                                      content: Data(),
+                                      contentDescriptionString: contentDescription,
+                                      timestamp: Date(),
                                       copiedFromApplicationTitle: copiedFromApp.applicationTitle,
                                       copiedFromApplicationPID: copiedFromApp.applicationProcessIdentifier)
             }
@@ -76,7 +81,11 @@ final class ClipboardService {
                       let imageData = try? Data(contentsOf: URL(fileURLWithPath: firstURL)) {
                 content = imageData
             } else {
-                return ClipboardEntry(type: .text, content: Data(), contentDescriptionString: contentDescription,
+                return ClipboardEntry(id: UUID(),
+                                      type: .text,
+                                      content: Data(),
+                                      contentDescriptionString: contentDescription,
+                                      timestamp: Date(),
                                       copiedFromApplicationTitle: copiedFromApp.applicationTitle,
                                       copiedFromApplicationPID: copiedFromApp.applicationProcessIdentifier)
             }
@@ -84,7 +93,11 @@ final class ClipboardService {
             if let url = pasteboard.string(forType: .URL), let urlData = url.data(using: .utf8) {
                 content = urlData
             } else {
-                return ClipboardEntry(type: .text, content: Data(), contentDescriptionString: contentDescription,
+                return ClipboardEntry(id: UUID(),
+                                      type: .text,
+                                      content: Data(),
+                                      contentDescriptionString: contentDescription,
+                                      timestamp: Date(),
                                       copiedFromApplicationTitle: copiedFromApp.applicationTitle,
                                       copiedFromApplicationPID: copiedFromApp.applicationProcessIdentifier)
             }
