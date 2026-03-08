@@ -26,6 +26,9 @@ final class ClipboardViewModel: ObservableObject {
         self.settings = settings
         bindSettings()
         refresh()
+        clipboardService.onItemsChanged = { [weak self] in
+            self?.refresh()
+        }
         clipboardService.startMonitoring()
     }
 
