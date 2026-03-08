@@ -14,7 +14,6 @@ final class ClipboardService {
     private let settings: SettingsStore
     private var timer: Timer?
     private var lastContentDescription = ""
-    var onItemsChanged: (() -> Void)?
 
     init(repository: ClipboardRepository, settings: SettingsStore) {
         self.repository = repository
@@ -41,7 +40,6 @@ final class ClipboardService {
 
             NotificationCenter.default.post(name: .refreshClipboardItems, object: nil)
             NotificationCenter.default.post(name: .pasteBoardCountNotification, object: self.repository.count())
-            self.onItemsChanged?()
         }
     }
 

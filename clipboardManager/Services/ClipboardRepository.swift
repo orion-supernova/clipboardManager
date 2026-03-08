@@ -16,6 +16,18 @@ final class ClipboardRepository {
         self.context = context
     }
 
+    func makeFetchedResultsController(predicate: NSPredicate? = nil) -> NSFetchedResultsController<ClipboardEntity> {
+        let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+        request.predicate = predicate
+        return NSFetchedResultsController(
+            fetchRequest: request,
+            managedObjectContext: context,
+            sectionNameKeyPath: nil,
+            cacheName: nil
+        )
+    }
+
     func fetchAll() -> [ClipboardEntry] {
         let request: NSFetchRequest<ClipboardEntity> = ClipboardEntity.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]

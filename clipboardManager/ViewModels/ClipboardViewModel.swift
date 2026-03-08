@@ -8,9 +8,10 @@
 import SwiftUI
 import AppKit
 import Combine
+import CoreData
 
 @MainActor
-final class ClipboardViewModel: ObservableObject {
+final class ClipboardViewModel: NSObject, ObservableObject, NSFetchedResultsControllerDelegate {
     @Published var items: [ClipboardEntry] = []
     @Published var isSearchFieldVisible: Bool = false
     @Published var searchText: String = ""
@@ -19,16 +20,15 @@ final class ClipboardViewModel: ObservableObject {
     private let clipboardService: ClipboardService
     private let settings: SettingsStore
     private var cancellables = Set<AnyCancellable>()
+    private var frc: NSFetchedResultsController<ClipboardEntity>?
 
     init(repository: ClipboardRepository, clipboardService: ClipboardService, settings: SettingsStore) {
         self.repository = repository
         self.clipboardService = clipboardService
         self.settings = settings
+        super.init()
         bindSettings()
-        refresh()
-        clipboardService.onItemsChanged = { [weak self] in
-            self?.refresh()
-        }
+        setupFetchedResultsController()
         clipboardService.startMonitoring()
     }
 
@@ -41,36 +41,45 @@ final class ClipboardViewModel: ObservableObject {
 
         settings.$clearItemsOlderThanHours
             .sink { [weak self] _ in
-                self?.refresh()
-            }
-            .store(in: &cancellables)
-
-        NotificationCenter.default.publisher(for: .refreshClipboardItems)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.items = self?.repository.fetchAll() ?? []
+                self?.refreshFromController()
             }
             .store(in: &cancellables)
     }
 
-    func refresh() {
-        items = repository.fetchAll()
+    private func setupFetchedResultsController(predicate: NSPredicate? = nil) {
+        frc = repository.makeFetchedResultsController(predicate: predicate)
+        frc?.delegate = self
+        do {
+            try frc?.performFetch()
+            refreshFromController()
+        } catch {
+            print("FRC fetch error: \(error)")
+        }
+    }
+
+    private func refreshFromController() {
+        let objects = frc?.fetchedObjects ?? []
+        items = objects.map { $0.toClipboardEntry() }
         NotificationCenter.default.post(name: .pasteBoardCountNotification, object: items.count)
+    }
+
+    func refresh() {
+        refreshFromController()
     }
 
     func search(_ text: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            items = repository.fetchAll()
+            setupFetchedResultsController(predicate: nil)
         } else {
-            items = repository.search(trimmed)
+            let predicate = NSPredicate(format: "contentDescriptionString CONTAINS[c] %@", trimmed)
+            setupFetchedResultsController(predicate: predicate)
         }
     }
 
     func clearAll() {
         repository.clearAll()
-        items.removeAll()
-        NotificationCenter.default.post(name: .pasteBoardCountNotification, object: 0)
+        refreshFromController()
     }
 
     func selectItem(_ item: ClipboardEntry) {
@@ -82,6 +91,10 @@ final class ClipboardViewModel: ObservableObject {
 
     func updateRetainCount() {
         repository.trimRetainCount(settings.retainCount)
-        refresh()
+        refreshFromController()
+    }
+
+    func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
+        refreshFromController()
     }
 }
