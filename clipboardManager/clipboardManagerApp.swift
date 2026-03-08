@@ -145,8 +145,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func updateMenuBarItemCount(_ notification: NSNotification) {
-        let count = AppDelegate.repository?.count() ?? 0
-        setMenuBarText(count: count)
+        Task { @MainActor in
+            let count = AppDelegate.repository?.count() ?? 0
+            setMenuBarText(count: count)
+        }
     }
     
     private func setMenuBarText(count: Int) {
@@ -262,9 +264,11 @@ extension AppDelegate: ApplicationMenuDelegate {
     func didTapClearAllButton() {
         showCustomAlertWithTwoButtons(title: "Warning", message: "Are you sure you want to delete all items inside your clipboard?\n This action can NOT be reversed or undone.") { [weak self] in
             guard let self else { return }
-            AppDelegate.viewModel?.clearAll()
-            setMenuBarText(count: 0)
-            NotificationCenter.default.post(name: .allItemsClearedNotification, object: nil)
+            Task { @MainActor in
+                AppDelegate.viewModel?.clearAll()
+                setMenuBarText(count: 0)
+                NotificationCenter.default.post(name: .allItemsClearedNotification, object: nil)
+            }
         }
     }
 }
