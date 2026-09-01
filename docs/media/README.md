@@ -52,7 +52,15 @@ from the PNG, and the file is a sixth of the size (320 KB against 1.9 MB).
 
 The same captures, scaled to 2880×1800 for App Store Connect, live in the
 marketing folder alongside the copy deck. That set has two scenes this one
-doesn't: the Save-to-Folder chooser and a folder scope.
+doesn't — the Save-to-Folder chooser and a populated folder scope — and it
+carries the caption block (icon, wordmark, headline, subtitle) burned in, drawn
+by `tools/caption.swift` with the same typography `MarketingScenes` used. The
+bare versions stay in `assets/uncaptioned/` so the copy can change without
+re-shooting anything.
+
+The README images stay uncaptioned on purpose. A store listing is a shop window
+and needs the pitch on the glass; a repo readme is standing next to the thing
+itself, and a headline pasted over a screenshot only gets in the way.
 
 The crop numbers come from `PanelMetrics`: the panel is `maxWidth`-clamped to
 the visible frame minus `horizontalScreenInset` on each side, sits
