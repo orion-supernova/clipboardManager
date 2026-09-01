@@ -24,6 +24,13 @@ enum KeyboardLayout {
     static let home: UInt16 = 0x73
     static let end: UInt16 = 0x77
 
+    /// The two keys right of P on an ANSI board. They print `[` and `]` on US
+    /// layouts and something else almost everywhere else — `ğ`/`ü` on Turkish,
+    /// `ü`/`+` on German — so scope switching has to match the position rather
+    /// than the character, or it silently does nothing outside the US.
+    static let leftBracket: UInt16 = 0x21
+    static let rightBracket: UInt16 = 0x1E
+
     static let modifierKeyCodes: Set<UInt16> = [0x37, 0x36, 0x38, 0x3C, 0x3A, 0x3D, 0x3B, 0x3E, 0x39, 0x3F]
 
     private static let specialNames: [UInt16: String] = [

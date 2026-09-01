@@ -69,7 +69,7 @@ struct PreviewSheetView: View {
                 keyedButton(item.kind == .url ? "Open Link" : "Open", symbol: "arrow.up.forward.app", key: "⌘O", action: onOpen)
                     .panelButtonStyle()
             }
-            keyedButton("Paste", symbol: "arrow.down.doc", key: "↩", action: onPaste)
+            keyedButton("Copy", symbol: "doc.on.clipboard", key: "↩", action: onPaste)
                 .panelButtonStyle(prominent: true)
             Button(action: onClose) {
                 Image(systemName: "xmark")

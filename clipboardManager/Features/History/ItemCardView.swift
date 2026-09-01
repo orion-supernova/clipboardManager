@@ -251,11 +251,11 @@ struct ItemCardView: View {
 
     private func contextMenuEntries() -> [ContextMenuEntry] {
         var entries: [ContextMenuEntry] = [
-            .item(title: "Paste\t↩", symbol: "arrow.down.doc", action: actions.tap),
+            .item(title: "Copy\t↩", symbol: "doc.on.clipboard", action: actions.tap),
         ]
         if item.kind == .text || item.kind == .url {
             entries.append(.submenu(
-                title: "Paste As\t⌘T",
+                title: "Copy As\t⌘T",
                 symbol: "text.badge.checkmark",
                 entries: [.item(title: "Plain Text\t⇧↩", symbol: "textformat", action: actions.pastePlain), .separator]
                     + TextTransform.allCases.map { transform in
@@ -263,7 +263,7 @@ struct ItemCardView: View {
                     }
             ))
         }
-        entries.append(.item(title: "Copy Without Pasting\t⌘C", symbol: "doc.on.doc", action: actions.copyOnly))
+        entries.append(.item(title: "Copy, Keep Panel Open\t⌘C", symbol: "doc.on.doc", action: actions.copyOnly))
         if item.kind == .color {
             entries.append(.submenu(
                 title: "Copy As\t⌘⇧C",

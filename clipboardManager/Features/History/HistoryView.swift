@@ -139,10 +139,10 @@ struct HistoryView: View {
     private var hintBar: some View {
         HStack(spacing: 12) {
             if store.keyboardNavigation {
-                hint("↩", "Paste")
+                hint("↩", "Copy")
                 hint("⇧↩", "Plain")
                 hint("space", "Preview")
-                hint("⌘C", "Copy")
+                hint("⌘C", "Keep open")
                 hint("⌘P", "Pin")
                 hint("⌘S", "Folder")
                 hint("⌫", "Delete")
@@ -590,7 +590,7 @@ struct HistoryView: View {
             )
         case .pasteAs:
             DialogView(
-                title: "Paste As",
+                title: "Copy As",
                 message: "Transforms are applied to a copy; the stored item stays untouched.",
                 symbol: "text.badge.checkmark",
                 options: store.dialogOptions,
