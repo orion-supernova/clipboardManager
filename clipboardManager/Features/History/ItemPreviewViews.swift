@@ -18,7 +18,8 @@ struct ItemPreviewView: View {
 
     var body: some View {
         if let sensitivity = item.sensitivity {
-            SensitivePreview(item: item, kind: sensitivity, lifetime: sensitiveLifetime)
+            // A pinned or filed item is never pruned, so it has no expiry to count down to.
+            SensitivePreview(item: item, kind: sensitivity, lifetime: item.isRetentionExempt ? nil : sensitiveLifetime)
         } else {
             switch item.kind {
             case .text: TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)

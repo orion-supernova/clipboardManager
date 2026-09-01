@@ -11,7 +11,6 @@ import ComposableArchitecture
 struct WorkspaceClient: Sendable {
     var revealInFinder: @Sendable (URL) async -> Void
     var open: @Sendable (URL) async -> Void
-    var openAccessibilitySettings: @Sendable () async -> Void
     var haptic: @Sendable (NSHapticFeedbackManager.FeedbackPattern) async -> Void
     var confirm: @Sendable (_ title: String, _ message: String, _ confirmTitle: String) async -> Bool
     var terminate: @Sendable () async -> Void
@@ -24,12 +23,6 @@ extension WorkspaceClient: DependencyKey {
         },
         open: { url in
             await MainActor.run { _ = NSWorkspace.shared.open(url) }
-        },
-        openAccessibilitySettings: {
-            await MainActor.run {
-                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-                _ = NSWorkspace.shared.open(url)
-            }
         },
         haptic: { pattern in
             await MainActor.run { NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .now) }
@@ -53,7 +46,7 @@ extension WorkspaceClient: DependencyKey {
     )
 
     static let previewValue = WorkspaceClient(
-        revealInFinder: { _ in }, open: { _ in }, openAccessibilitySettings: {},
+        revealInFinder: { _ in }, open: { _ in },
         haptic: { _ in }, confirm: { _, _, _ in true }, terminate: {}
     )
 }

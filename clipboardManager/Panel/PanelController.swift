@@ -164,6 +164,10 @@ final class PanelController: NSObject, NSWindowDelegate {
             emit(.key(.last)); return true
         case KeyboardLayout.tab:
             emit(.key(.toggleFocus)); return true
+        case KeyboardLayout.leftBracket where command:
+            emit(.key(.previousScope)); return true
+        case KeyboardLayout.rightBracket where command:
+            emit(.key(.nextScope)); return true
         case KeyboardLayout.delete, KeyboardLayout.forwardDelete:
             if editingText { return false }
             emit(.key(command ? .deleteFolder : .deleteSelected)); return true
@@ -191,6 +195,7 @@ final class PanelController: NSObject, NSWindowDelegate {
             case ("e", false, false): emit(.key(.reveal))
             case ("o", false, false): emit(.key(.open))
             case ("u", false, false): emit(.key(.openUpdate))
+            // Layouts that print the brackets on some other key still work.
             case ("[", _, _): emit(.key(.previousScope))
             case ("]", _, _): emit(.key(.nextScope))
             case ("1"..."9", false, false): emit(.key(.pasteIndex(Int(key)! - 1)))

@@ -2,20 +2,20 @@
 //  PasteClient.swift
 //  clipboardManager
 //
-//  Writes payloads back to the pasteboard (tagged with the app's own marker) and
-//  simulates ⌘V in the frontmost app when Accessibility access is granted.
+//  Writes payloads back to the pasteboard, tagged with the app's own marker so
+//  the monitor recognises the write as its own instead of recording a duplicate.
+//
+//  Choosing an item puts it on the clipboard; the user presses ⌘V. Synthesising
+//  that keystroke would mean asking for Accessibility access, which App Review
+//  rejects under guideline 2.4.5 — Accessibility APIs are for assistive
+//  features, not for automating other apps.
 //
 
 import AppKit
-import ApplicationServices
-import Carbon
 import ComposableArchitecture
 
 struct PasteClient: Sendable {
     var write: @Sendable (ClipboardPayload, _ markerID: UUID, _ plainText: Bool) async -> Void
-    var simulatePaste: @Sendable () async -> Bool
-    var isAccessibilityTrusted: @Sendable () -> Bool
-    var requestAccessibility: @Sendable () -> Void
 }
 
 extension PasteClient: DependencyKey {
@@ -54,59 +54,10 @@ extension PasteClient: DependencyKey {
                 }
                 pasteboard.writeObjects([item])
             }
-        },
-        simulatePaste: {
-            await MainActor.run {
-                guard AXIsProcessTrusted() else { return false }
-                guard let keyCode = PasteKeyCode.shared.value else { return false }
-                let source = CGEventSource(stateID: .combinedSessionState)
-                guard let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
-                      let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
-                else { return false }
-                down.flags = .maskCommand
-                up.flags = .maskCommand
-                down.post(tap: .cghidEventTap)
-                up.post(tap: .cghidEventTap)
-                return true
-            }
-        },
-        isAccessibilityTrusted: { AXIsProcessTrusted() },
-        requestAccessibility: {
-            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
-            _ = AXIsProcessTrustedWithOptions(options)
         }
     )
 
-    static let previewValue = PasteClient(
-        write: { _, _, _ in },
-        simulatePaste: { true },
-        isAccessibilityTrusted: { true },
-        requestAccessibility: {}
-    )
-}
-
-/// Resolves and caches the key code for "V" on the current keyboard layout.
-@MainActor
-private final class PasteKeyCode {
-    static let shared = PasteKeyCode()
-    private var cached: UInt16?
-    private var layoutObserver: (any NSObjectProtocol)?
-
-    private init() {
-        layoutObserver = DistributedNotificationCenter.default().addObserver(
-            forName: NSNotification.Name(kTISNotifySelectedKeyboardInputSourceChanged as String),
-            object: nil, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.cached = nil }
-        }
-    }
-
-    var value: UInt16? {
-        if let cached { return cached }
-        let resolved = KeyboardLayout.keyCode(for: "v") ?? 0x09
-        cached = resolved
-        return resolved
-    }
+    static let previewValue = PasteClient(write: { _, _, _ in })
 }
 
 extension DependencyValues {

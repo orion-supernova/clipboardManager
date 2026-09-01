@@ -89,6 +89,12 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
 
     var isSensitive: Bool { sensitivity != nil }
 
+    /// Pinning or filing an item takes it out of every retention rule — count,
+    /// age and the sensitive-content timer alike. `ClipboardStore.prune` fetches
+    /// with exactly this predicate, so anything reading it stays in step with
+    /// what actually gets deleted.
+    var isRetentionExempt: Bool { isPinned || folderID != nil }
+
     var displayTitle: String {
         switch kind {
         case .file, .video: fileName ?? preview
