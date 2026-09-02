@@ -14,6 +14,7 @@ struct SettingsFeature {
         @Shared(.maxAgeHours) var maxAgeHours
         @Shared(.sensitiveMaxAgeMinutes) var sensitiveMaxAgeMinutes
         @Shared(.keyboardNavigation) var keyboardNavigation
+        @Shared(.autoPaste) var autoPaste
         @Shared(.ignoreConcealed) var ignoreConcealed
         @Shared(.recordSensitive) var recordSensitive
         @Shared(.recognizeImageText) var recognizeImageText
@@ -28,6 +29,7 @@ struct SettingsFeature {
         var section: Section? = .general
         var launchAtLogin = false
         var launchAtLoginError: String?
+        var isAccessibilityTrusted = false
         var storageFootprint: Int64 = 0
         var isRecordingShortcut = false
         var updateCheck: UpdateCheckState = .idle
@@ -45,7 +47,7 @@ struct SettingsFeature {
             case general = "General"
             case capture = "Capture"
             case privacy = "Privacy"
-            case dragAndPaste = "Drag & Copy"
+            case dragAndPaste = "Drag & Paste"
             case shortcuts = "Shortcuts"
             case about = "About"
 
@@ -67,9 +69,11 @@ struct SettingsFeature {
         case binding(BindingAction<State>)
         case task
         case refresh
-        case statusLoaded(launchAtLogin: Bool, storage: Int64)
+        case statusLoaded(launchAtLogin: Bool, accessibility: Bool, storage: Int64)
         case launchAtLoginToggled(Bool)
         case launchAtLoginFailed(String)
+        case requestAccessibility
+        case openAccessibilitySettings
         case clearHistoryTapped
         case shortcutRecordingChanged(Bool)
         case shortcutRecorded(KeyboardShortcutSpec)
@@ -103,21 +107,26 @@ struct SettingsFeature {
             case .task:
                 return .run { send in
                     await send(.refresh)
-                    // The store keeps growing while the window is open.
-                    for await _ in clock.timer(interval: .seconds(5)) { await send(.refresh) }
+                    // Accessibility can be granted in System Settings while this window is open.
+                    for await _ in clock.timer(interval: .seconds(2)) { await send(.refresh) }
                 }
 
             case .refresh:
                 return .run { send in
                     let storage = await clipboardStore.storageFootprint()
                     await send(
-                        .statusLoaded(launchAtLogin: launchAtLogin.isEnabled(), storage: storage),
+                        .statusLoaded(
+                            launchAtLogin: launchAtLogin.isEnabled(),
+                            accessibility: paste.isAccessibilityTrusted(),
+                            storage: storage
+                        ),
                         animation: .smooth
                     )
                 }
 
-            case let .statusLoaded(launch, storage):
+            case let .statusLoaded(launch, accessibility, storage):
                 state.launchAtLogin = launch
+                state.isAccessibilityTrusted = accessibility
                 state.storageFootprint = storage
                 return .none
 
@@ -136,6 +145,16 @@ struct SettingsFeature {
             case let .launchAtLoginFailed(message):
                 state.launchAtLoginError = message
                 return .none
+
+            case .requestAccessibility:
+                return .run { send in
+                    paste.requestAccessibility()
+                    try await clock.sleep(for: .milliseconds(500))
+                    await send(.refresh)
+                }
+
+            case .openAccessibilitySettings:
+                return .run { _ in await workspace.openAccessibilitySettings() }
 
             case .clearHistoryTapped:
                 return .send(.delegate(.clearHistory))

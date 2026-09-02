@@ -31,6 +31,19 @@ enum KeyboardLayout {
     static let leftBracket: UInt16 = 0x21
     static let rightBracket: UInt16 = 0x1E
 
+    /// The key that prints `,` on a US board. Turkish-Q prints `ö` there and
+    /// moves the comma to 0x2A, which is why ⌘, needs resolving rather than
+    /// hard-coding: AppKit labels a menu key equivalent by *position*, so a
+    /// literal "," renders as ⌘Ö while firing on a different key entirely.
+    static let ansiComma: UInt16 = 0x2B
+
+    /// The character the settings shortcut should show, and fire on, under the
+    /// current layout. Both come from here so they cannot disagree.
+    static var settingsKeyCharacter: Character {
+        guard let text = character(for: ansiComma), let first = text.first else { return "," }
+        return first
+    }
+
     static let modifierKeyCodes: Set<UInt16> = [0x37, 0x36, 0x38, 0x3C, 0x3A, 0x3D, 0x3B, 0x3E, 0x39, 0x3F]
 
     private static let specialNames: [UInt16: String] = [

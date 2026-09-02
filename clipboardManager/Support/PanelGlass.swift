@@ -26,9 +26,23 @@ private struct PanelGlassModifier<S: Shape>: ViewModifier {
     let prominent: Bool
     let shape: S
     @Environment(\.marketingRender) private var marketingRender
+    /// Liquid Glass is precisely what "Reduce Transparency" exists to switch
+    /// off: a translucent panel over an arbitrary desktop is unreadable for a
+    /// lot of people. Honour it with a solid surface rather than a thinner blur.
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
-        if marketingRender {
+        if reduceTransparency {
+            content
+                .background {
+                    ZStack {
+                        shape.fill(Color(nsColor: .windowBackgroundColor))
+                        if let tint { shape.fill(tint.opacity(prominent ? 0.85 : 0.22)) }
+                    }
+                }
+                .overlay(shape.stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+                .clipShape(shape)
+        } else if marketingRender {
             content
                 .background {
                     ZStack {

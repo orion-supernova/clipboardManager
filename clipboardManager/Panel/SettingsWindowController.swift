@@ -7,7 +7,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class SettingsWindowController: NSWindowController {
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private static let autosaveName = "MahmutSettingsWindow"
     private static let initialSize = NSSize(width: 800, height: 580)
     private var hasBeenShown = false
@@ -25,6 +25,7 @@ final class SettingsWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.contentMinSize = NSSize(width: 720, height: 480)
         super.init(window: window)
+        window.delegate = self
     }
 
     @available(*, unavailable)
@@ -46,7 +47,23 @@ final class SettingsWindowController: NSWindowController {
             window.setFrameAutosaveName(Self.autosaveName)
             hasBeenShown = true
         }
-        NSApp.activate()
+        // Mahmut is an LSUIElement app, so it normally has no Dock icon and no
+        // ⌘-Tab entry. That is right for the panel and wrong for a settings
+        // window: click away from an accessory window and there is no way back
+        // to it. Become a regular app for as long as the window is open.
+        if NSApp.activationPolicy() != .regular {
+            NSApp.setActivationPolicy(.regular)
+        }
+        // The clipboard panel is a floating-level window and may still be on
+        // screen for another frame or two, which would leave Settings behind it.
+        window.level = .normal
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        // Back to a menu bar utility.
+        NSApp.setActivationPolicy(.accessory)
     }
 }

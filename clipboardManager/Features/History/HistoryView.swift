@@ -132,6 +132,27 @@ struct HistoryView: View {
         .padding(.horizontal, 6)
         .animation(.easeOut(duration: 0.22), value: store.previewID)
         .animation(quickAnimation, value: store.dialog)
+        // The panel is a transient window with no title bar, so nothing tells a
+        // screen reader it opened or what changed inside it. These do.
+        .onChange(of: store.isPresented) { _, presented in
+            guard presented else { return }
+            announce("Clipboard history, \(store.items.count) \(store.items.count == 1 ? "item" : "items")")
+        }
+        .onChange(of: store.toast?.id) { _, _ in
+            if let toast = store.toast { announce(toast.text) }
+        }
+        .onChange(of: store.searchText) { _, query in
+            guard !query.isEmpty else { return }
+            let count = store.items.count
+            announce("\(count) \(count == 1 ? "result" : "results") for \(query)")
+        }
+    }
+
+    /// VoiceOver only. Silent for everyone else.
+    private func announce(_ message: String) {
+        var announcement = AttributedString(message)
+        announcement.accessibilitySpeechAnnouncementPriority = .high
+        AccessibilityNotification.Announcement(announcement).post()
     }
 
     // MARK: - Hint tray
@@ -139,10 +160,10 @@ struct HistoryView: View {
     private var hintBar: some View {
         HStack(spacing: 12) {
             if store.keyboardNavigation {
-                hint("↩", "Copy")
+                hint("↩", "Paste")
                 hint("⇧↩", "Plain")
                 hint("space", "Preview")
-                hint("⌘C", "Keep open")
+                hint("⌘C", "Copy")
                 hint("⌘P", "Pin")
                 hint("⌘S", "Folder")
                 hint("⌫", "Delete")
@@ -158,6 +179,7 @@ struct HistoryView: View {
         .frame(height: PanelMetrics.hintBarHeight)
         .panelGlass(in: .capsule)
         .animation(.easeOut(duration: 0.16), value: store.flashHintKey)
+        .accessibilityHidden(true)
     }
 
     private func hint(_ key: String, _ label: String) -> some View {
@@ -358,6 +380,8 @@ struct HistoryView: View {
         .buttonStyle(.plain)
         .panelGlass(tint: store.capturePaused ? .orange.opacity(0.3) : nil, interactive: true, in: .circle)
         .help(store.capturePaused ? "Resume capturing (⌘⇧P)" : "Pause capturing (⌘⇧P)")
+        .accessibilityLabel(store.capturePaused ? "Resume capturing" : "Pause capturing")
+        .accessibilityValue(store.capturePaused ? "Paused" : "Recording")
     }
 
     @ViewBuilder
@@ -425,7 +449,8 @@ struct HistoryView: View {
         }
         .buttonStyle(.plain)
         .panelGlass(interactive: true, in: .circle)
-        .help("Settings (⌘,)")
+        .help("Settings (⌘\(String(KeyboardLayout.settingsKeyCharacter).uppercased()))")
+        .accessibilityLabel("Settings")
     }
 
     // MARK: - Cards
@@ -590,7 +615,7 @@ struct HistoryView: View {
             )
         case .pasteAs:
             DialogView(
-                title: "Copy As",
+                title: "Paste As",
                 message: "Transforms are applied to a copy; the stored item stays untouched.",
                 symbol: "text.badge.checkmark",
                 options: store.dialogOptions,

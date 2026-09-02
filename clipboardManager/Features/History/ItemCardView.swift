@@ -50,6 +50,7 @@ struct ItemCardView: View {
     @State private var isHovered = false
     @State private var isPressed = false
     @State private var hasAppeared = false
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
 
     private var cornerRadius: CGFloat { PanelMetrics.cardCornerRadius }
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius) }
@@ -70,6 +71,13 @@ struct ItemCardView: View {
         .padding(14)
         .frame(width: PanelMetrics.cardWidth, height: PanelMetrics.cardHeight)
         .panelGlass(tint: glassTint, interactive: true, in: shape)
+        // Selection is otherwise carried by an accent tint alone, which is
+        // invisible to anyone who can't separate it from the card behind it.
+        .overlay {
+            if isSelected, differentiateWithoutColor {
+                shape.strokeBorder(Color.primary, lineWidth: 3)
+            }
+        }
         .overlay { shape.fill(.black.opacity(isPressed ? 0.08 : 0)).allowsHitTesting(false) }
         .overlay { recentGlow }
         .overlay { flashOverlay }
@@ -111,9 +119,36 @@ struct ItemCardView: View {
                 withAnimation(.spring(duration: 0.4, bounce: 0.12).delay(delay)) { hasAppeared = true }
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(item.headerTitle): \(item.preview)")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        // One element per card, spoken as a sentence. `.ignore` rather than
+        // `.combine` so VoiceOver reads the written description instead of
+        // stitching together the header, badge, byte count and shortcut hint.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(item.accessibilityLabel)
+        .accessibilityHint(item.accessibilityHint)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityActions { accessibilityActions }
+    }
+
+    /// Every panel shortcut, reachable from the VoiceOver rotor. The keyboard
+    /// chords stay, but they are hard to reach for anyone driving the Mac by
+    /// voice or with a switch, and ⌘⌫ is not a gesture at all.
+    @ViewBuilder
+    private var accessibilityActions: some View {
+        Button("Paste") { actions.tap() }
+        Button("Copy without pasting") { actions.copyOnly() }
+        Button("Quick Look") { actions.preview() }
+        Button(item.isPinned ? "Unpin" : "Pin") { actions.togglePin() }
+        Button("Paste as plain text") { actions.pastePlain() }
+        if item.kind.isFileBacked {
+            Button("Open") { actions.open() }
+            Button("Reveal in Finder") { actions.reveal() }
+            Button("Copy file path") { actions.copyPath() }
+        }
+        ForEach(folders) { folder in
+            Button("Save to \(folder.name)") { actions.moveToFolder(folder.id) }
+        }
+        Button("New folder…") { actions.newFolder() }
+        Button("Delete") { actions.delete() }
     }
 
     private func handleControl(_ control: CardControl) {
@@ -251,11 +286,11 @@ struct ItemCardView: View {
 
     private func contextMenuEntries() -> [ContextMenuEntry] {
         var entries: [ContextMenuEntry] = [
-            .item(title: "Copy\t↩", symbol: "doc.on.clipboard", action: actions.tap),
+            .item(title: "Paste\t↩", symbol: "arrow.down.doc", action: actions.tap),
         ]
         if item.kind == .text || item.kind == .url {
             entries.append(.submenu(
-                title: "Copy As\t⌘T",
+                title: "Paste As\t⌘T",
                 symbol: "text.badge.checkmark",
                 entries: [.item(title: "Plain Text\t⇧↩", symbol: "textformat", action: actions.pastePlain), .separator]
                     + TextTransform.allCases.map { transform in
@@ -263,7 +298,7 @@ struct ItemCardView: View {
                     }
             ))
         }
-        entries.append(.item(title: "Copy, Keep Panel Open\t⌘C", symbol: "doc.on.doc", action: actions.copyOnly))
+        entries.append(.item(title: "Copy Without Pasting\t⌘C", symbol: "doc.on.doc", action: actions.copyOnly))
         if item.kind == .color {
             entries.append(.submenu(
                 title: "Copy As\t⌘⇧C",
