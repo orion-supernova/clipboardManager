@@ -28,6 +28,7 @@ struct SettingsView: View {
                 case .capture: captureSection
                 case .privacy: privacySection
                 case .dragAndPaste: dragAndPasteSection
+                case .accessibility: accessibilitySection
                 case .shortcuts: shortcutsSection
                 case .about: aboutSection
                 }
@@ -182,26 +183,46 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        Section("Accessibility") {
-            LabeledContent("VoiceOver") {
-                Text("Every card reads as one sentence, with rotor actions for paste, copy, pin, folders and delete")
-                    .foregroundStyle(.secondary)
+    }
+
+    // MARK: - Accessibility
+
+    @ViewBuilder
+    private var accessibilitySection: some View {
+        Section("Panel appearance") {
+            Picker("Background", selection: Binding(store.$panelSurface)) {
+                ForEach(PanelSurface.allCases, id: \.self) { Text($0.title).tag($0) }
             }
-            LabeledContent("Reduce Transparency") {
-                Text("Replaces Liquid Glass with a solid surface")
-                    .foregroundStyle(.secondary)
+            Picker("Animation", selection: Binding(store.$panelMotion)) {
+                ForEach(PanelMotion.allCases, id: \.self) { Text($0.title).tag($0) }
             }
-            LabeledContent("Reduce Motion") {
-                Text("Cross-fades instead of sliding and springing")
-                    .foregroundStyle(.secondary)
+            Picker("Selected card", selection: Binding(store.$selectionStyle)) {
+                ForEach(SelectionStyle.allCases, id: \.self) { Text($0.title).tag($0) }
             }
-            LabeledContent("Differentiate Without Color") {
-                Text("Draws the selected card with a border, not just a tint")
-                    .foregroundStyle(.secondary)
-            }
-            Text("All four follow the settings in System Settings › Accessibility. Mahmut has no switches of its own to get out of step with them.")
+            Text("“Follow System” tracks Reduce Transparency, Reduce Motion and Differentiate Without Color. The other options apply to Mahmut's panel only — useful if you want a readable panel over a busy wallpaper without flattening every other app on the Mac.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            Button("Open Accessibility Settings…") { store.send(.openAccessibilityDisplaySettings) }
+                .buttonStyle(.glass)
+                .controlSize(.small)
+        }
+        Section("VoiceOver") {
+            Toggle("Speak what the panel is doing", isOn: Binding(store.$spokenAnnouncements))
+            Text("Announces the item count when the panel opens, the result count as you search, and each action as it completes. Nothing is spoken unless VoiceOver is running.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            LabeledContent("Cards") {
+                Text("Each card reads as one sentence — kind, content, source app and age — with rotor actions for paste, copy, Quick Look, pin, folders and delete")
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Masked items") {
+                Text("Spoken as “Masked Visa card, ending 4 2 4 2” rather than reading the bullets aloud")
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Images") {
+                Text("Speak the text found in them by on-device recognition")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

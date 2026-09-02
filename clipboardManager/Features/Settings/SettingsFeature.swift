@@ -15,6 +15,10 @@ struct SettingsFeature {
         @Shared(.sensitiveMaxAgeMinutes) var sensitiveMaxAgeMinutes
         @Shared(.keyboardNavigation) var keyboardNavigation
         @Shared(.autoPaste) var autoPaste
+        @Shared(.panelSurface) var panelSurface
+        @Shared(.panelMotion) var panelMotion
+        @Shared(.selectionStyle) var selectionStyle
+        @Shared(.spokenAnnouncements) var spokenAnnouncements
         @Shared(.ignoreConcealed) var ignoreConcealed
         @Shared(.recordSensitive) var recordSensitive
         @Shared(.recognizeImageText) var recognizeImageText
@@ -48,6 +52,7 @@ struct SettingsFeature {
             case capture = "Capture"
             case privacy = "Privacy"
             case dragAndPaste = "Drag & Paste"
+            case accessibility = "Accessibility"
             case shortcuts = "Shortcuts"
             case about = "About"
 
@@ -58,6 +63,7 @@ struct SettingsFeature {
                 case .capture: "doc.on.clipboard"
                 case .privacy: "lock.shield"
                 case .dragAndPaste: "hand.draw"
+                case .accessibility: "accessibility"
                 case .shortcuts: "keyboard"
                 case .about: "info.circle"
                 }
@@ -74,6 +80,7 @@ struct SettingsFeature {
         case launchAtLoginFailed(String)
         case requestAccessibility
         case openAccessibilitySettings
+        case openAccessibilityDisplaySettings
         case clearHistoryTapped
         case shortcutRecordingChanged(Bool)
         case shortcutRecorded(KeyboardShortcutSpec)
@@ -155,6 +162,9 @@ struct SettingsFeature {
 
             case .openAccessibilitySettings:
                 return .run { _ in await workspace.openAccessibilitySettings() }
+
+            case .openAccessibilityDisplaySettings:
+                return .run { _ in await workspace.openAccessibilityDisplaySettings() }
 
             case .clearHistoryTapped:
                 return .send(.delegate(.clearHistory))

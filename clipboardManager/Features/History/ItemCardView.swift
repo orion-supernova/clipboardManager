@@ -50,7 +50,7 @@ struct ItemCardView: View {
     @State private var isHovered = false
     @State private var isPressed = false
     @State private var hasAppeared = false
-    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
+    @Environment(\.resolvedAppearance) private var appearance
 
     private var cornerRadius: CGFloat { PanelMetrics.cardCornerRadius }
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius) }
@@ -74,7 +74,7 @@ struct ItemCardView: View {
         // Selection is otherwise carried by an accent tint alone, which is
         // invisible to anyone who can't separate it from the card behind it.
         .overlay {
-            if isSelected, differentiateWithoutColor {
+            if isSelected, appearance.borderSelection {
                 shape.strokeBorder(Color.primary, lineWidth: 3)
             }
         }

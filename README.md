@@ -141,7 +141,7 @@ The three decisions that were actually interesting:
 
 Files are held as security-scoped bookmarks, so a file you copied last week still drags out correctly after a reboot, without Mahmut ever having copied the file itself.
 
-It also tries to be usable if you aren't reading the screen. Each card is one VoiceOver element with a written description rather than a heap of fragments — a masked card says "Masked Visa card, ending 4 2 4 2" instead of reading out bullets, and an image speaks the text Vision found inside it. Every panel shortcut has a matching rotor action, so nothing depends on being able to hit ⌘⇧R. Reduce Transparency swaps the glass for a solid surface, Reduce Motion drops the springs, and Differentiate Without Color gives the selected card a border instead of a tint.
+It also tries to be usable if you aren't reading the screen. Each card is one VoiceOver element with a written description rather than a heap of fragments — a masked card says "Masked Visa card, ending 4 2 4 2" instead of reading out bullets, and an image speaks the text Vision found inside it. Every panel shortcut has a matching rotor action, so nothing depends on being able to hit ⌘⇧R. Reduce Transparency swaps the glass for a solid surface, Reduce Motion drops the springs, and Differentiate Without Color gives the selected card a border instead of a tint. Each follows the system setting by default, and can be pinned either way for this panel alone — a solid panel over a busy wallpaper shouldn't cost you transparency everywhere else.
 
 ## Building
 

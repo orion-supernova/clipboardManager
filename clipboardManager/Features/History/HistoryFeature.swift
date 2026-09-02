@@ -48,6 +48,10 @@ struct HistoryFeature {
         @Shared(.sensitiveMaxAgeMinutes) var sensitiveMaxAgeMinutes
         @Shared(.keyboardNavigation) var keyboardNavigation
         @Shared(.autoPaste) var autoPaste
+        @Shared(.panelSurface) var panelSurface
+        @Shared(.panelMotion) var panelMotion
+        @Shared(.selectionStyle) var selectionStyle
+        @Shared(.spokenAnnouncements) var spokenAnnouncements
         @Shared(.ignoreConcealed) var ignoreConcealed
         @Shared(.recordSensitive) var recordSensitive
         @Shared(.recognizeImageText) var recognizeImageText

@@ -12,6 +12,7 @@ struct WorkspaceClient: Sendable {
     var revealInFinder: @Sendable (URL) async -> Void
     var open: @Sendable (URL) async -> Void
     var openAccessibilitySettings: @Sendable () async -> Void
+    var openAccessibilityDisplaySettings: @Sendable () async -> Void
     var haptic: @Sendable (NSHapticFeedbackManager.FeedbackPattern) async -> Void
     var confirm: @Sendable (_ title: String, _ message: String, _ confirmTitle: String) async -> Bool
     var terminate: @Sendable () async -> Void
@@ -28,6 +29,14 @@ extension WorkspaceClient: DependencyKey {
         openAccessibilitySettings: {
             await MainActor.run {
                 let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+                _ = NSWorkspace.shared.open(url)
+            }
+        },
+        openAccessibilityDisplaySettings: {
+            await MainActor.run {
+                // The Accessibility pane itself, where Reduce Transparency,
+                // Reduce Motion and Differentiate Without Color live.
+                let url = URL(string: "x-apple.systempreferences:com.apple.preference.universalaccess")!
                 _ = NSWorkspace.shared.open(url)
             }
         },
@@ -53,7 +62,7 @@ extension WorkspaceClient: DependencyKey {
     )
 
     static let previewValue = WorkspaceClient(
-        revealInFinder: { _ in }, open: { _ in }, openAccessibilitySettings: {},
+        revealInFinder: { _ in }, open: { _ in }, openAccessibilitySettings: {}, openAccessibilityDisplaySettings: {},
         haptic: { _ in }, confirm: { _, _, _ in true }, terminate: {}
     )
 }
