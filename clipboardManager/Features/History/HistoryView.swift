@@ -12,7 +12,9 @@ import SwiftUI
 
 struct HistoryView: View {
     @Bindable var store: StoreOf<HistoryFeature>
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var systemDifferentiateWithoutColor
     @Environment(\.marketingRender) private var marketingRender
     @Environment(\.marketingSheetProgress) private var marketingSheetProgress
     @Namespace private var glassNamespace
@@ -38,6 +40,17 @@ struct HistoryView: View {
             return row
         }
     }
+
+    /// System settings with the user's per-panel overrides applied.
+    private var appearance: ResolvedAppearance {
+        ResolvedAppearance(
+            solidSurface: store.panelSurface.resolved(system: systemReduceTransparency),
+            reduceMotion: store.panelMotion.resolved(system: systemReduceMotion),
+            borderSelection: store.selectionStyle.resolved(system: systemDifferentiateWithoutColor)
+        )
+    }
+
+    private var reduceMotion: Bool { appearance.reduceMotion }
 
     private var presentAnimation: Animation {
         reduceMotion ? .easeOut(duration: 0.18) : .spring(duration: 0.36, bounce: 0.14)
@@ -67,6 +80,7 @@ struct HistoryView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .environment(\.resolvedAppearance, appearance)
         .animation(presentAnimation, value: store.isPresented)
         .onChange(of: store.isSearchFocused) { _, focused in
             if focused {
@@ -148,8 +162,9 @@ struct HistoryView: View {
         }
     }
 
-    /// VoiceOver only. Silent for everyone else.
+    /// VoiceOver only, and only when the user leaves announcements on.
     private func announce(_ message: String) {
+        guard store.spokenAnnouncements else { return }
         var announcement = AttributedString(message)
         announcement.accessibilitySpeechAnnouncementPriority = .high
         AccessibilityNotification.Announcement(announcement).post()

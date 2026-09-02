@@ -28,6 +28,89 @@ enum DragMode: String, CaseIterable, Sendable, Equatable {
     }
 }
 
+/// Appearance choices that mirror a System Settings › Accessibility switch.
+///
+/// The system value is the default and the right answer for most people, but it
+/// is all-or-nothing: someone can want a readable panel over a busy wallpaper
+/// without flattening every other app on the Mac. So each of these can follow
+/// the system or be pinned either way, for this panel only.
+protocol SystemAccessibilityOverride: RawRepresentable, CaseIterable, Sendable where RawValue == String {
+    /// Resolves the stored choice against the matching system setting.
+    func resolved(system: Bool) -> Bool
+    var title: String { get }
+}
+
+enum PanelSurface: String, SystemAccessibilityOverride {
+    case automatic, solid, glass
+
+    var title: String {
+        switch self {
+        case .automatic: "Follow System"
+        case .solid: "Always solid"
+        case .glass: "Always glass"
+        }
+    }
+
+    /// `true` when the panel should draw an opaque surface.
+    func resolved(system reduceTransparency: Bool) -> Bool {
+        switch self {
+        case .automatic: reduceTransparency
+        case .solid: true
+        case .glass: false
+        }
+    }
+}
+
+enum PanelMotion: String, SystemAccessibilityOverride {
+    case automatic, reduced, full
+
+    var title: String {
+        switch self {
+        case .automatic: "Follow System"
+        case .reduced: "Always reduced"
+        case .full: "Always full"
+        }
+    }
+
+    /// `true` when transitions should cross-fade instead of slide and spring.
+    func resolved(system reduceMotion: Bool) -> Bool {
+        switch self {
+        case .automatic: reduceMotion
+        case .reduced: true
+        case .full: false
+        }
+    }
+}
+
+enum SelectionStyle: String, SystemAccessibilityOverride {
+    case automatic, border, tint
+
+    var title: String {
+        switch self {
+        case .automatic: "Follow System"
+        case .border: "Border"
+        case .tint: "Tint only"
+        }
+    }
+
+    /// `true` when the selected card needs a border rather than colour alone.
+    func resolved(system differentiateWithoutColor: Bool) -> Bool {
+        switch self {
+        case .automatic: differentiateWithoutColor
+        case .border: true
+        case .tint: false
+        }
+    }
+}
+
+/// The three resolved values, handed down the panel's view tree so no view has
+/// to know which of them came from the system and which the user pinned.
+struct ResolvedAppearance: Equatable, Sendable {
+    var solidSurface = false
+    var reduceMotion = false
+    var borderSelection = false
+}
+
 enum RetentionOption: Int, CaseIterable, Sendable {
     case twenty = 20
     case fifty = 50
@@ -133,6 +216,12 @@ extension SharedReaderKey where Self == AppStorageKey<Bool>.Default {
     static var fetchLinkTitles: Self {
         Self[.appStorage("fetchLinkTitles"), default: true]
     }
+
+    /// Speak panel state changes through VoiceOver. Silent when VoiceOver is off,
+    /// but some people run a screen reader and still want the panel to shut up.
+    static var spokenAnnouncements: Self {
+        Self[.appStorage("spokenAnnouncements"), default: true]
+    }
 }
 
 extension SharedReaderKey where Self == AppStorageKey<String?>.Default {
@@ -145,6 +234,24 @@ extension SharedReaderKey where Self == AppStorageKey<String?>.Default {
 extension SharedReaderKey where Self == AppStorageKey<DragMode>.Default {
     static var dragMode: Self {
         Self[.appStorage("dragMode"), default: .copy]
+    }
+}
+
+extension SharedReaderKey where Self == AppStorageKey<PanelSurface>.Default {
+    static var panelSurface: Self {
+        Self[.appStorage("panelSurface"), default: .automatic]
+    }
+}
+
+extension SharedReaderKey where Self == AppStorageKey<PanelMotion>.Default {
+    static var panelMotion: Self {
+        Self[.appStorage("panelMotion"), default: .automatic]
+    }
+}
+
+extension SharedReaderKey where Self == AppStorageKey<SelectionStyle>.Default {
+    static var selectionStyle: Self {
+        Self[.appStorage("selectionStyle"), default: .automatic]
     }
 }
 

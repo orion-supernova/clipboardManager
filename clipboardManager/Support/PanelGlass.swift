@@ -10,6 +10,9 @@
 import SwiftUI
 
 extension EnvironmentValues {
+    /// System accessibility settings after the user's per-panel overrides have
+    /// been applied. Set once at the panel root; read wherever it matters.
+    @Entry var resolvedAppearance = ResolvedAppearance()
     /// True while rendering marketing artwork with `ImageRenderer`.
     @Entry var marketingRender = false
     /// Pre-decoded images keyed by file path / "app:<bundle id>", used by offline renders.
@@ -29,10 +32,10 @@ private struct PanelGlassModifier<S: Shape>: ViewModifier {
     /// Liquid Glass is precisely what "Reduce Transparency" exists to switch
     /// off: a translucent panel over an arbitrary desktop is unreadable for a
     /// lot of people. Honour it with a solid surface rather than a thinner blur.
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.resolvedAppearance) private var appearance
 
     func body(content: Content) -> some View {
-        if reduceTransparency {
+        if appearance.solidSurface {
             content
                 .background {
                     ZStack {
