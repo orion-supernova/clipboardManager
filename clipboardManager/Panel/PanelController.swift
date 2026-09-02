@@ -164,6 +164,8 @@ final class PanelController: NSObject, NSWindowDelegate {
             emit(.key(.last)); return true
         case KeyboardLayout.tab:
             emit(.key(.toggleFocus)); return true
+        case KeyboardLayout.ansiComma where command:
+            emit(.key(.openSettings)); return true
         case KeyboardLayout.leftBracket where command:
             emit(.key(.previousScope)); return true
         case KeyboardLayout.rightBracket where command:

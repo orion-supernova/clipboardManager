@@ -44,7 +44,7 @@ private struct MenuBarMenu: View {
         Divider()
         Toggle("Pause Capturing", isOn: Binding(store.history.$capturePaused))
         Button("Settings…") { store.send(.menuOpenSettings) }
-            .keyboardShortcut(",")
+            .keyboardShortcut(KeyEquivalent(KeyboardLayout.settingsKeyCharacter))
         Button("Clear History…") { store.send(.menuClearHistory) }
         Divider()
         Button("Quit Mahmut") { store.send(.menuQuit) }

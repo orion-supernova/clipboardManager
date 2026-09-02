@@ -99,6 +99,10 @@ extension SharedReaderKey where Self == AppStorageKey<Bool>.Default {
         Self[.appStorage("enableKeyboardNavigationUserDefaultsKey"), default: true]
     }
 
+    /// Simulate ⌘V in the frontmost app after choosing an item.
+    static var autoPaste: Self {
+        Self[.appStorage("autoPasteEnabled"), default: true]
+    }
 
     /// Skip pasteboard contents flagged as concealed (password managers) or transient.
     static var ignoreConcealed: Self {

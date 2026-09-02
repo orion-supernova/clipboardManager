@@ -158,14 +158,67 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         Section("Pasting") {
-            LabeledContent("Choosing an item") {
-                Text("Puts it on the clipboard — press ⌘V to paste")
-                    .foregroundStyle(.secondary)
+            Toggle("Paste into the active app automatically", isOn: Binding(store.$autoPaste))
+            Text("When off, choosing an item only copies it to the clipboard.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            LabeledContent("Accessibility access") {
+                HStack(spacing: 8) {
+                    accessibilityBadge
+                    if !store.isAccessibilityTrusted {
+                        Button("Grant…") { store.send(.requestAccessibility) }
+                            .buttonStyle(.glassProminent)
+                            .controlSize(.small)
+                        Button("System Settings") { store.send(.openAccessibilitySettings) }
+                            .buttonStyle(.glass)
+                            .controlSize(.small)
+                    }
+                }
             }
-            Text("Mahmut asks for no Accessibility access. Synthesising ⌘V for you would need it, and those APIs exist for assistive features, not for driving other apps. The panel never takes focus, so ⌘V lands where your cursor already was.")
+            Text("Automatic paste sends ⌘V to the app you were using, which macOS only allows with Accessibility access. If it still doesn't paste after granting, remove Mahmut from the list and add it again.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("Mahmut asks for nothing else with this access. It never reads other apps' windows, text or screen contents — it posts one key event, to the app you were already typing in, at the moment you choose an item. Turn the toggle off and the permission is never used.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+        Section("Accessibility") {
+            LabeledContent("VoiceOver") {
+                Text("Every card reads as one sentence, with rotor actions for paste, copy, pin, folders and delete")
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Reduce Transparency") {
+                Text("Replaces Liquid Glass with a solid surface")
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Reduce Motion") {
+                Text("Cross-fades instead of sliding and springing")
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Differentiate Without Color") {
+                Text("Draws the selected card with a border, not just a tint")
+                    .foregroundStyle(.secondary)
+            }
+            Text("All four follow the settings in System Settings › Accessibility. Mahmut has no switches of its own to get out of step with them.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var accessibilityBadge: some View {
+        let trusted = store.isAccessibilityTrusted
+        return HStack(spacing: 5) {
+            Circle()
+                .fill(trusted ? Color.green : Color.orange)
+                .frame(width: 7, height: 7)
+            Text(trusted ? "Granted" : "Not granted")
+                .font(.caption.weight(.medium))
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background((trusted ? Color.green : Color.orange).opacity(0.14), in: .capsule)
+        .contentTransition(.interpolate)
+        .animation(.smooth, value: trusted)
     }
 
     // MARK: - Shortcuts
@@ -197,11 +250,11 @@ struct SettingsView: View {
             shortcutRow("Close", "esc")
         }
         Section("Act on the selected item") {
-            shortcutRow("Copy and close", "↩")
-            shortcutRow("Copy as plain text", "⇧ ↩")
-            shortcutRow("Copy as… (case, trim, JSON)", "⌘ T")
-            shortcutRow("Copy item 1–9", "⌘ 1 … ⌘ 9")
-            shortcutRow("Copy, keep panel open", "⌘ C")
+            shortcutRow("Paste", "↩")
+            shortcutRow("Paste as plain text", "⇧ ↩")
+            shortcutRow("Paste as… (case, trim, JSON)", "⌘ T")
+            shortcutRow("Paste item 1–9", "⌘ 1 … ⌘ 9")
+            shortcutRow("Copy without pasting", "⌘ C")
             shortcutRow("Copy plain text · image text · color format · file path", "⌘ ⇧ C")
             shortcutRow("Quick Look", "space")
             shortcutRow("Reveal a masked value in Quick Look", "⌘ E")
@@ -218,7 +271,7 @@ struct SettingsView: View {
             shortcutRow("Delete current folder", "⌘ ⌫")
             shortcutRow("Pause / resume capturing", "⌘ ⇧ P")
             shortcutRow("Open the App Store update", "⌘ U")
-            shortcutRow("Settings", "⌘ ,")
+            shortcutRow("Settings", "⌘ \(String(KeyboardLayout.settingsKeyCharacter).uppercased())")
             shortcutRow("In choosers: pick option 1–9 / first option / secondary", "1 … 9  /  ↩  /  ⇧ ↩")
         }
     }

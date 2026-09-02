@@ -47,6 +47,7 @@ struct HistoryFeature {
         @Shared(.maxAgeHours) var maxAgeHours
         @Shared(.sensitiveMaxAgeMinutes) var sensitiveMaxAgeMinutes
         @Shared(.keyboardNavigation) var keyboardNavigation
+        @Shared(.autoPaste) var autoPaste
         @Shared(.ignoreConcealed) var ignoreConcealed
         @Shared(.recordSensitive) var recordSensitive
         @Shared(.recognizeImageText) var recognizeImageText
@@ -357,12 +358,17 @@ struct HistoryFeature {
                 state.previewPayload = nil
                 state.previewRevealed = false
                 state.dialog = nil
+                let simulate = reason == .pasted && state.autoPaste
                 return .merge(
                     .cancel(id: CancelID.previewResize),
                     .run { send in
                         try await clock.sleep(for: .milliseconds(200))
                         await panel.hide()
                         await send(.dismissalDidFinish)
+                        if simulate {
+                            try await clock.sleep(for: .milliseconds(60))
+                            _ = await paste.simulatePaste()
+                        }
                     }
                     .cancellable(id: CancelID.dismissal, cancelInFlight: true)
                 )

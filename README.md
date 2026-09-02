@@ -25,7 +25,7 @@ Press ⌘⇧V and a glass panel slides up from the bottom of the screen with eve
 
 Every clipboard manager keeps a list. The annoying part was never the list — it's that you have to go *look* at it. Open a window, find the thing, copy it, come back, paste it, and by then you've forgotten what you were writing.
 
-Mahmut doesn't take focus. The panel is a non-activating window, so the app you were working in never stops being frontmost. You press ⌘⇧V mid-sentence, arrow to the snippet, hit Return, and it's on your clipboard — ⌘V puts it exactly where your cursor already was.
+Mahmut doesn't take focus. The panel is a non-activating window, so the app you were working in never stops being frontmost. You press ⌘⇧V mid-sentence, arrow to the snippet, hit Return, and the text appears where your cursor already was.
 
 It also reads what you copied. Paste a Swift function and it comes back syntax-coloured with a `Swift` badge. Paste a URL and it grows a page title, hero image and favicon. Copy a screenshot and it's run through on-device text recognition, so a week later you can find it by typing a word that was *inside the picture*. Copy `#5E5CE6` and you get a swatch you can paste back as hex, `rgb()`, `hsl()`, SwiftUI `Color`, `NSColor` or `UIColor`.
 
@@ -45,11 +45,11 @@ It also reads what you copied. Paste a Swift function and it comes back syntax-c
 
 **Drag a card straight out of the panel.** Into Finder, into Mail, into a Slack message. Files are dragged by reference and you choose in Settings whether the drop copies or moves the original. Images arrive as a file promise named `Clipboard Image 2026-09-01 at 20.41.03.png`, and chat apps that want pixels get pixels instead.
 
-**Take it in a shape you didn't copy it in.** ⌘T offers the same text as plain, lowercase, UPPERCASE, Capitalized Words, trimmed, collapsed to a single line, or JSON pretty-printed or minified — eight options, each one a number key away. The transform applies to what lands on the clipboard; the stored item is left exactly as you copied it.
+**Paste it in a shape you didn't copy it in.** ⌘T offers the same text as plain, lowercase, UPPERCASE, Capitalized Words, trimmed, collapsed to a single line, or JSON pretty-printed or minified — eight options, each one a number key away. The transform applies to the copy that lands in your document; the stored item is left exactly as you copied it.
 
 <img src="docs/media/paste-as.jpg" alt="The Paste As sheet over the panel, listing eight transforms each numbered 1 to 8" width="100%">
 
-**It's built for people who don't reach for the mouse.** Type anything and it searches — including the words Vision found inside your screenshots. ⌘1–⌘9 grab the first nine cards outright. ⌥1–6 filter to text, links, images, files or colours. ⌘[ and ⌘] move between folders, ⌘S saves a keeper into one, ⌘P pins it so retention can never touch it. Every one of those is printed along the top of the panel, so there's nothing to memorise.
+**It's built for people who don't reach for the mouse.** Type anything and it searches — including the words Vision found inside your screenshots. ⌘1–⌘9 paste the first nine cards outright. ⌥1–6 filter to text, links, images, files or colours. ⌘[ and ⌘] move between folders, ⌘S saves a keeper into one, ⌘P pins it so retention can never touch it. Every one of those is printed along the top of the panel, so there's nothing to memorise.
 
 <img src="docs/media/search.gif" alt="Typing glass into the search field; the strip narrows from seven cards to the two that match, with the query highlighted in each" width="100%">
 
@@ -90,12 +90,10 @@ Password managers flag their clipboard writes as concealed or transient, and Mah
 </details>
 
 <details>
-<summary><b>Does it want Accessibility access?</b></summary>
+<summary><b>Do I have to give it Accessibility access?</b></summary>
 <br>
 
-No — it asks for no permissions at all beyond the sandbox it ships in. Choosing an item puts it on the clipboard and you press ⌘V.
-
-Earlier builds synthesised that ⌘V for you, which on macOS requires Accessibility access. App Review rejects that under guideline 2.4.5: those APIs exist so assistive software can drive other apps on behalf of someone who needs it, not so a utility can save everyone a keystroke. That's a fair reading, so the feature is gone rather than argued about. The panel never takes focus, so ⌘V still lands where your cursor already was.
+Only if you want the paste to happen by itself. Choosing an item always puts it on the clipboard; the extra step of simulating ⌘V in the app you were using is something macOS only permits with Accessibility access. Without it, everything works — you just press ⌘V yourself.
 
 </details>
 
@@ -103,9 +101,7 @@ Earlier builds synthesised that ⌘V for you, which on macOS requires Accessibil
 <summary><b>Will my history grow forever?</b></summary>
 <br>
 
-Not unless you ask it to. Out of the box it keeps the last 50 items and drops anything older than two days. You can go up to 500 or unlimited, and stretch the age limit to 30 days or never.
-
-Pinned items and anything saved into a folder are exempt from every rule — count, age, and the sensitive-content timer alike. `prune` fetches with `isPinned == NO AND folderID == nil`, so an exempt item is never even a candidate for deletion.
+Not unless you ask it to. Out of the box it keeps the last 50 items and drops anything older than two days. You can go up to 500 or unlimited, and stretch the age limit to 30 days or never. Pinned items and anything saved into a folder are exempt from both rules — that's the point of pinning.
 
 </details>
 
@@ -139,11 +135,13 @@ Swift 6, SwiftUI with Liquid Glass on macOS 26, and [The Composable Architecture
 
 The three decisions that were actually interesting:
 
-- **The panel is an `NSPanel` that can become key without activating the app.** `.nonactivatingPanel` plus `canBecomeKey` true and `canBecomeMain` false — so search and arrow keys work while the app you were in stays frontmost and keeps its insertion point. That is the whole reason ⌘V works the moment the panel closes, with no permissions and nothing to re-focus.
+- **The panel is an `NSPanel` that can become key without activating the app.** `.nonactivatingPanel` plus `canBecomeKey` true and `canBecomeMain` false — so search and arrow keys work while the app you were in stays frontmost and receives the simulated ⌘V directly. Getting this wrong is why some clipboard managers paste into themselves.
 - **The list never loads a blob.** Fetches use `NSDictionaryResultType` with an explicit `propertiesToFetch`, so scrolling reads columns, not content. Images are normalised to PNG once and written beside a 640 px thumbnail that is the only thing the strip ever decodes. Caches are bounded on purpose — 64 MB and 500 images, 600 attributed strings — instead of growing until something else on the Mac suffers.
 - **Drag needed AppKit.** SwiftUI's `onDrag` can't restrict the operation mask, and "copy or move, your choice" is exactly an operation mask. So each card has an `NSView` overlay owning hover, click, context menu and the drag session — and because that overlay never changes geometry, tracking areas stay stable while the strip animates.
 
 Files are held as security-scoped bookmarks, so a file you copied last week still drags out correctly after a reboot, without Mahmut ever having copied the file itself.
+
+It also tries to be usable if you aren't reading the screen. Each card is one VoiceOver element with a written description rather than a heap of fragments — a masked card says "Masked Visa card, ending 4 2 4 2" instead of reading out bullets, and an image speaks the text Vision found inside it. Every panel shortcut has a matching rotor action, so nothing depends on being able to hit ⌘⇧R. Reduce Transparency swaps the glass for a solid surface, Reduce Motion drops the springs, and Differentiate Without Color gives the selected card a border instead of a tint.
 
 ## Building
 
