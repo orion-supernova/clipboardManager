@@ -22,7 +22,7 @@ Press ⌘⇧V and a glass panel slides up from the bottom of the screen with eve
 
 ## What it does
 
-Every clipboard manager keeps a list. The annoying part was never the list — it's that you have to go *look* at it. Open a window, find the thing, copy it, come back, paste it, and by then you've forgotten what you were writing.
+Every clipboard manager keeps a list. The annoying part was never the list. It's that you have to go *look* at it. Open a window, find the thing, copy it, come back, paste it, and by then you've forgotten what you were writing.
 
 Mahmut doesn't take focus. The panel is a non-activating window, so the app you were working in never stops being frontmost. You press ⌘⇧V mid-sentence, arrow to the snippet, hit Return, and the text appears where your cursor already was.
 
@@ -32,11 +32,11 @@ It also reads what you copied. Paste a Swift function and it comes back syntax-c
 
 ## Why it's good
 
-**Your card number never sits in a list in plaintext.** Payment cards are Luhn-checked, IBANs are validated mod-97, and ten token shapes — OpenAI, AWS, GitHub, Slack, Google, Stripe, JWTs, bearer tokens — are matched on sight, with PEM private keys and bare `password:` lines caught alongside them. What gets stored is the masked string; the real value is revealed only when you ask for it with ⌘E, and it's forgotten on its own timer, an hour after you copied it by default. Anything a password manager marks concealed or transient is never recorded at all.
+**Your card number never sits in a list in plaintext.** Payment cards are Luhn-checked, IBANs are validated mod-97, and ten token shapes (OpenAI, AWS, GitHub, Slack, Google, Stripe, JWTs, bearer tokens) are matched on sight, with PEM private keys and bare `password:` lines caught alongside them. What gets stored is the masked string; the real value is revealed only when you ask for it with ⌘E, and it's forgotten on its own timer, an hour after you copied it by default. Anything a password manager marks concealed or transient is never recorded at all.
 
 <img src="docs/media/masked.jpg" alt="Quick Look on a copied Visa number: a padlock, the masked digits, and a note saying paste still inserts the real value" width="100%">
 
-**Pasting from Mahmut doesn't create a duplicate of itself.** Every paste writes a private pasteboard type carrying that item's UUID. When the monitor sees its own marker come back it bumps the existing row's timestamp instead of filing a copy — which is the difference between a history and a hall of mirrors.
+**Pasting from Mahmut doesn't create a duplicate of itself.** Every paste writes a private pasteboard type carrying that item's UUID. When the monitor sees its own marker come back it bumps the existing row's timestamp instead of filing a copy, which is the difference between a history and a hall of mirrors.
 
 **Space, and the thing gets bigger.** Quick Look renders full text with colouring, images at size with the text Vision found in them, link cards, every format of a colour, and a real `QLPreviewView` for PDFs and documents. The panel grows upward from its anchored bottom edge; nothing else on screen moves.
 
@@ -44,11 +44,11 @@ It also reads what you copied. Paste a Swift function and it comes back syntax-c
 
 **Drag a card straight out of the panel.** Into Finder, into Mail, into a Slack message. Files are dragged by reference and you choose in Settings whether the drop copies or moves the original. Images arrive as a file promise named `Clipboard Image 2026-09-01 at 20.41.03.png`, and chat apps that want pixels get pixels instead.
 
-**Paste it in a shape you didn't copy it in.** ⌘T offers the same text as plain, lowercase, UPPERCASE, Capitalized Words, trimmed, collapsed to a single line, or JSON pretty-printed or minified — eight options, each one a number key away. The transform applies to the copy that lands in your document; the stored item is left exactly as you copied it.
+**Paste it in a shape you didn't copy it in.** ⌘T offers the same text as plain, lowercase, UPPERCASE, Capitalized Words, trimmed, collapsed to a single line, or JSON pretty-printed or minified: eight options, each one a number key away. The transform applies to the copy that lands in your document; the stored item is left exactly as you copied it.
 
 <img src="docs/media/paste-as.jpg" alt="The Paste As sheet over the panel, listing eight transforms each numbered 1 to 8" width="100%">
 
-**It's built for people who don't reach for the mouse.** Type anything and it searches — including the words Vision found inside your screenshots. ⌘1–⌘9 paste the first nine cards outright. ⌥1–6 filter to text, links, images, files or colours. ⌘[ and ⌘] move between folders, ⌘S saves a keeper into one, ⌘P pins it so retention can never touch it. Every one of those is printed along the top of the panel, so there's nothing to memorise.
+**It's built for people who don't reach for the mouse.** Type anything and it searches, including the words Vision found inside your screenshots. ⌘1 to ⌘9 paste the first nine cards outright. ⌥1 to ⌥6 filter to text, links, images, files or colours. ⌘[ and ⌘] move between folders, ⌘S saves a keeper into one, ⌘P pins it so retention can never touch it. Every one of those is printed along the top of the panel, so there's nothing to memorise.
 
 <img src="docs/media/search.gif" alt="Typing glass into the search field; the strip narrows from seven cards to the two that match, with the query highlighted in each" width="100%">
 
@@ -76,7 +76,7 @@ No. History lives in a Core Data store inside the app's sandbox container and is
 <summary><b>What happens when I copy a password?</b></summary>
 <br>
 
-Password managers flag their clipboard writes as concealed or transient, and Mahmut skips those entirely by default. For everything else — a card number pasted from a bank page, an API key out of a `.env`, a `password:` line in a config file — the sensitive detector catches it, stores it masked, and deletes it an hour later. You can shorten that to ten minutes, extend it to a day, or tell Mahmut not to record sensitive content at all.
+Password managers flag their clipboard writes as concealed or transient, and Mahmut skips those entirely by default. For everything else, like a card number pasted from a bank page, an API key out of a `.env` or a `password:` line in a config file, the sensitive detector catches it, stores it masked, and deletes it an hour later. You can shorten that to ten minutes, extend it to a day, or tell Mahmut not to record sensitive content at all.
 
 </details>
 
@@ -84,7 +84,7 @@ Password managers flag their clipboard writes as concealed or transient, and Mah
 <summary><b>Do I have to give it Accessibility access?</b></summary>
 <br>
 
-Only if you want the paste to happen by itself. Choosing an item always puts it on the clipboard; the extra step of simulating ⌘V in the app you were using is something macOS only permits with Accessibility access. Without it, everything works — you just press ⌘V yourself.
+Only if you want the paste to happen by itself. Choosing an item always puts it on the clipboard; the extra step of simulating ⌘V in the app you were using is something macOS only permits with Accessibility access. Without it, everything works; you just press ⌘V yourself.
 
 </details>
 
@@ -92,7 +92,7 @@ Only if you want the paste to happen by itself. Choosing an item always puts it 
 <summary><b>Will my history grow forever?</b></summary>
 <br>
 
-Not unless you ask it to. Out of the box it keeps the last 50 items and drops anything older than two days. You can go up to 500 or unlimited, and stretch the age limit to 30 days or never. Pinned items and anything saved into a folder are exempt from both rules — that's the point of pinning.
+Not unless you ask it to. Out of the box it keeps the last 50 items and drops anything older than two days. You can go up to 500 or unlimited, and stretch the age limit to 30 days or never. Pinned items and anything saved into a folder are exempt from both rules. That's the point of pinning.
 
 </details>
 
@@ -100,7 +100,7 @@ Not unless you ask it to. Out of the box it keeps the last 50 items and drops an
 <summary><b>Is a clipboard manager going to sit there eating my battery?</b></summary>
 <br>
 
-macOS has no notification for "the clipboard changed", so every clipboard manager polls. Mahmut reads one integer — `NSPasteboard.changeCount` — every 350 ms, and only touches the actual contents when that integer moves.
+macOS has no notification for "the clipboard changed", so every clipboard manager polls. Mahmut reads one integer, `NSPasteboard.changeCount`, every 350 ms, and only touches the actual contents when that integer moves.
 
 </details>
 
@@ -122,17 +122,17 @@ It's been called that since 2023 and it's too late now.
 
 ## Under the hood
 
-Swift 6, SwiftUI with Liquid Glass on macOS 26, and [The Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture) — every side effect the app has (the pasteboard, the hotkey, the panel, Vision, the store) is a dependency the reducer talks to through a protocol witness.
+Swift 6, SwiftUI with Liquid Glass on macOS 26, and [The Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture). Every side effect the app has (the pasteboard, the hotkey, the panel, Vision, the store) is a dependency the reducer talks to through a protocol witness.
 
 The three decisions that were actually interesting:
 
-- **The panel is an `NSPanel` that can become key without activating the app.** `.nonactivatingPanel` plus `canBecomeKey` true and `canBecomeMain` false — so search and arrow keys work while the app you were in stays frontmost and receives the simulated ⌘V directly. Getting this wrong is why some clipboard managers paste into themselves.
-- **The list never loads a blob.** Fetches use `NSDictionaryResultType` with an explicit `propertiesToFetch`, so scrolling reads columns, not content. Images are normalised to PNG once and written beside a 640 px thumbnail that is the only thing the strip ever decodes. Caches are bounded on purpose — 64 MB and 500 images, 600 attributed strings — instead of growing until something else on the Mac suffers.
-- **Drag needed AppKit.** SwiftUI's `onDrag` can't restrict the operation mask, and "copy or move, your choice" is exactly an operation mask. So each card has an `NSView` overlay owning hover, click, context menu and the drag session — and because that overlay never changes geometry, tracking areas stay stable while the strip animates.
+- **The panel is an `NSPanel` that can become key without activating the app.** `.nonactivatingPanel` plus `canBecomeKey` true and `canBecomeMain` false, so search and arrow keys work while the app you were in stays frontmost and receives the simulated ⌘V directly. Getting this wrong is why some clipboard managers paste into themselves.
+- **The list never loads a blob.** Fetches use `NSDictionaryResultType` with an explicit `propertiesToFetch`, so scrolling reads columns, not content. Images are normalised to PNG once and written beside a 640 px thumbnail that is the only thing the strip ever decodes. Caches are bounded on purpose (64 MB and 500 images, 600 attributed strings) instead of growing until something else on the Mac suffers.
+- **Drag needed AppKit.** SwiftUI's `onDrag` can't restrict the operation mask, and "copy or move, your choice" is exactly an operation mask. So each card has an `NSView` overlay owning hover, click, context menu and the drag session, and because that overlay never changes geometry, tracking areas stay stable while the strip animates.
 
 Files are held as security-scoped bookmarks, so a file you copied last week still drags out correctly after a reboot, without Mahmut ever having copied the file itself.
 
-It also tries to be usable if you aren't reading the screen. Each card is one VoiceOver element with a written description rather than a heap of fragments — a masked card says "Masked Visa card, ending 4 2 4 2" instead of reading out bullets, and an image speaks the text Vision found inside it. Every panel shortcut has a matching rotor action, so nothing depends on being able to hit ⌘⇧R. Reduce Transparency swaps the glass for a solid surface, Reduce Motion drops the springs, and Differentiate Without Color gives the selected card a border instead of a tint. Each follows the system setting by default, and can be pinned either way for this panel alone — a solid panel over a busy wallpaper shouldn't cost you transparency everywhere else.
+It also tries to be usable if you aren't reading the screen. Each card is one VoiceOver element with a written description rather than a heap of fragments: a masked card says "Masked Visa card, ending 4 2 4 2" instead of reading out bullets, and an image speaks the text Vision found inside it. Every panel shortcut has a matching rotor action, so nothing depends on being able to hit ⌘⇧R. Reduce Transparency swaps the glass for a solid surface, Reduce Motion drops the springs, and Differentiate Without Color gives the selected card a border instead of a tint. Each follows the system setting by default, and can be pinned either way for this panel alone. A solid panel over a busy wallpaper shouldn't cost you transparency everywhere else.
 
 ## Building
 
@@ -146,9 +146,9 @@ Two DEBUG-only environment variables are handy while working on it: `MAHMUT_SHOW
 
 ## Say hi
 
-Found a language it highlights wrong, a secret it should have masked and didn't, or an app it refuses to paste into — [open an issue](https://github.com/orion-supernova/clipboardManager/issues) with what you copied and where it came from, or email **info@walhallaa.com**. Every message gets read.
+Found a language it highlights wrong, a secret it should have masked and didn't, or an app it refuses to paste into? [Open an issue](https://github.com/orion-supernova/clipboardManager/issues) with what you copied and where it came from, or email **info@walhallaa.com**. Every message gets read.
 
-© Murat Can Koç. All rights reserved — the source is here to read, not to redistribute. See [LICENSE](LICENSE).
+© Murat Can Koç. All rights reserved. The source is here to read, not to redistribute. See [LICENSE](LICENSE).
 
 <div align="center">
 <br>

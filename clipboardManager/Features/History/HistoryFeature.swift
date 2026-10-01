@@ -63,6 +63,8 @@ struct HistoryFeature {
         var previewRevealed = false
         var dialog: Dialog?
         var dialogText = ""
+        /// Rename starts with the old name selected; the first key typed replaces it.
+        var dialogTextPristine = false
 
         @Shared(.retainCount) var retainCount
         @Shared(.maxAgeHours) var maxAgeHours
@@ -83,6 +85,15 @@ struct HistoryFeature {
         @Shared(.availableUpdate) var availableUpdate
 
         var isSearchExpanded: Bool { isSearchFocused || !searchText.isEmpty }
+
+        mutating func typeIntoDialog(_ text: String) {
+            if dialogTextPristine {
+                dialogText = text
+                dialogTextPristine = false
+            } else {
+                dialogText += text
+            }
+        }
         var isSearching: Bool { !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         var isPreviewOpen: Bool { previewID != nil }
         var selectedIndex: Int? { selectedID.flatMap { items.index(id: $0) } }
@@ -196,6 +207,13 @@ struct HistoryFeature {
         /// ⌘O on text with several links: pick one by number, or ↩ for all.
         case openLinks(UUID)
 
+        var takesText: Bool {
+            switch self {
+            case .newFolder, .renameFolder: true
+            default: false
+            }
+        }
+
         var isChooser: Bool {
             switch self {
             case .chooseFolder, .pasteAs, .copyAs, .openLinks: true
@@ -302,6 +320,10 @@ struct HistoryFeature {
             switch action {
             case .binding(\.searchText):
                 return debouncedReload()
+
+            case .binding(\.dialogText):
+                state.dialogTextPristine = false
+                return .none
 
             case .binding(\.paletteQuery):
                 state.paletteSelection = 0
@@ -727,6 +749,7 @@ struct HistoryFeature {
             case let .newFolderTapped(thenAdd):
                 state.dialog = .newFolder(thenAdd: thenAdd)
                 state.dialogText = ""
+                state.dialogTextPristine = false
                 state.isSearchFocused = false
                 return .none
 
@@ -734,6 +757,7 @@ struct HistoryFeature {
                 guard let folder = state.currentFolder else { return .none }
                 state.dialog = .renameFolder(folder.id)
                 state.dialogText = folder.name
+                state.dialogTextPristine = true
                 state.isSearchFocused = false
                 return .none
 
@@ -1005,6 +1029,11 @@ struct HistoryFeature {
                         if dialog.isChooser, let number = Int(text), number >= 1 {
                             return .send(.dialogOptionChosen(number - 1))
                         }
+                        // Typed before the name field took focus: keep it, don't drop it.
+                        if dialog.takesText { state.typeIntoDialog(text) }
+                        return .none
+                    case .togglePreview:
+                        if dialog.takesText { state.typeIntoDialog(" ") }
                         return .none
                     default:
                         return .none
@@ -1023,6 +1052,15 @@ struct HistoryFeature {
                         guard count > 0 else { return .none }
                         let step = command == .previous || command == .vertical(.lineUp) ? -1 : 1
                         state.paletteSelection = (state.paletteSelection + step + count) % count
+                        return .none
+                    case let .typeToSearch(text):
+                        // Typed before the palette's field took focus: keep it, don't drop it.
+                        state.paletteQuery += text
+                        state.paletteSelection = 0
+                        return .none
+                    case .togglePreview:
+                        state.paletteQuery += " "
+                        state.paletteSelection = 0
                         return .none
                     default:
                         return .none

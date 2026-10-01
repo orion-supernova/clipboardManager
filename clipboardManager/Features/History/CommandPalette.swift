@@ -155,7 +155,7 @@ struct CommandPaletteView: View {
     let selection: Int
     let onRun: @MainActor (PaletteCommand) -> Void
 
-    @FocusState private var fieldFocused: Bool
+    @State private var fieldFocused = true
     private static let rowHeight: CGFloat = 30
     private static let visibleRows = 5
 
@@ -164,9 +164,7 @@ struct CommandPaletteView: View {
             HStack(spacing: 8) {
                 Image(systemName: "command")
                     .foregroundStyle(.tint)
-                TextField("Type a command or folder…", text: $query)
-                    .textFieldStyle(.plain)
-                    .focused($fieldFocused)
+                PanelTextField(placeholder: "Type a command or folder…", text: $query, isFocused: $fieldFocused)
                 keycap("esc")
             }
             .padding(.horizontal, 12)
@@ -203,10 +201,6 @@ struct CommandPaletteView: View {
         .frame(width: 460)
         .panelGlass(prominent: true, in: .rect(cornerRadius: PanelMetrics.cardCornerRadius))
         .shadow(color: .black.opacity(0.22), radius: 24, y: 12)
-        .task {
-            try? await Task.sleep(for: .milliseconds(60))
-            fieldFocused = true
-        }
     }
 
     private func row(_ command: PaletteCommand, isSelected: Bool) -> some View {
