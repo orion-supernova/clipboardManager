@@ -1029,7 +1029,9 @@ struct HistoryFeature {
                 return state.isPresented ? .send(.dismiss(.lostFocus)) : .none
 
             case let .panelEvent(.key(command)):
-                return .send(.keyCommand(command))
+                // A chord, not a hold: drop a pending reveal so ⌘C never flashes it.
+                guard state.modifierHint == .none else { return .send(.keyCommand(command)) }
+                return .merge(.cancel(id: CancelID.modifierHint), .send(.keyCommand(command)))
 
             case let .panelEvent(.modifiers(held)):
                 guard held != .none else {
@@ -1041,9 +1043,10 @@ struct HistoryFeature {
                     state.modifierHint = held
                     return .none
                 }
-                // A beat first, so ⌘C and friends never flash the overlay.
+                // A short beat, cancelled by any shortcut key below, so ⌘C and
+                // friends never flash the overlay but a deliberate hold feels instant.
                 return .run { send in
-                    try await clock.sleep(for: .milliseconds(350))
+                    try await clock.sleep(for: .milliseconds(150))
                     await send(.modifierHintRevealed(held), animation: .easeOut(duration: 0.15))
                 }
                 .cancellable(id: CancelID.modifierHint, cancelInFlight: true)
