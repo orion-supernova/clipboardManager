@@ -64,7 +64,13 @@ private struct PanelGlassModifier<S: Shape>: ViewModifier {
 
     private var liveGlass: Glass {
         var glass: Glass = .regular
-        if let tint { glass = glass.tint(tint) }
+        if let tint {
+            glass = glass.tint(tint)
+        } else if prominent {
+            // A reading surface (the preview sheet) needs a calmer, denser glass than
+            // the cards; `prominent` used to change only the offline stand-in.
+            glass = glass.tint(Color(nsColor: .windowBackgroundColor).opacity(0.35))
+        }
         if interactive { glass = glass.interactive() }
         return glass
     }

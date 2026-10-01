@@ -152,7 +152,8 @@ struct HistoryView: View {
         }
         .padding(.top, PanelMetrics.topInset)
         .padding(.bottom, PanelMetrics.bottomInset)
-        .padding(.horizontal, 6)
+        // One gutter for every row: toolbar, sheet and cards share a left edge.
+        .padding(.horizontal, 16)
         .animation(.easeOut(duration: 0.22), value: store.previewID != nil)
         .animation(quickAnimation, value: store.dialog)
         .animation(quickAnimation, value: store.isPaletteOpen)
@@ -607,7 +608,6 @@ struct HistoryView: View {
                 }
             }
             .scrollTargetLayout()
-            .padding(.horizontal, 10)
             .padding(.vertical, PanelMetrics.stripVerticalPadding)
             .overlayPreferenceValue(CardAnchorKey.self) { anchors in
                 GeometryReader { proxy in

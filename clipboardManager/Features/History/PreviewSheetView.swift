@@ -47,7 +47,6 @@ struct PreviewSheetView: View {
                 .contentTransition(.opacity)
         }
         .panelGlass(prominent: true, in: .rect(cornerRadius: PanelMetrics.cardCornerRadius))
-        .padding(.horizontal, 10)
         .task(id: StatsKey(id: item.id, loaded: payload != nil)) {
             // Counting characters and lines walks the whole text: never in `body`.
             guard item.kind == .text, !item.isSensitive, let text = payload?.text else { stats = nil; return }
@@ -120,8 +119,8 @@ struct PreviewSheetView: View {
                 .disabled(failed)
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .frame(width: 24, height: 24)
+                    .font(.system(size: 11, weight: .bold))
+                    .frame(width: 28, height: 28)
                     .contentShape(.circle)
             }
             .buttonStyle(.plain)
@@ -137,6 +136,8 @@ struct PreviewSheetView: View {
     private var headerTitle: String {
         if item.isSensitive { return item.headerTitle }
         if let primary = item.primarySmartAction { return primary.subjectTitle }
+        // The recognised text is in the body; as a title it read like a caption.
+        if item.kind == .image { return "Image" }
         if item.kind == .text {
             let firstLine = item.preview.split(whereSeparator: \.isNewline).first.map(String.init) ?? item.preview
             return item.codeLanguage.map { "\($0.displayName) snippet" } ?? firstLine
@@ -624,6 +625,16 @@ private struct ImageBody: View {
     let onCopyText: @MainActor (String) -> Void
     @Dependency(\.imageLoader) private var loader
     @Environment(\.staticImages) private var staticImages
+    @Environment(\.marketingRender) private var marketingRender
+
+    /// Recognised text reads like the document it came from: body size, real leading.
+    private func ocrText(_ text: String) -> some View {
+        Text(text)
+            .font(.body)
+            .lineSpacing(4)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
     @State private var image: CGImage?
 
     private var resolved: CGImage? { image ?? imageURL.flatMap { staticImages[$0.path] } }
@@ -648,34 +659,42 @@ private struct ImageBody: View {
             // A stage, so a small image doesn't float alone in a wide glass field.
             .background(.black.opacity(0.12), in: .rect(cornerRadius: 14))
             if let recognizedText, !recognizedText.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Label("Text in image", systemImage: "text.viewfinder")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Spacer()
+                let lines = recognizedText.split(whereSeparator: \.isNewline).count
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "text.viewfinder")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.tint)
+                            .frame(width: 24, height: 24)
+                            .background(.tint.opacity(0.14), in: .rect(cornerRadius: 7))
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Text in image").font(.subheadline.weight(.semibold))
+                            Text(lines == 1 ? "1 line" : "\(lines) lines").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 8)
                         Button {
                             onCopyText(recognizedText)
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "doc.on.doc")
                                 Text("Copy")
-                                Text("⌘⇧C").font(.caption2.monospaced()).opacity(0.6)
+                                KeyCap(key: "⇧⌘C")
                             }
                         }
                         .panelButtonStyle()
-                        .controlSize(.mini)
                     }
-                    ScrollView {
-                        Text(recognizedText)
-                            .font(.callout)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                    Divider().opacity(0.5)
+                    Group {
+                        if marketingRender {
+                            ocrText(recognizedText).frame(maxHeight: .infinity, alignment: .top).clipped()
+                        } else {
+                            ScrollView { ocrText(recognizedText) }.scrollIndicators(.automatic)
+                        }
                     }
                 }
-                .padding(12)
-                .frame(width: 280)
-                .background(.primary.opacity(0.05), in: .rect(cornerRadius: 12))
+                .padding(14)
+                .frame(width: 340)
+                .background(.background.opacity(0.45), in: .rect(cornerRadius: 14))
                 .transition(.opacity)
             }
         }
