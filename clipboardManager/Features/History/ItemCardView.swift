@@ -176,9 +176,14 @@ struct ItemCardView: View {
     // MARK: - Pieces
 
     private var header: some View {
-        HStack(spacing: 8) {
-            // The type, once, as a tinted caption (like a widget's label). The body's
-            // tile or thumbnail is the card's only picture.
+        HStack(spacing: 7) {
+            // The type: a small tinted icon tile and caption, like an app's icon and
+            // name on a notification.
+            Image(systemName: item.headerSymbol)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(headerTint)
+                .frame(width: 20, height: 20)
+                .background(headerTint.opacity(0.16), in: .rect(cornerRadius: 6))
             Text(item.headerTitle.uppercased())
                 .font(.system(size: 10.5, weight: .semibold))
                 .tracking(0.6)
@@ -203,9 +208,16 @@ struct ItemCardView: View {
 
     private var headerTint: Color {
         if item.isSensitive { return .red }
-        if let action = item.primarySmartAction { return action.tint.opacity(0.9) }
-        if item.kind == .url, MapsLink.isMaps(URL(string: item.preview)) { return .red.opacity(0.9) }
-        return .secondary
+        if let action = item.primarySmartAction { return action.tint }
+        if item.kind == .url, MapsLink.isMaps(URL(string: item.preview)) { return .red }
+        if item.codeLanguage != nil { return .purple }
+        switch item.kind {
+        case .url: return .blue
+        case .image: return .teal
+        case .color: return .pink
+        case .file, .video: return .orange
+        case .text: return .secondary
+        }
     }
 
     private var footer: some View {

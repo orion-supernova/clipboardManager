@@ -379,29 +379,51 @@ enum Calculator {
     }
 }
 
-/// The country an international number dials, from its calling code. Only for
-/// a subtitle: unknown codes and local numbers just get none.
+/// The country an international number dials. Calling codes are an ITU standard
+/// that almost never changes; the table maps them to ISO region codes, and macOS
+/// supplies the country *name*, localised and kept current by the system.
 enum PhoneRegion {
-    private static let codes: [(String, String)] = [
-        ("+90", "Türkiye"), ("+44", "United Kingdom"), ("+49", "Germany"), ("+33", "France"),
-        ("+31", "Netherlands"), ("+34", "Spain"), ("+39", "Italy"), ("+41", "Switzerland"),
-        ("+43", "Austria"), ("+45", "Denmark"), ("+46", "Sweden"), ("+47", "Norway"),
-        ("+353", "Ireland"), ("+351", "Portugal"), ("+48", "Poland"), ("+30", "Greece"),
-        ("+971", "United Arab Emirates"), ("+966", "Saudi Arabia"), ("+974", "Qatar"),
-        ("+91", "India"), ("+86", "China"), ("+81", "Japan"), ("+82", "South Korea"),
-        ("+61", "Australia"), ("+64", "New Zealand"), ("+55", "Brazil"), ("+52", "Mexico"),
-        ("+7", "Russia · Kazakhstan"), ("+1", "US · Canada"),
+    /// Shared codes have no single country: +1 is the North American plan, +7 two.
+    private static let shared: [String: String] = ["1": "US · Canada", "7": "Russia · Kazakhstan"]
+
+    private static let regions: [String: String] = [
+        "20": "EG", "27": "ZA", "30": "GR", "31": "NL", "32": "BE", "33": "FR", "34": "ES", "36": "HU",
+        "39": "IT", "40": "RO", "41": "CH", "43": "AT", "44": "GB", "45": "DK", "46": "SE", "47": "NO",
+        "48": "PL", "49": "DE", "51": "PE", "52": "MX", "53": "CU", "54": "AR", "55": "BR", "56": "CL",
+        "57": "CO", "58": "VE", "60": "MY", "61": "AU", "62": "ID", "63": "PH", "64": "NZ", "65": "SG",
+        "66": "TH", "81": "JP", "82": "KR", "84": "VN", "86": "CN", "90": "TR", "91": "IN", "92": "PK",
+        "93": "AF", "94": "LK", "95": "MM", "98": "IR",
+        "212": "MA", "213": "DZ", "216": "TN", "218": "LY", "220": "GM", "221": "SN", "233": "GH",
+        "234": "NG", "249": "SD", "251": "ET", "254": "KE", "255": "TZ", "256": "UG", "260": "ZM",
+        "263": "ZW", "351": "PT", "352": "LU", "353": "IE", "354": "IS", "355": "AL", "356": "MT",
+        "357": "CY", "358": "FI", "359": "BG", "370": "LT", "371": "LV", "372": "EE", "373": "MD",
+        "374": "AM", "375": "BY", "376": "AD", "377": "MC", "380": "UA", "381": "RS", "382": "ME",
+        "383": "XK", "385": "HR", "386": "SI", "387": "BA", "389": "MK", "420": "CZ", "421": "SK",
+        "423": "LI", "852": "HK", "853": "MO", "855": "KH", "856": "LA", "880": "BD", "886": "TW",
+        "960": "MV", "961": "LB", "962": "JO", "963": "SY", "964": "IQ", "965": "KW", "966": "SA",
+        "967": "YE", "968": "OM", "970": "PS", "971": "AE", "972": "IL", "973": "BH", "974": "QA",
+        "975": "BT", "976": "MN", "977": "NP", "992": "TJ", "993": "TM", "994": "AZ", "995": "GE",
+        "996": "KG", "998": "UZ",
     ]
 
     static func name(for number: String) -> String? {
         let compact = number.filter { $0.isNumber || $0 == "+" }
         guard compact.hasPrefix("+") else { return nil }
-        // Longest code first, so +353 wins over +3….
-        return codes.sorted { $0.0.count > $1.0.count }.first { compact.hasPrefix($0.0) }?.1
+        let digits = compact.dropFirst()
+        // Calling codes are prefix-free: try 3 digits, then 2, then 1.
+        for length in [3, 2, 1] where digits.count > length {
+            let code = String(digits.prefix(length))
+            if let region = regions[code] { return Locale.current.localizedString(forRegionCode: region) ?? region }
+            if let name = shared[code] { return name }
+        }
+        return nil
     }
 }
 
-/// The airline behind a flight code's IATA prefix, for a subtitle.
+/// The airline behind a flight code's IATA prefix, for a subtitle. A curated list
+/// of major carriers: codes are stable but occasionally reassigned, and a full
+/// live list needs a paid data source. Unknown codes simply show no subtitle;
+/// the action (a web search for the code) never depends on this.
 enum Airline {
     private static let names: [String: String] = [
         "TK": "Turkish Airlines", "PC": "Pegasus", "VF": "AJet", "XQ": "SunExpress",
