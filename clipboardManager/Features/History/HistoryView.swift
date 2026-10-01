@@ -7,6 +7,7 @@
 //  card strip. The card strip never moves when the preview opens.
 //
 
+import AppKit
 import ComposableArchitecture
 import SwiftUI
 
@@ -92,6 +93,13 @@ struct HistoryView: View {
             }
         }
         .onChange(of: searchFocused) { _, focused in
+            if focused {
+                // A field that gains focus selects its text, so the next letter typed would
+                // replace the one that opened search. Put the caret at the end instead.
+                DispatchQueue.main.async {
+                    (NSApp.keyWindow?.firstResponder as? NSTextView)?.moveToEndOfDocument(nil)
+                }
+            }
             if store.isSearchFocused != focused {
                 store.send(.binding(.set(\.isSearchFocused, focused)))
             }
