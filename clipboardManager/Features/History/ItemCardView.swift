@@ -60,7 +60,8 @@ struct ItemCardView: View {
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius) }
 
     private var glassTint: Color? {
-        if isSelected { return .accentColor.opacity(0.45) }
+        // The moving ring carries selection; a heavy tint under it only washed it out.
+        if isSelected { return .accentColor.opacity(0.16) }
         if item.isSensitive { return .red.opacity(isHovered ? 0.22 : 0.16) }
         return isHovered ? .white.opacity(0.12) : nil
     }
@@ -175,12 +176,14 @@ struct ItemCardView: View {
     // MARK: - Pieces
 
     private var header: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Image(systemName: item.headerSymbol)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(item.isSensitive ? Color.red : Color.accentColor)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(item.isSensitive ? Color.red : Color.secondary)
+                .frame(width: 20, height: 20)
+                .background((item.isSensitive ? Color.red : Color.primary).opacity(0.1), in: .rect(cornerRadius: 6))
             Text(item.headerTitle)
-                .font(.caption.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
             if item.isPinned {
                 Image(systemName: "pin.fill")
@@ -188,25 +191,15 @@ struct ItemCardView: View {
                     .foregroundStyle(.orange)
                     .transition(.opacity)
             }
-            if let action = item.primarySmartAction {
-                // What ⌘O will do, at a glance.
-                Image(systemName: action.symbol)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tint)
-                    .help("\(action.title) (⌘O)")
-                    .accessibilityHidden(true)
-            }
             Spacer(minLength: 4)
-            Text(item.timestamp, format: .relative(presentation: .named, unitsStyle: .abbreviated))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
             if showShortcutHint {
                 Text("⌘\(index + 1)")
-                    .font(.caption2.weight(.semibold).monospaced())
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(.primary.opacity(0.08), in: .rect(cornerRadius: 4))
+                    .font(.caption2.weight(.bold).monospaced())
+                    .foregroundStyle(isSelected ? Color.white : Color.primary)
+                    .padding(.horizontal, 6)
+                    .frame(height: 18)
+                    // Filled on the selected card: that's the digit that pastes it.
+                    .background(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.12)), in: .capsule)
                     .opacity(isHovered ? 0 : 1)
             }
         }
@@ -217,7 +210,7 @@ struct ItemCardView: View {
         HStack(spacing: 6) {
             AppIconView(source: item.source)
                 .frame(width: 16, height: 16)
-            Text(item.source.name)
+            (Text(item.source.name) + Text(" · ") + Text(item.timestamp, format: .relative(presentation: .numeric, unitsStyle: .narrow)))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
@@ -231,22 +224,25 @@ struct ItemCardView: View {
                     .padding(.vertical, 2)
                     .background(.tint.opacity(0.16), in: .capsule)
                     .layoutPriority(1)
-            } else {
+            } else if let metaLabel {
                 Text(metaLabel)
                     .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
         }
     }
 
-    private var metaLabel: String {
+    /// Only when it says something: a count is noise on a one-liner.
+    private var metaLabel: String? {
         switch item.kind {
-        case .text: item.isSensitive ? "Masked" : Formatting.characterCount(Int(item.byteCount))
-        case .url: URL(string: item.preview)?.host() ?? ""
-        case .color: item.preview
-        case .image: item.pixelSize?.label ?? Formatting.bytes(item.byteCount)
-        case .file, .video: item.isFileAvailable ? Formatting.bytes(item.byteCount) : "Missing"
+        case .text:
+            if item.isSensitive || item.primarySmartAction != nil { return nil }
+            return item.byteCount > 80 ? Formatting.characterCount(Int(item.byteCount)) : nil
+        case .url: return nil
+        case .color: return nil
+        case .image: return item.pixelSize?.label ?? Formatting.bytes(item.byteCount)
+        case .file, .video: return item.isFileAvailable ? Formatting.bytes(item.byteCount) : "Missing"
         }
     }
 

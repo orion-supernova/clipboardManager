@@ -23,8 +23,8 @@ struct ItemPreviewView: View {
         } else {
             switch item.kind {
             case .text:
-                if let result = item.calculatedResult {
-                    CalculationPreview(expression: item.preview, result: result)
+                if let action = item.primarySmartAction {
+                    SmartCardPreview(item: item, action: action)
                 } else {
                     TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)
                 }
@@ -43,18 +43,25 @@ private struct TextPreview: View {
     let language: CodeLanguage?
     let highlight: String
 
+    /// A short single line ("Thanks!", a name) reads as a value, not a paragraph.
+    private var isShort: Bool { language == nil && text.count <= 40 && !text.contains("\n") }
+
     var body: some View {
         Group {
             if text.isEmpty {
                 Text("Empty text").foregroundStyle(.secondary)
             } else {
                 Text(AttributedTextCache.preview(id: id, text: text, language: language, highlight: highlight))
-                    .font(language != nil ? .system(.callout, design: .monospaced) : .system(.callout))
+                    .font(language != nil ? .system(size: 11.5, design: .monospaced) : isShort ? .title3.weight(.medium) : .callout)
             }
         }
-        .lineLimit(8)
         .multilineTextAlignment(.leading)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
+        // Fade out instead of ending mid-word in "re…".
+        .mask {
+            LinearGradient(stops: [.init(color: .black, location: 0.78), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
+        }
         .textSelection(.disabled)
     }
 }
@@ -65,33 +72,175 @@ private struct SensitivePreview: View {
     let lifetime: TimeInterval?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "lock.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.red)
-                    .frame(width: 24, height: 24)
-                    .background(.red.opacity(0.14), in: .circle)
-                Text("Masked · ⌘E reveals")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+        VStack(alignment: .leading, spacing: 8) {
             Text(item.preview)
-                .font(.system(kind == .creditCard || kind == .iban ? .title3 : .callout, design: .monospaced).weight(.semibold))
-                .lineLimit(kind == .creditCard || kind == .iban ? 2 : 5)
+                .font(.system(kind == .creditCard || kind == .iban ? .title2 : .title3, design: .monospaced).weight(.semibold))
+                .tracking(1.5)
+                .lineLimit(kind == .creditCard || kind == .iban ? 2 : 3)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-            if let lifetime {
-                let expiry = item.timestamp.addingTimeInterval(lifetime)
-                Label {
-                    Text("Forgets \(expiry, format: .relative(presentation: .named, unitsStyle: .abbreviated))")
-                } icon: {
-                    Image(systemName: "timer")
+            Spacer(minLength: 0)
+            HStack(spacing: 8) {
+                CardPill(symbol: "eye", title: "Reveal", key: "⌘E", tint: .red)
+                Spacer(minLength: 0)
+                if let lifetime {
+                    let expiry = item.timestamp.addingTimeInterval(lifetime)
+                    Label {
+                        Text(expiry, format: .relative(presentation: .numeric, unitsStyle: .narrow))
+                    } icon: {
+                        Image(systemName: "timer")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .help("Forgotten automatically")
                 }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// What a smart card shows: the thing set large, and a pill saying what ⌘O does.
+private struct SmartCardPreview: View {
+    let item: ClipboardItem
+    let action: SmartAction
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            value
+            Spacer(minLength: 0)
+            CardPill(symbol: action.symbol, title: action.pillTitle, key: "⌘O", tint: .accentColor)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private var value: some View {
+        switch action.kind {
+        case let .pasteResult(result):
+            Text(item.preview)
+                .font(.callout.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+            (Text("= ").font(.system(size: 30, weight: .light, design: .rounded)).foregroundStyle(.secondary)
+             + Text(result).font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit()))
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        case let .email(address):
+            big(address)
+            Text(address.split(separator: "@").last.map(String.init) ?? "").font(.caption).foregroundStyle(.secondary)
+        case let .call(number), let .message(number):
+            big(number, size: 24, rounded: true)
+            Text(number.hasPrefix("+") ? "International" : "Phone number").font(.caption).foregroundStyle(.secondary)
+        case let .map(address):
+            let lines = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            big(lines.first ?? address)
+            Text(lines.dropFirst().joined(separator: ", ")).font(.callout).foregroundStyle(.secondary).lineLimit(2)
+        case let .addToCalendar(start, _, allDay, title):
+            HStack(spacing: 10) {
+                VStack(spacing: 0) {
+                    Text(start.formatted(.dateTime.month(.abbreviated)).uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 14)
+                        .background(Color.red)
+                    Text(start.formatted(.dateTime.day()))
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .frame(maxHeight: .infinity)
+                }
+                .frame(width: 44, height: 48)
+                .background(Color.primary.opacity(0.08))
+                .clipShape(.rect(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline).lineLimit(2)
+                    Text(allDay ? start.formatted(.dateTime.weekday(.wide)) : start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        case let .track(number):
+            Text(number.hasPrefix("1Z") ? "UPS" : number.hasPrefix("JD") || number.hasPrefix("JJD") ? "DHL" : number.allSatisfy(\.isNumber) ? "Parcel" : "Postal")
+                .font(.caption2.weight(.bold))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 1)
+                .background(Color.primary.opacity(0.1), in: .capsule)
+            Text(number).font(.system(.title3, design: .monospaced).weight(.medium)).lineLimit(2).minimumScaleFactor(0.7)
+        case let .flight(code):
+            big(code, size: 28, rounded: true)
+            Text("Flight number").font(.caption).foregroundStyle(.secondary)
+        case let .showPath(path):
+            let name = (path as NSString).lastPathComponent
+            big(name)
+            Text((path as NSString).deletingLastPathComponent)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.head)
+        case let .openLinks(urls):
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(Array(urls.prefix(3).enumerated()), id: \.offset) { _, url in
+                    Label(url.host() ?? url.absoluteString, systemImage: "globe")
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                }
+                if urls.count > 3 {
+                    Text("+\(urls.count - 3) more").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        case let .openLink(url):
+            big(url.host() ?? url.absoluteString)
+            Text(url.path()).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+        }
+    }
+
+    private func big(_ text: String, size: CGFloat = 18, rounded: Bool = false) -> some View {
+        Text(text)
+            .font(.system(size: size, weight: .semibold, design: rounded ? .rounded : .default).monospacedDigit())
+            .lineLimit(2)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+/// The card-sized action: flat fill (no glass) so a strip of them scrolls cheaply.
+struct CardPill: View {
+    let symbol: String
+    let title: String
+    let key: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).font(.caption.weight(.semibold))
+            Text(title).font(.caption.weight(.semibold)).lineLimit(1)
+            Text(key)
+                .font(.caption2.weight(.semibold).monospaced())
+                .padding(.horizontal, 4)
+                .background(tint.opacity(0.22), in: .rect(cornerRadius: 4))
+        }
+        .padding(.horizontal, 9)
+        .frame(height: 24)
+        .background(tint.opacity(0.22), in: .capsule)
+        .foregroundStyle(tint)
+        .accessibilityHidden(true)
+    }
+}
+
+extension SmartAction {
+    /// Short enough for a card pill.
+    var pillTitle: String {
+        switch kind {
+        case .email: "Email"
+        case .call: "Call"
+        case .message: "Message"
+        case .map: "Maps"
+        case .openLink: "Open"
+        case let .openLinks(urls): "Open \(urls.count)"
+        case .addToCalendar: "Add to Calendar"
+        case .showPath: "Show in Finder"
+        case .track: "Track"
+        case .flight: "Flight Status"
+        case let .pasteResult(result): "Paste \(result)"
+        }
     }
 }
 
@@ -118,16 +267,18 @@ private struct LinkPreview: View {
                         ThumbnailImage(url: iconURL, placeholderSymbol: "globe")
                             .clipShape(.rect(cornerRadius: 5))
                     } else {
-                        Image(systemName: "globe")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.tint)
+                        // A monogram on a stable hue reads better than a generic globe.
+                        Text(String((url?.host() ?? "?").replacingOccurrences(of: "www.", with: "").prefix(1)).uppercased())
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Hue.gradient(for: url?.host() ?? ""))
                     }
                 }
-                .frame(width: heroURL == nil ? 28 : 20, height: heroURL == nil ? 28 : 20)
-                .padding(heroURL == nil ? 4 : 0)
-                .background(heroURL == nil ? AnyShapeStyle(.tint.opacity(0.12)) : AnyShapeStyle(.clear), in: .rect(cornerRadius: 8))
+                .frame(width: heroURL == nil ? 36 : 20, height: heroURL == nil ? 36 : 20)
+                .clipShape(.rect(cornerRadius: heroURL == nil ? 9 : 5))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(Highlighter.attributed(item.linkTitle ?? url?.host() ?? "Link", matching: highlight))
+                    Text(Highlighter.attributed(item.linkTitle ?? Self.readableTitle(url) ?? url?.host() ?? "Link", matching: highlight))
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(heroURL == nil ? 3 : 2)
                     Text(url?.host() ?? item.preview)
@@ -148,28 +299,16 @@ private struct LinkPreview: View {
         .animation(.easeOut(duration: 0.25), value: heroURL)
         .animation(.easeOut(duration: 0.25), value: item.linkTitle)
     }
-}
 
-/// A sum shows its answer: the card itself is the calculator.
-private struct CalculationPreview: View {
-    let expression: String
-    let result: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(expression)
-                .font(.system(.callout, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-            Text("= \(result)")
-                .font(.system(size: 30, weight: .semibold, design: .rounded).monospacedDigit())
-                .foregroundStyle(.tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .textSelection(.enabled)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .combine)
+    /// "/blog/liquid-glass-design" → "Liquid glass design", so a link with no
+    /// fetched title doesn't just repeat its host.
+    static func readableTitle(_ url: URL?) -> String? {
+        guard let last = url?.pathComponents.last(where: { $0 != "/" }), last.count > 2 else { return nil }
+        let words = (last as NSString).deletingPathExtension
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+        guard words.contains(where: \.isLetter), !words.allSatisfy({ $0.isNumber || $0 == " " }) else { return nil }
+        return words.prefix(1).uppercased() + words.dropFirst()
     }
 }
 
@@ -178,20 +317,23 @@ private struct ColorPreview: View {
 
     var body: some View {
         let parsed = ParsedColor.parse(hex)
-        ZStack {
-            RoundedRectangle(cornerRadius: 14)
-                .fill(parsed?.swiftUIColor ?? .gray)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(.white.opacity(0.25), lineWidth: 1)
+        let light = parsed?.isLight ?? false
+        RoundedRectangle(cornerRadius: 14)
+            .fill(parsed?.swiftUIColor ?? .gray)
+            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.primary.opacity(0.1), lineWidth: 1) }
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(hex.uppercased())
+                        .font(.system(.callout, design: .monospaced).weight(.bold))
+                    if let parsed {
+                        Text(ColorFormat.rgb.render(parsed))
+                            .font(.caption2.monospaced())
+                            .opacity(0.8)
+                    }
                 }
-            Text(hex.uppercased())
-                .font(.system(.title3, design: .monospaced).weight(.semibold))
-                .foregroundStyle((parsed?.isLight ?? false) ? .black : .white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(.black.opacity((parsed?.isLight ?? false) ? 0.08 : 0.25), in: .capsule)
-        }
+                .foregroundStyle(light ? Color.black : Color.white)
+                .padding(10)
+            }
     }
 }
 
@@ -201,27 +343,33 @@ private struct ImagePreview: View {
     let highlight: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ThumbnailImage(url: thumbnailURL, placeholderSymbol: "photo")
-                .clipShape(.rect(cornerRadius: 12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(.primary.opacity(0.08), lineWidth: 1)
-                }
-            if !recognizedText.isEmpty {
-                HStack(spacing: 5) {
-                    Image(systemName: "text.viewfinder")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.tint)
-                    Text(Highlighter.attributed(recognizedText, matching: highlight))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                .transition(.opacity)
+        // Fill, not fit: letterboxed thumbnails left odd gutters in every card.
+        // A fixed box first, so the filled image has something to clip against.
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay { ThumbnailImage(url: thumbnailURL, placeholderSymbol: "photo", contentMode: .fill) }
+            .clipShape(.rect(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12).strokeBorder(.primary.opacity(0.08), lineWidth: 1)
             }
-        }
-        .animation(.easeOut(duration: 0.25), value: recognizedText.isEmpty)
+            .overlay(alignment: .bottomLeading) {
+                if !recognizedText.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "text.viewfinder").font(.caption2.weight(.semibold))
+                        Text(Highlighter.attributed(recognizedText, matching: highlight))
+                            .font(.caption2.weight(.medium))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .frame(height: 20)
+                    // A flat fill: a material on every card is expensive to scroll.
+                    .background(.black.opacity(0.5), in: .capsule)
+                    .padding(6)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: 0.25), value: recognizedText.isEmpty)
     }
 }
 

@@ -69,10 +69,10 @@ struct PreviewSheetView: View {
                 .background((item.isSensitive ? Color.red : Color.accentColor).opacity(0.14), in: .rect(cornerRadius: 8))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.isSensitive ? item.headerTitle : item.displayTitle)
-                    .font(.title3.weight(.semibold))
+                Text(headerTitle)
+                    .font(.headline)
                     .lineLimit(1)
-                    .truncationMode(.middle)
+                    .truncationMode(item.kind == .text ? .tail : .middle)
                 HStack(spacing: 6) {
                     AppIconView(source: item.source).frame(width: 12, height: 12)
                     Text(item.source.name)
@@ -102,11 +102,7 @@ struct PreviewSheetView: View {
                 keyedButton(item.kind == .url ? "Open Link" : "Open", symbol: "arrow.up.forward.app", key: "⌘O", action: onOpen)
                     .panelButtonStyle()
             }
-            if !item.isSensitive, let primary = item.primarySmartAction {
-                keyedButton(primary.title, symbol: primary.symbol, key: "⌘O") { onSmartAction(primary) }
-                    .panelButtonStyle()
-            }
-            let secondary = item.isSensitive ? [] : item.smartActions.filter { !$0.isPrimary }
+            let secondary = item.isSensitive || bodyShowsActions ? [] : item.smartActions.filter { !$0.isPrimary }
             if !secondary.isEmpty {
                 Menu {
                     ForEach(secondary) { action in
@@ -135,6 +131,21 @@ struct PreviewSheetView: View {
         }
         .controlSize(.small)
     }
+
+    /// The body shows the content, so the title says what it is: the smart
+    /// type, or the first line of text — never the same paragraph twice.
+    private var headerTitle: String {
+        if item.isSensitive { return item.headerTitle }
+        if let primary = item.primarySmartAction { return primary.subjectTitle }
+        if item.kind == .text {
+            let firstLine = item.preview.split(whereSeparator: \.isNewline).first.map(String.init) ?? item.preview
+            return item.codeLanguage.map { "\($0.displayName) snippet" } ?? firstLine
+        }
+        return item.displayTitle
+    }
+
+    /// Smart text shows its actions as tiles in the body; the header keeps only Paste.
+    private var bodyShowsActions: Bool { !item.isSensitive && item.primarySmartAction != nil }
 
     private func keyedButton(_ title: String, symbol: String, key: String, prominent: Bool = false, action: @escaping @MainActor () -> Void) -> some View {
         Button(action: action) {
@@ -203,8 +214,8 @@ struct PreviewSheetView: View {
     private func body(for kind: ClipboardKind) -> some View {
         switch kind {
         case .text:
-            if let result = item.calculatedResult {
-                CalculationBody(expression: payload?.text ?? item.preview, result: result)
+            if !item.isSensitive, let primary = item.primarySmartAction {
+                SmartBody(item: item, text: payload?.text ?? item.preview, primary: primary, onAction: onSmartAction, onPasteOriginal: onPaste)
             } else if item.isSensitive, !revealed {
                 MaskedBody(masked: item.preview, kind: item.sensitivity ?? .credential, detail: item.sensitivityDetail)
             } else {
@@ -385,41 +396,6 @@ private struct TextBody: View {
                     .padding(16)
             }
         }
-    }
-}
-
-/// A sum is a calculator: the answer is the content, not a button label.
-private struct CalculationBody: View {
-    let expression: String
-    let result: String
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Text(expression.trimmingCharacters(in: .whitespacesAndNewlines))
-                .font(.system(size: 20, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .textSelection(.enabled)
-            Text("= \(result)")
-                .font(.system(size: 64, weight: .semibold, design: .rounded).monospacedDigit())
-                .foregroundStyle(.tint)
-                .lineLimit(1)
-                .minimumScaleFactor(0.4)
-                .textSelection(.enabled)
-                .contentTransition(.numericText())
-            HStack(spacing: 6) {
-                KeyCap(key: "⌘O")
-                Text("pastes \(result) ·")
-                KeyCap(key: "↩")
-                Text("pastes the expression")
-            }
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .padding(.top, 6)
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
     }
 }
 

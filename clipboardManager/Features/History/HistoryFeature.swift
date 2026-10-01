@@ -1012,6 +1012,10 @@ struct HistoryFeature {
                     state.isSearchFocused = true
                     return flash
                 case let .typeToSearch(text):
+                    if state.isPreviewOpen, let item = state.selectedItem, !item.isSensitive,
+                       let digit = Int(text), let action = SmartPreviewKeys.action(forDigit: digit, in: item) {
+                        return .send(.performSmartAction(item.id, action))
+                    }
                     if state.isPreviewOpen, let item = state.selectedItem, item.kind == .color,
                        let number = Int(text), ColorFormat.allCases.indices.contains(number - 1) {
                         return .send(.copyColor(item.id, ColorFormat.allCases[number - 1]))

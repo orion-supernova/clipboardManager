@@ -266,19 +266,14 @@ struct HistoryView: View {
 
     private var regularHints: some View {
         HStack(spacing: 12) {
+            // The essentials only; every other key is one ⌘ hold or ⌘K away.
             if store.keyboardNavigation {
                 hint("↩", "Paste")
-                hint("⇧↩", "Plain")
                 hint("space", "Preview")
                 hint("⌘C", "Copy")
-                hint("⌘P", "Pin")
-                hint("⌘S", "Folder")
-                hint("⌫", "Delete")
                 hint("⌘F", "Search")
-                hint("⌥1–6", "Filter")
-                hint(KeyboardLayout.scopeKeysLabel, "Scope")
                 hint("⌘K", "Commands")
-                hint("hold ⌘", "More")
+                hint("hold ⌘", "All Keys")
             }
             hint("esc", "Close")
         }

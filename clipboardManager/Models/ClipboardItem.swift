@@ -116,12 +116,15 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
     var headerTitle: String {
         if let sensitivity { return sensitivityDetail.map { "\(sensitivity.title) · \($0)" } ?? sensitivity.title }
         if let codeLanguage { return codeLanguage.displayName }
+        // Say what the text *is*: "Phone", not "Text" next to a tiny glyph.
+        if let primarySmartAction { return primarySmartAction.shortSubject }
         return kind.title
     }
 
     var headerSymbol: String {
         if let sensitivity { return sensitivity.symbol }
         if codeLanguage != nil { return "chevron.left.forwardslash.chevron.right" }
+        if let primarySmartAction { return primarySmartAction.subjectSymbol }
         return kind.symbolName
     }
 
