@@ -117,6 +117,12 @@ struct HistoryFeature {
                     + TextTransform.allCases.enumerated().map { DialogOption(id: $0.offset + 1, title: $0.element.title, symbol: $0.element.symbol) }
             case .copyAs:
                 return ColorFormat.allCases.enumerated().map { DialogOption(id: $0.offset, title: $0.element.title, symbol: "swatchpalette") }
+            case let .openLinks(itemID):
+                // Links first, numbered as they appear in the text; "all" last (and on ↩).
+                let urls = items[id: itemID]?.webLinks ?? []
+                return urls.enumerated().map { index, url in
+                    DialogOption(id: index, title: (url.host() ?? url.absoluteString) + (url.path().count > 1 ? url.path() : ""), symbol: "safari")
+                } + [DialogOption(id: urls.count, title: "All \(urls.count) Links", symbol: "square.stack.3d.up")]
             default:
                 return []
             }
@@ -187,10 +193,12 @@ struct HistoryFeature {
         case chooseFolder(UUID)
         case pasteAs(UUID)
         case copyAs(UUID)
+        /// ⌘O on text with several links: pick one by number, or ↩ for all.
+        case openLinks(UUID)
 
         var isChooser: Bool {
             switch self {
-            case .chooseFolder, .pasteAs, .copyAs: true
+            case .chooseFolder, .pasteAs, .copyAs, .openLinks: true
             default: false
             }
         }
@@ -759,6 +767,10 @@ struct HistoryFeature {
 
             case let .dialogConfirmed(choice):
                 guard let dialog = state.dialog else { return .none }
+                // ↩ in the link picker opens them all.
+                if case let .openLinks(itemID) = dialog {
+                    return .send(.dialogOptionChosen(state.items[id: itemID]?.webLinks.count ?? 0))
+                }
                 let text = state.dialogText.trimmingCharacters(in: .whitespacesAndNewlines)
                 switch dialog {
                 case let .newFolder(thenAdd):
@@ -789,7 +801,7 @@ struct HistoryFeature {
                     } catch: { error, _ in
                         logger.error("Delete folder failed: \(error.localizedDescription)")
                     }
-                case .chooseFolder, .pasteAs, .copyAs:
+                case .chooseFolder, .pasteAs, .copyAs, .openLinks:
                     // ↩ picks the first option in chooser dialogs.
                     return .send(.dialogOptionChosen(0))
                 }
@@ -822,6 +834,13 @@ struct HistoryFeature {
                     state.dialog = nil
                     guard ColorFormat.allCases.indices.contains(index) else { return .none }
                     return .send(.copyColor(itemID, ColorFormat.allCases[index]))
+                case let .openLinks(itemID):
+                    state.dialog = nil
+                    let urls = state.items[id: itemID]?.webLinks ?? []
+                    if urls.indices.contains(index) {
+                        return .send(.performSmartAction(itemID, SmartAction(kind: .openLink(urls[index]))))
+                    }
+                    return .send(.performSmartAction(itemID, SmartAction(kind: .openLinks(urls))))
                 default:
                     return .none
                 }
@@ -1056,10 +1075,6 @@ struct HistoryFeature {
                     if state.isPreviewOpen, state.selectedItem?.kind == .image, text.lowercased() == "z" {
                         return .send(.toggleImageZoom, animation: .smooth(duration: 0.25))
                     }
-                    if state.isPreviewOpen, let item = state.selectedItem, !item.isSensitive,
-                       let digit = Int(text), let action = SmartPreviewKeys.action(forDigit: digit, in: item) {
-                        return .send(.performSmartAction(item.id, action))
-                    }
                     if state.isPreviewOpen, let item = state.selectedItem, item.kind == .color,
                        let number = Int(text), ColorFormat.allCases.indices.contains(number - 1) {
                         return .send(.copyColor(item.id, ColorFormat.allCases[number - 1]))
@@ -1139,6 +1154,11 @@ struct HistoryFeature {
                     return .concatenate(.send(.previewItem(item.id)), item.isSensitive ? .send(.toggleReveal) : .none)
                 case .open:
                     guard let item = state.selectedItem else { return flash }
+                    if !item.isSensitive, item.kind == .text, item.webLinks.count >= 2 {
+                        state.dialog = .openLinks(item.id)
+                        state.isSearchFocused = false
+                        return flash
+                    }
                     // ⌘O only ever means Open: a file, a link, or a link or path found in text.
                     if let action = item.openSmartAction { return .merge(flash, .send(.performSmartAction(item.id, action))) }
                     return .merge(flash, .send(.openItem(item.id)))

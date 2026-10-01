@@ -64,14 +64,6 @@ struct SmartBody: View {
 
 }
 
-/// Digits open the individual rows of a several-links preview; every other
-/// action has a fixed or joker key instead.
-enum SmartPreviewKeys {
-    static func action(forDigit digit: Int, in item: ClipboardItem) -> SmartAction? {
-        guard digit >= 1, case let .openLinks(urls)? = item.primarySmartAction?.kind else { return nil }
-        return urls.indices.contains(digit - 1) ? SmartAction(kind: .openLink(urls[digit - 1])) : nil
-    }
-}
 
 extension SmartAction {
     /// What the copied text is, for card headers.
@@ -432,10 +424,10 @@ private struct LinksHero: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(Array(urls.prefix(5).enumerated()), id: \.offset) { index, url in
-                LinkRow(url: url, key: "\(index + 1)") { onOpen(url) }
+                LinkRow(url: url) { onOpen(url) }
             }
             if urls.count > 5 {
-                Text("+\(urls.count - 5) more · ⌘K lists them all")
+                Text("+\(urls.count - 5) more · ⌘O lists them all")
                     .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 46)
@@ -447,7 +439,6 @@ private struct LinksHero: View {
 
 private struct LinkRow: View {
     let url: URL
-    let key: String
     let action: @MainActor () -> Void
     @State private var hovering = false
 
@@ -455,7 +446,6 @@ private struct LinkRow: View {
         let host = url.host() ?? url.absoluteString
         Button(action: action) {
             HStack(spacing: 12) {
-                KeyCap(key: key)
                 Text(String(host.replacingOccurrences(of: "www.", with: "").prefix(1)).uppercased())
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
@@ -470,6 +460,10 @@ private struct LinkRow: View {
                         .truncationMode(.middle)
                 }
                 Spacer(minLength: 0)
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .opacity(hovering ? 1 : 0.5)
             }
             .padding(.horizontal, 8)
             .frame(height: 40)

@@ -113,6 +113,12 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
         smartActions.first { $0.fixedKey == "⌘O" }
     }
 
+    /// Every web link found in the text, in order.
+    var webLinks: [URL] {
+        for action in smartActions { if case let .openLinks(urls) = action.kind { return urls } }
+        return smartActions.compactMap { if case let .openLink(url) = $0.kind { url } else { nil } }
+    }
+
     /// A copied path answers ⇧⌘R like a copied file does.
     var showInFinderAction: SmartAction? {
         smartActions.first { if case .showPath = $0.kind { true } else { false } }

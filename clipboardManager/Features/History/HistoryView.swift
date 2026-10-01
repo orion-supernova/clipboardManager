@@ -784,6 +784,15 @@ struct HistoryView: View {
                 onOption: { store.send(.dialogOptionChosen($0)) },
                 onCancel: { store.send(.dialogCancelled) }
             )
+        case let .openLinks(itemID):
+            DialogView(
+                title: "Open Which Link?",
+                message: "Press a number for one link, or ↩ for all \(store.items[id: itemID]?.webLinks.count ?? 0).",
+                symbol: "link",
+                options: store.dialogOptions,
+                onOption: { store.send(.dialogOptionChosen($0)) },
+                onCancel: { store.send(.dialogCancelled) }
+            )
         case .copyAs:
             DialogView(
                 title: "Copy Color As",
