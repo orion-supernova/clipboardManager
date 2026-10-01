@@ -70,7 +70,9 @@ struct ItemCardView: View {
         }
         .padding(14)
         .frame(width: PanelMetrics.cardWidth, height: PanelMetrics.cardHeight)
-        .panelGlass(tint: glassTint, interactive: true, in: shape)
+        // Not `interactive`: the overlay already drives hover and press, and the
+        // system's flex effect on every card was ~8% of main-thread time.
+        .panelGlass(tint: glassTint, in: shape)
         // Selection is otherwise carried by an accent tint alone, which is
         // invisible to anyone who can't separate it from the card behind it.
         .overlay {

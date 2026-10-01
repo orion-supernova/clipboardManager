@@ -49,7 +49,7 @@ struct HistoryView: View {
         )
     }
 
-    private var reduceMotion: Bool { appearance.reduceMotion }
+    private var reduceMotion: Bool { store.panelMotion.resolved(system: systemReduceMotion) }
 
     private var presentAnimation: Animation {
         reduceMotion ? .easeOut(duration: 0.18) : .spring(duration: 0.36, bounce: 0.14)
@@ -536,7 +536,20 @@ struct HistoryView: View {
     }
 
     private var cards: some View {
-        ForEach(rows) { row in
+        // Read the store once per update, not once per card: these go through
+        // TCA's observation (and @Shared settings) on every access.
+        let selectedID = store.selectedID
+        let flashID = store.flashID
+        let recentID = store.recentID
+        let showsHints = store.showShortcutHints && store.keyboardNavigation
+        let highlight = store.searchText
+        let dragMode = store.dragMode
+        let reduceMotion = reduceMotion
+        let staggered = store.isEntering
+        let interactionEnabled = store.dialog == nil
+        let sensitiveLifetime = store.sensitiveLifetime
+        let folders = Array(store.folders)
+        return ForEach(rows) { row in
             HStack(spacing: PanelMetrics.cardSpacing) {
                 if row.showsPinnedDivider {
                     pinnedDivider
@@ -544,17 +557,17 @@ struct HistoryView: View {
                 ItemCardView(
                     item: row.item,
                     index: row.index,
-                    isSelected: row.item.id == store.selectedID,
-                    isFlashing: row.item.id == store.flashID,
-                    isRecent: row.item.id == store.recentID,
-                    showShortcutHint: store.showShortcutHints && store.keyboardNavigation && row.index < 9,
-                    highlight: store.searchText,
-                    dragMode: store.dragMode,
+                    isSelected: row.item.id == selectedID,
+                    isFlashing: row.item.id == flashID,
+                    isRecent: row.item.id == recentID,
+                    showShortcutHint: showsHints && row.index < 9,
+                    highlight: highlight,
+                    dragMode: dragMode,
                     reduceMotion: reduceMotion,
-                    staggered: store.isEntering,
-                    interactionEnabled: store.dialog == nil,
-                    sensitiveLifetime: store.sensitiveLifetime,
-                    folders: Array(store.folders),
+                    staggered: staggered,
+                    interactionEnabled: interactionEnabled,
+                    sensitiveLifetime: sensitiveLifetime,
+                    folders: folders,
                     actions: cardActions(for: row.item)
                 )
             }
