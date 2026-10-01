@@ -16,21 +16,32 @@ struct SmartBody: View {
     let text: String
     let primary: SmartAction
     let onAction: @MainActor (SmartAction) -> Void
-    let onPasteOriginal: @MainActor () -> Void
 
+    /// The thing itself, centred in the sheet. The actions live in the header
+    /// (with the same keys everywhere), so the body doesn't repeat them.
     var body: some View {
-        HStack(alignment: .center, spacing: 32) {
-            VStack(alignment: .leading, spacing: 14) {
-                hero
-                if let context { contextLine(context) }
+        VStack(spacing: 18) {
+            hero
+            // The copied text is the header title now, so no context line repeating it.
+            if case let .pasteResult(result) = primary.kind {
+                keyLine(result)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            actionColumn
         }
-        .frame(maxWidth: 860)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 24)
+        .frame(maxWidth: 820)
+        .padding(.horizontal, 32)
         .padding(.vertical, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func keyLine(_ result: String) -> some View {
+        HStack(spacing: 6) {
+            KeyCap(key: item.key(for: primary) ?? "")
+            Text("pastes \(result) ·")
+            KeyCap(key: "↩")
+            Text("pastes the expression")
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
     }
 
     // MARK: Hero
@@ -51,67 +62,6 @@ struct SmartBody: View {
         }
     }
 
-    /// The copied text, when it says more than the detected thing.
-    private var context: String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch primary.kind {
-        case let .email(value), let .call(value), let .message(value), let .map(value), let .openPath(value), let .showPath(value), let .track(value):
-            return trimmed.count > value.count + 4 ? trimmed : nil
-        case .addToCalendar, .openLinks, .flight:
-            return trimmed.count > 24 ? trimmed : nil
-        default:
-            return nil
-        }
-    }
-
-    private func contextLine(_ text: String) -> some View {
-        Label {
-            Text(text).lineLimit(2)
-        } icon: {
-            Image(systemName: "text.quote")
-        }
-        .font(.callout)
-        .foregroundStyle(.secondary)
-    }
-
-    // MARK: Actions
-
-    private var actionColumn: some View {
-        VStack(spacing: 8) {
-            if case let .pasteResult(result) = primary.kind {
-                ActionTile(symbol: "equal.circle.fill", title: "Paste \(result)", subtitle: "The answer", key: item.key(for: primary) ?? "", isPrimary: true) { onAction(primary) }
-                ActionTile(symbol: "function", title: "Paste Expression", subtitle: "As copied", key: "↩", isPrimary: false, action: onPasteOriginal)
-            } else {
-                ForEach(tileActions, id: \.id) { action in
-                    ActionTile(
-                        symbol: action.symbol,
-                        title: action.title,
-                        subtitle: action.destination,
-                        key: key(for: action),
-                        isPrimary: action.isPrimary
-                    ) { onAction(action) }
-                }
-            }
-        }
-        .frame(width: 240)
-    }
-
-    /// The same key the item answers to everywhere: ⌘O / ⇧⌘R for open and show,
-    /// the joker keys ⌘D / ⇧⌘D for the item's own actions.
-    private func key(for action: SmartAction) -> String {
-        item.key(for: action) ?? ""
-    }
-
-    /// Primary first, then the rest.
-    private var tileActions: [SmartAction] {
-        [primary] + item.smartActions.filter { $0 != primary && !Self.isSingleLink($0, in: primary) }.prefix(3)
-    }
-
-    /// With "Open All", the individual links are rows in the hero, not tiles.
-    private static func isSingleLink(_ action: SmartAction, in primary: SmartAction) -> Bool {
-        if case .openLinks = primary.kind, case .openLink = action.kind { return true }
-        return false
-    }
 }
 
 /// Digits open the individual rows of a several-links preview; every other
@@ -123,76 +73,7 @@ enum SmartPreviewKeys {
     }
 }
 
-// MARK: - Tiles
-
-struct ActionTile: View {
-    let symbol: String
-    let title: String
-    let subtitle: String?
-    let key: String
-    let isPrimary: Bool
-    let action: @MainActor () -> Void
-    @State private var hovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isPrimary ? Color.white : Color.accentColor)
-                    .frame(width: 32, height: 32)
-                    .background(isPrimary ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.accentColor.opacity(0.14)), in: .circle)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(.headline)
-                        .lineLimit(1)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 6)
-                KeyCap(key: key)
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 60)
-            .background(background, in: .rect(cornerRadius: 14))
-            .contentShape(.rect(cornerRadius: 14))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.12), value: hovering)
-        .accessibilityLabel(title)
-        .accessibilityHint(subtitle.map { "Opens \($0). Shortcut \(key)" } ?? "Shortcut \(key)")
-    }
-
-    private var background: AnyShapeStyle {
-        if isPrimary { return AnyShapeStyle(Color.accentColor.opacity(hovering ? 0.26 : 0.18)) }
-        return AnyShapeStyle(Color.primary.opacity(hovering ? 0.1 : 0.06))
-    }
-}
-
 extension SmartAction {
-    /// Where the action lands, as a tile subtitle.
-    var destination: String? {
-        switch kind {
-        case .email: "Mail"
-        case .call: "FaceTime"
-        case .message: "Messages"
-        case .map: "Apple Maps"
-        case let .openLink(url): url.host()
-        case .openLinks: "Browser"
-        case .addToCalendar: "Calendar"
-        case .openPath: "Default app"
-        case .showPath: "Finder"
-        case .track: "17TRACK"
-        case .flight: "Web search"
-        case .pasteResult: "The answer"
-        }
-    }
-
     /// What the copied text is, for card headers.
     var shortSubject: String {
         switch kind {
@@ -554,12 +435,13 @@ private struct LinksHero: View {
                 LinkRow(url: url, key: "\(index + 1)") { onOpen(url) }
             }
             if urls.count > 5 {
-                Text("+\(urls.count - 5) more")
+                Text("+\(urls.count - 5) more · ⌘K lists them all")
                     .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 46)
             }
         }
+        .frame(width: 460)
     }
 }
 

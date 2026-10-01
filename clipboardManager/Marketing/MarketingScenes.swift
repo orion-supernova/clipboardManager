@@ -165,7 +165,7 @@ struct MarketingScenes {
                             thumbnailPath: "link-hero.png", linkTitle: "Adopting Liquid Glass", linkIconPath: "link-icon.png"),
              ClipboardPayload(kind: .url, text: "https://developer.apple.com/documentation/technologyoverviews/liquid-glass?utm_source=newsletter&ref=home")),
             ("maps", s.item(.url, "https://maps.app.goo.gl/AbCdEf123Example", app: s.safari, minutesAgo: 1,
-                            thumbnailPath: "link-hero.png", linkTitle: "Dropped pin · 40.9310, 29.2179"),
+                            thumbnailPath: "map-square.png", linkTitle: "Dropped pin · 40.9310, 29.2179"),
              ClipboardPayload(kind: .url, text: "https://maps.app.goo.gl/AbCdEf123Example")),
             ("link-bare", s.item(.url, "https://example.com/some/long/path/to/an/article", app: s.safari, minutesAgo: 3),
              ClipboardPayload(kind: .url, text: "https://example.com/some/long/path/to/an/article")),
@@ -481,6 +481,8 @@ struct MarketingAssets {
         images["/marketing/thumbs/screenshot.png"] = Self.render(size: CGSize(width: 480, height: 300)) { SampleScreenshot() }
         images["/marketing/images/screenshot-full.png"] = Self.render(size: CGSize(width: 960, height: 600)) { SampleScreenshot() }
         images["/marketing/thumbs/link-hero.png"] = Self.render(size: CGSize(width: 480, height: 240)) { SampleLinkHero() }
+        // Large and square, like Google's 900×900 static map: catches images escaping their frame.
+        images["/marketing/thumbs/map-square.png"] = Self.render(size: CGSize(width: 900, height: 900)) { SampleLinkHero() }
         images["/marketing/thumbs/link-icon.png"] = Self.render(size: CGSize(width: 64, height: 64)) { SampleFavicon() }
         images["/marketing/thumbs/pdf.png"] = Self.render(size: CGSize(width: 200, height: 260)) { SampleDocument() }
         for bundleID in ["com.apple.Safari", "com.apple.dt.Xcode", "com.apple.finder", "com.apple.Notes", "com.apple.Terminal", "com.figma.Desktop"] {

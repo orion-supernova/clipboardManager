@@ -100,6 +100,10 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
 
     /// The key that runs `action` on this item, wherever it's shown.
     func key(for action: SmartAction) -> String? {
+        // One action per key: with "Open All", ⌘O opens all; single links use their row digit.
+        if case .openLink = action.kind, smartActions.contains(where: { if case .openLinks = $0.kind { true } else { false } }) {
+            return nil
+        }
         if let fixed = action.fixedKey { return fixed }
         return jokerActions.firstIndex(of: action).map { SmartAction.jokerKeys[$0] }
     }

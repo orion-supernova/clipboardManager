@@ -221,7 +221,7 @@ struct PreviewSheetView: View {
         switch kind {
         case .text:
             if !item.isSensitive, let primary = item.primarySmartAction {
-                SmartBody(item: item, text: payload?.text ?? item.preview, primary: primary, onAction: onSmartAction, onPasteOriginal: onPaste)
+                SmartBody(item: item, text: payload?.text ?? item.preview, primary: primary, onAction: onSmartAction)
             } else if item.isSensitive, !revealed {
                 MaskedBody(masked: item.preview, kind: item.sensitivity ?? .credential, detail: item.sensitivityDetail)
             } else {
