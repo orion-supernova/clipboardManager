@@ -86,8 +86,48 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
     var linkIconPath: String?
     /// Detected once when the item is loaded, never in view bodies.
     var codeLanguage: CodeLanguage?
+    /// What the text is and what to do with it (email, phone, sum…). Detected
+    /// once on load, like `codeLanguage`; primary action first.
+    var smartActions: [SmartAction] = []
 
     var isSensitive: Bool { sensitivity != nil }
+    var primarySmartAction: SmartAction? { smartActions.first(where: \.isPrimary) }
+    /// The actions ⌘D and ⇧⌘D run: the first two without an app-wide key of their own.
+    var jokerActions: [SmartAction] {
+        guard !isSensitive else { return [] }
+        return Array(smartActions.filter { $0.fixedKey == nil }.prefix(SmartAction.jokerKeys.count))
+    }
+
+    /// The key that runs `action` on this item, wherever it's shown.
+    func key(for action: SmartAction) -> String? {
+        // One action per key: with "Open All", ⌘O opens all; single links use their row digit.
+        if case .openLink = action.kind, smartActions.contains(where: { if case .openLinks = $0.kind { true } else { false } }) {
+            return nil
+        }
+        if let fixed = action.fixedKey { return fixed }
+        return jokerActions.firstIndex(of: action).map { SmartAction.jokerKeys[$0] }
+    }
+
+    /// The action ⌘O runs, when this item's Open is a smart one (a link or a path in text).
+    var openSmartAction: SmartAction? {
+        smartActions.first { $0.fixedKey == "⌘O" }
+    }
+
+    /// Every web link found in the text, in order.
+    var webLinks: [URL] {
+        for action in smartActions { if case let .openLinks(urls) = action.kind { return urls } }
+        return smartActions.compactMap { if case let .openLink(url) = $0.kind { url } else { nil } }
+    }
+
+    /// A copied path answers ⇧⌘R like a copied file does.
+    var showInFinderAction: SmartAction? {
+        smartActions.first { if case .showPath = $0.kind { true } else { false } }
+    }
+    /// The answer, when the text is a sum: shown on the card, pasted on request.
+    var calculatedResult: String? {
+        if case let .pasteResult(result)? = primarySmartAction?.kind { return result }
+        return nil
+    }
 
     /// Pinning or filing an item takes it out of every retention rule — count,
     /// age and the sensitive-content timer alike. `ClipboardStore.prune` fetches
@@ -107,12 +147,17 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
     var headerTitle: String {
         if let sensitivity { return sensitivityDetail.map { "\(sensitivity.title) · \($0)" } ?? sensitivity.title }
         if let codeLanguage { return codeLanguage.displayName }
+        // Say what the text *is*: "Phone", not "Text" next to a tiny glyph.
+        if let primarySmartAction { return primarySmartAction.shortSubject }
+        if kind == .url, MapsLink.isMaps(URL(string: preview)) { return "Place" }
         return kind.title
     }
 
     var headerSymbol: String {
         if let sensitivity { return sensitivity.symbol }
         if codeLanguage != nil { return "chevron.left.forwardslash.chevron.right" }
+        if let primarySmartAction { return primarySmartAction.subjectSymbol }
+        if kind == .url, MapsLink.isMaps(URL(string: preview)) { return "mappin.and.ellipse" }
         return kind.symbolName
     }
 

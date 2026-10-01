@@ -16,13 +16,15 @@ enum PanelMetrics {
     static let cardWidth: CGFloat = 250
     static let cardHeight: CGFloat = 236
     static let cardCornerRadius: CGFloat = 22
-    static let cardSpacing: CGFloat = 14
+    /// Everything sits on a 4pt grid: 12 between cards and rows, 16 inside cards.
+    static let cardSpacing: CGFloat = 12
+    static let cardPadding: CGFloat = 16
 
     static let toolbarHeight: CGFloat = 40
     static let hintBarHeight: CGFloat = 28
     static let previewHeight: CGFloat = 320
 
-    static let rowSpacing: CGFloat = 10
+    static let rowSpacing: CGFloat = 12
     static let topInset: CGFloat = 14
     static let bottomInset: CGFloat = 12
     /// Vertical breathing room around the card strip for hover scale and shadows.

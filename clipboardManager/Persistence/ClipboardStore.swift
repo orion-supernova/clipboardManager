@@ -68,6 +68,10 @@ final class ClipboardStore: @unchecked Sendable {
         "folderID", "sensitivity", "linkTitle", "linkIconPath",
     ]
 
+    static func searchTerms(_ search: String) -> [String] {
+        search.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+
     func load(_ query: ItemQuery) async throws -> [ClipboardItem] {
         try await persistence.ready()
         return try await context.perform { [self] in
@@ -79,17 +83,20 @@ final class ClipboardStore: @unchecked Sendable {
                 NSSortDescriptor(key: "timestamp", ascending: false),
             ]
             var predicates: [NSPredicate] = []
+            let terms = Self.searchTerms(query.search)
             switch query.scope {
             case .history:
-                predicates.append(NSPredicate(format: "folderID == nil"))
+                // Searching from History looks inside folders too; browsing doesn't.
+                if terms.isEmpty { predicates.append(NSPredicate(format: "folderID == nil")) }
             case let .folder(id):
                 predicates.append(NSPredicate(format: "folderID == %@", id as CVarArg))
             }
-            let search = query.search.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !search.isEmpty {
+            // Every word must appear somewhere, in any order: "phd karolinska"
+            // finds an email that mentions both.
+            for term in terms {
                 predicates.append(NSPredicate(
                     format: "previewText CONTAINS[cd] %@ OR text CONTAINS[cd] %@ OR fileName CONTAINS[cd] %@ OR sourceAppName CONTAINS[cd] %@ OR linkTitle CONTAINS[cd] %@",
-                    search, search, search, search, search
+                    term, term, term, term, term
                 ))
             }
             if let kinds = query.kinds {
@@ -333,6 +340,25 @@ final class ClipboardStore: @unchecked Sendable {
             guard let entity = try fetchEntity(id: id) else { return }
             entity.isPinned = pinned
             try context.save()
+        }
+    }
+
+    /// Masks a text item by hand, or clears any sensitivity (detected or marked).
+    /// Returns the updated item so the list can re-render it masked or plain.
+    func setSensitive(id: UUID, _ sensitive: Bool) async throws -> ClipboardItem? {
+        try await persistence.ready()
+        return try await context.perform { [self] in
+            guard let entity = try fetchEntity(id: id), let text = entity.text else { return nil }
+            if sensitive {
+                let match = SensitiveContent.markedByUser(text)
+                entity.sensitivity = Self.encodeSensitivity(match.kind, detail: nil)
+                entity.previewText = match.masked
+            } else {
+                entity.sensitivity = nil
+                entity.previewText = TextClassifier.preview(for: text)
+            }
+            try context.save()
+            return ClipboardItem(entity: entity)
         }
     }
 
@@ -648,7 +674,10 @@ extension ClipboardItem {
             linkIconPath: row["linkIconPath"] as? String,
             codeLanguage: nil
         )
-        if kind == .text, sensitivity == nil { codeLanguage = CodeLanguage.detect(preview) }
+        if kind == .text, sensitivity == nil {
+            codeLanguage = CodeLanguage.detect(preview)
+            if codeLanguage == nil { smartActions = SmartDetector.actions(for: preview) }
+        }
     }
 
     init(entity: ClipboardEntity) {
@@ -677,6 +706,9 @@ extension ClipboardItem {
             linkIconPath: entity.linkIconPath,
             codeLanguage: nil
         )
-        if kind == .text, sensitivity == nil { codeLanguage = CodeLanguage.detect(preview) }
+        if kind == .text, sensitivity == nil {
+            codeLanguage = CodeLanguage.detect(preview)
+            if codeLanguage == nil { smartActions = SmartDetector.actions(for: preview) }
+        }
     }
 }

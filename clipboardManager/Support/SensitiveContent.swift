@@ -15,6 +15,10 @@ enum SensitiveKind: String, Codable, Sendable, Equatable, Hashable, CaseIterable
     case apiKey
     case privateKey
     case credential
+    /// A lone token that reads like a generated password.
+    case password
+    /// Marked by the user; nothing about the text gave it away.
+    case marked
 
     var title: String {
         switch self {
@@ -23,6 +27,8 @@ enum SensitiveKind: String, Codable, Sendable, Equatable, Hashable, CaseIterable
         case .apiKey: "Secret Key"
         case .privateKey: "Private Key"
         case .credential: "Credential"
+        case .password: "Password"
+        case .marked: "Sensitive"
         }
     }
 
@@ -33,6 +39,8 @@ enum SensitiveKind: String, Codable, Sendable, Equatable, Hashable, CaseIterable
         case .apiKey: "key.fill"
         case .privateKey: "lock.doc.fill"
         case .credential: "person.badge.key.fill"
+        case .password: "key.horizontal.fill"
+        case .marked: "lock.fill"
         }
     }
 }
@@ -55,7 +63,55 @@ enum SensitiveContent {
         if let match = detectCard(text) { return match }
         if let match = detectIBAN(text) { return match }
         if let match = detectCredential(text) { return match }
+        if let match = detectPassword(text) { return match }
         return nil
+    }
+
+    /// The masked preview for an item the user marked sensitive by hand.
+    static func markedByUser(_ text: String) -> SensitiveMatch {
+        SensitiveMatch(kind: .marked, masked: bullets, detail: nil)
+    }
+
+    /// A fixed run, never one bullet per character: a mask that shows the
+    /// length gives away how strong (or short) the secret is.
+    private static let bullets = String(repeating: "•", count: 12)
+
+    // MARK: - Passwords
+
+    /// Characters common in versions, paths and identifiers. A password needs a
+    /// symbol outside these, so "v1.2.3-beta" isn't one. `@` only counts as
+    /// everyday inside an email address.
+    private static let everydaySymbols = CharacterSet(charactersIn: "._-/:")
+    private static let trailingPunctuation = CharacterSet(charactersIn: "!?.,;:")
+
+    /// One whitespace-free token of 8–64 characters with a digit, a real symbol
+    /// (not just trailing punctuation) and at least three character classes,
+    /// e.g. `Ath4664#?gl!` or `P@ssw0rd`. Paths, URLs, emails and key=value
+    /// pairs are left alone; anything misjudged can be unmarked with ⌘L.
+    private static func detectPassword(_ text: String) -> SensitiveMatch? {
+        let token = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (8...64).contains(token.count),
+              !token.unicodeScalars.contains(where: { CharacterSet.whitespacesAndNewlines.contains($0) }),
+              !token.contains("://"), !token.contains("="),
+              !token.hasPrefix("/"), !token.hasPrefix("~")
+        else { return nil }
+        let isEmail = token.range(of: #"^[^@]+@[^@]+\.[A-Za-z]{2,}$"#, options: .regularExpression) != nil
+        guard !isEmail else { return nil }
+
+        var lower = false, upper = false, digit = false, symbol = false, realSymbol = false
+        let core = String(String.UnicodeScalarView(token.unicodeScalars.reversed().drop(while: { trailingPunctuation.contains($0) }).reversed()))
+        for scalar in token.unicodeScalars {
+            if CharacterSet.lowercaseLetters.contains(scalar) { lower = true }
+            else if CharacterSet.uppercaseLetters.contains(scalar) { upper = true }
+            else if CharacterSet.decimalDigits.contains(scalar) { digit = true }
+            else { symbol = true }
+        }
+        for scalar in core.unicodeScalars where !CharacterSet.alphanumerics.contains(scalar) && !everydaySymbols.contains(scalar) {
+            realSymbol = true
+        }
+        let classes = [lower, upper, digit, symbol].filter { $0 }.count
+        guard digit, realSymbol, classes >= 3 else { return nil }
+        return SensitiveMatch(kind: .password, masked: bullets, detail: nil)
     }
 
     // MARK: - Private keys

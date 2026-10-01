@@ -140,6 +140,79 @@ struct MarketingScenes {
         min(size.width - 2 * PanelMetrics.horizontalScreenInset, PanelMetrics.maxWidth)
     }
 
+    // MARK: - Design review
+
+    /// Every content type with the preview open, plus the bare panel — for
+    /// reviewing layout without driving the real app. Fictional data only.
+    func designReview() -> [MarketingRenderer.Still] {
+        let size = Self.stillSize
+        let width = panelWidth(for: size)
+        let s = SampleContent()
+        let cases: [(String, ClipboardItem, ClipboardPayload)] = [
+            ("prose", s.item(.text, "Design is not just what it looks like and feels like. Design is how it works. Every pixel here should earn its place, and the quiet parts matter as much as the loud ones.", app: s.notes, minutesAgo: 3),
+             ClipboardPayload(kind: .text, text: String(repeating: "Design is not just what it looks like and feels like. Design is how it works. Every pixel here should earn its place, and the quiet parts matter as much as the loud ones. ", count: 6))),
+            ("code", s.item(.text, s.swiftSnippet, app: s.xcode, minutesAgo: 1), ClipboardPayload(kind: .text, text: s.swiftSnippet)),
+            ("calc", s.item(.text, "(3+4)^2 - 10", app: s.notes, minutesAgo: 2), ClipboardPayload(kind: .text, text: "(3+4)^2 - 10")),
+            ("email", s.item(.text, "hello@example.com", app: s.safari, minutesAgo: 2), ClipboardPayload(kind: .text, text: "hello@example.com")),
+            ("phone", s.item(.text, "(415) 555-0132", app: s.safari, minutesAgo: 2), ClipboardPayload(kind: .text, text: "(415) 555-0132")),
+            ("address", s.item(.text, "1 Infinite Loop, Cupertino, CA 95014", app: s.safari, minutesAgo: 2), ClipboardPayload(kind: .text, text: "1 Infinite Loop, Cupertino, CA 95014")),
+            ("date", s.item(.text, "Dinner with Alex tomorrow at 19:30", app: s.notes, minutesAgo: 2), ClipboardPayload(kind: .text, text: "Dinner with Alex tomorrow at 19:30")),
+            ("multilink", s.item(.text, "Read these: https://example.com/a https://example.org/b https://example.net/c", app: s.safari, minutesAgo: 2),
+             ClipboardPayload(kind: .text, text: "Read these: https://example.com/a https://example.org/b https://example.net/c")),
+            ("tracking", s.item(.text, "RR123456789TR", app: s.safari, minutesAgo: 2), ClipboardPayload(kind: .text, text: "RR123456789TR")),
+            ("path", s.item(.text, "~/Documents/Launch plan.pdf", app: s.terminal, minutesAgo: 2), ClipboardPayload(kind: .text, text: "~/Documents/Launch plan.pdf")),
+            ("link", s.item(.url, "https://developer.apple.com/documentation/technologyoverviews/liquid-glass?utm_source=newsletter&ref=home", app: s.safari, minutesAgo: 3,
+                            thumbnailPath: "link-hero.png", linkTitle: "Adopting Liquid Glass", linkIconPath: "link-icon.png"),
+             ClipboardPayload(kind: .url, text: "https://developer.apple.com/documentation/technologyoverviews/liquid-glass?utm_source=newsletter&ref=home")),
+            ("maps", s.item(.url, "https://maps.app.goo.gl/AbCdEf123Example", app: s.safari, minutesAgo: 1,
+                            thumbnailPath: "map-square.png", linkTitle: "Dropped pin · 40.9310, 29.2179"),
+             ClipboardPayload(kind: .url, text: "https://maps.app.goo.gl/AbCdEf123Example")),
+            ("link-bare", s.item(.url, "https://example.com/some/long/path/to/an/article", app: s.safari, minutesAgo: 3),
+             ClipboardPayload(kind: .url, text: "https://example.com/some/long/path/to/an/article")),
+            ("image", s.item(.image, "Q3 roadmap · Liquid Glass rollout · ship by Oct 14", app: s.finder, minutesAgo: 6, byteCount: 842_000,
+                             imagePath: "screenshot-full.png", thumbnailPath: "screenshot.png", pixelSize: PixelSize(width: 1600, height: 1000)),
+             ClipboardPayload(kind: .image, text: "Q3 roadmap\nLiquid Glass rollout\nShip by Oct 14\nOwners: design, platform\nRisks: performance on older Macs")),
+            ("color", s.item(.color, "#5E5CE6", app: s.figma, minutesAgo: 9), ClipboardPayload(kind: .color, text: "#5E5CE6")),
+            ("card", s.item(.text, "•••• •••• •••• 4242", app: s.safari, minutesAgo: 4, sensitivity: .creditCard, sensitivityDetail: "Visa"),
+             ClipboardPayload(kind: .text, text: "4242 4242 4242 4242")),
+            ("password", s.item(.text, "••••••••••••", app: s.safari, minutesAgo: 4, sensitivity: .password), ClipboardPayload(kind: .text, text: "x9K!mQ2#vL")),
+            ("file", s.item(.file, "Launch plan.pdf", app: s.finder, minutesAgo: 22, byteCount: 2_400_000, fileName: "Launch plan.pdf",
+                            filePath: "/Users/you/Documents/Launch plan.pdf", thumbnailPath: "pdf.png"),
+             ClipboardPayload(kind: .file)),
+        ]
+        var stills: [MarketingRenderer.Still] = [
+            .init(name: "00-panel", size: size, scale: 2, view: scene(size: size, caption: nil) {
+                panel(baseState(items: cases.map(\.1)), width: width, height: PanelMetrics.height)
+            }),
+        ]
+        for (held, name) in [(HeldModifiers.command, "hold-cmd"), (.commandOption, "hold-cmd-opt")] {
+            var state = baseState(items: cases.map(\.1))
+            state.modifierHint = held
+            stills.append(.init(name: name, size: size, scale: 2, view: scene(size: size, caption: nil) {
+                panel(state, width: width, height: PanelMetrics.height)
+            }))
+        }
+        // The strip doesn't scroll offline: show every card by starting at different items.
+        let all = cases.map(\.1)
+        for (offset, name) in [(0, "strip-a"), (6, "strip-b"), (12, "strip-c")] {
+            var state = baseState(items: Array(all.dropFirst(offset)))
+            state.selectedID = all[offset].id
+            stills.append(.init(name: name, size: size, scale: 2, view: scene(size: size, caption: nil) {
+                panel(state, width: width, height: PanelMetrics.height)
+            }))
+        }
+        for (index, entry) in cases.enumerated() {
+            var state = baseState(items: cases.map(\.1))
+            state.selectedID = entry.1.id
+            state.previewID = entry.1.id
+            state.previewPayload = entry.2
+            stills.append(.init(name: String(format: "%02d-%@", index + 1, entry.0), size: size, scale: 2, view: scene(size: size, caption: nil) {
+                panel(state, width: width, height: PanelMetrics.expandedHeight)
+            }))
+        }
+        return stills
+    }
+
     // MARK: - Stills
 
     func stills() -> [MarketingRenderer.Still] {
@@ -331,7 +404,8 @@ private struct SampleContent {
             sensitivityDetail: sensitivityDetail,
             linkTitle: linkTitle,
             linkIconPath: linkIconPath,
-            codeLanguage: kind == .text && sensitivity == nil ? CodeLanguage.detect(preview) : nil
+            codeLanguage: kind == .text && sensitivity == nil ? CodeLanguage.detect(preview) : nil,
+            smartActions: kind == .text && sensitivity == nil && CodeLanguage.detect(preview) == nil ? SmartDetector.actions(for: preview) : []
         )
     }
 
@@ -407,6 +481,8 @@ struct MarketingAssets {
         images["/marketing/thumbs/screenshot.png"] = Self.render(size: CGSize(width: 480, height: 300)) { SampleScreenshot() }
         images["/marketing/images/screenshot-full.png"] = Self.render(size: CGSize(width: 960, height: 600)) { SampleScreenshot() }
         images["/marketing/thumbs/link-hero.png"] = Self.render(size: CGSize(width: 480, height: 240)) { SampleLinkHero() }
+        // Large and square, like Google's 900×900 static map: catches images escaping their frame.
+        images["/marketing/thumbs/map-square.png"] = Self.render(size: CGSize(width: 900, height: 900)) { SampleLinkHero() }
         images["/marketing/thumbs/link-icon.png"] = Self.render(size: CGSize(width: 64, height: 64)) { SampleFavicon() }
         images["/marketing/thumbs/pdf.png"] = Self.render(size: CGSize(width: 200, height: 260)) { SampleDocument() }
         for bundleID in ["com.apple.Safari", "com.apple.dt.Xcode", "com.apple.finder", "com.apple.Notes", "com.apple.Terminal", "com.figma.Desktop"] {

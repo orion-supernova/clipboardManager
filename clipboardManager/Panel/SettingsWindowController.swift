@@ -11,6 +11,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private static let autosaveName = "MahmutSettingsWindow"
     private static let initialSize = NSSize(width: 800, height: 580)
     private var hasBeenShown = false
+    var onVisibilityChange: ((Bool) -> Void)?
 
     init() {
         let window = NSWindow(
@@ -60,10 +61,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+        onVisibilityChange?(true)
     }
 
     func windowWillClose(_ notification: Notification) {
         // Back to a menu bar utility.
-        NSApp.setActivationPolicy(.accessory)
+        let otherWindowOpen = NSApp.windows.contains { $0 !== window && $0.isVisible && $0.styleMask.contains(.titled) }
+        if !otherWindowOpen { NSApp.setActivationPolicy(.accessory) }
+        onVisibilityChange?(false)
     }
 }

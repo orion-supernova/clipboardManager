@@ -33,12 +33,33 @@ struct HistoryFeature {
         var flashID: UUID?
         var recentID: UUID?
         var flashHintKey: String?
+        /// Modifiers held right now; the hint bar shows what they unlock.
+        var modifierHint = HeldModifiers.none
+        var isPaletteOpen = false
+        var paletteQuery = ""
+        var paletteSelection = 0
         var toast: Toast?
         /// Set by keyboard navigation so the strip centres the selection.
         var scrollTarget: UUID?
         var kindFilter: KindFilter = .all
         var previewID: UUID?
         var previewPayload: ClipboardPayload?
+        /// Which item `previewPayload` belongs to. It is kept while the next item
+        /// loads, so Quick Look can swap files instead of being rebuilt per keypress.
+        var previewPayloadID: UUID?
+        var previewFailed = false
+        /// Links whose missing title or image was already re-fetched this session.
+        var linkRetries: Set<UUID> = []
+        /// Bumped per ↑/↓ while a long text preview is open; the sheet scrolls to match.
+        var previewScroll: PreviewScrollRequest?
+        var previewZoomed = false
+
+        /// Long, unmasked plain text: ↑/↓ scroll it instead of changing items.
+        var previewScrollsText: Bool {
+            guard isPreviewOpen, let item = selectedItem, item.kind == .text, item.primarySmartAction == nil else { return false }
+            if item.isSensitive, !previewRevealed { return false }
+            return item.preview.count > 140 || item.preview.contains(where: \.isNewline)
+        }
         var previewRevealed = false
         var dialog: Dialog?
         var dialogText = ""
@@ -66,6 +87,9 @@ struct HistoryFeature {
         var isPreviewOpen: Bool { previewID != nil }
         var selectedIndex: Int? { selectedID.flatMap { items.index(id: $0) } }
         var selectedItem: ClipboardItem? { selectedID.flatMap { items[id: $0] } }
+        var paletteResults: [PaletteCommand] {
+            CommandCatalog.matching(paletteQuery, in: CommandCatalog.commands(for: self))
+        }
         var currentFolder: ClipboardFolder? { activeScope.folderID.flatMap { folders[id: $0] } }
         var scopeTitle: String { currentFolder?.name ?? "History" }
         var sensitiveLifetime: TimeInterval? { sensitiveMaxAgeMinutes > 0 ? TimeInterval(sensitiveMaxAgeMinutes) * 60 : nil }
@@ -93,6 +117,12 @@ struct HistoryFeature {
                     + TextTransform.allCases.enumerated().map { DialogOption(id: $0.offset + 1, title: $0.element.title, symbol: $0.element.symbol) }
             case .copyAs:
                 return ColorFormat.allCases.enumerated().map { DialogOption(id: $0.offset, title: $0.element.title, symbol: "swatchpalette") }
+            case let .openLinks(itemID):
+                // Links first, numbered as they appear in the text; "all" last (and on ↩).
+                let urls = items[id: itemID]?.webLinks ?? []
+                return urls.enumerated().map { index, url in
+                    DialogOption(id: index, title: (url.host() ?? url.absoluteString) + (url.path().count > 1 ? url.path() : ""), symbol: "safari")
+                } + [DialogOption(id: urls.count, title: "All \(urls.count) Links", symbol: "square.stack.3d.up")]
             default:
                 return []
             }
@@ -101,7 +131,8 @@ struct HistoryFeature {
         /// Keeps the in-memory list consistent with the retention policy without a round trip.
         mutating func applyRetention() {
             guard activeScope == .history, let maxCount = retention.maxCount else { return }
-            let unpinned = items.filter { !$0.isPinned }
+            // Folder items only appear here as search results; they never count.
+            let unpinned = items.filter { !$0.isRetentionExempt }
             guard unpinned.count > maxCount else { return }
             let doomed = Set(unpinned.suffix(unpinned.count - maxCount).map(\.id))
             items.removeAll { doomed.contains($0.id) }
@@ -140,9 +171,16 @@ struct HistoryFeature {
         var isDisabled = false
     }
 
+    struct PreviewScrollRequest: Equatable, Sendable {
+        var move: VerticalMove
+        var id: Int
+    }
+
     struct PasteOptions: Equatable, Sendable {
         var plainText = false
         var transform: TextTransform?
+        /// Paste this instead of the item's text (a calculation's result).
+        var replacementText: String?
 
         static let standard = PasteOptions()
         static let plain = PasteOptions(plainText: true)
@@ -155,10 +193,12 @@ struct HistoryFeature {
         case chooseFolder(UUID)
         case pasteAs(UUID)
         case copyAs(UUID)
+        /// ⌘O on text with several links: pick one by number, or ↩ for all.
+        case openLinks(UUID)
 
         var isChooser: Bool {
             switch self {
-            case .chooseFolder, .pasteAs, .copyAs: true
+            case .chooseFolder, .pasteAs, .copyAs, .openLinks: true
             default: false
             }
         }
@@ -195,9 +235,12 @@ struct HistoryFeature {
         case copyColor(UUID, ColorFormat)
         case delete(UUID)
         case togglePin(UUID)
+        case toggleSensitive(UUID)
+        case toggleImageZoom
         case revealInFinder(UUID)
         case copyPath(UUID)
         case openItem(UUID)
+        case performSmartAction(UUID, SmartAction)
         case setKindFilter(KindFilter)
         case setScope(HistoryScope)
         case cycleScope(Int)
@@ -223,6 +266,8 @@ struct HistoryFeature {
         case move(Move)
         case keyCommand(KeyCommand)
         case panelEvent(PanelEvent)
+        case paletteRun(PaletteCommand)
+        case paletteClosed
         case pruneTick
         case pruned([UUID])
         case clearAllTapped
@@ -257,6 +302,10 @@ struct HistoryFeature {
             switch action {
             case .binding(\.searchText):
                 return debouncedReload()
+
+            case .binding(\.paletteQuery):
+                state.paletteSelection = 0
+                return .none
 
             case .binding:
                 return .none
@@ -326,6 +375,9 @@ struct HistoryFeature {
                 state.kindFilter = .all
                 state.previewID = nil
                 state.previewPayload = nil
+                state.previewPayloadID = nil
+                state.previewFailed = false
+                state.previewZoomed = false
                 state.previewRevealed = false
                 state.dialog = nil
                 state.selectionAnimated = false
@@ -358,8 +410,14 @@ struct HistoryFeature {
                 state.isPresented = false
                 state.isEntering = false
                 state.isSearchFocused = false
+                state.modifierHint = .none
+                state.isPaletteOpen = false
+                state.paletteQuery = ""
                 state.previewID = nil
                 state.previewPayload = nil
+                state.previewPayloadID = nil
+                state.previewFailed = false
+                state.previewZoomed = false
                 state.previewRevealed = false
                 state.dialog = nil
                 let simulate = reason == .pasted && state.autoPaste
@@ -414,6 +472,8 @@ struct HistoryFeature {
                     if let id = state.selectedID {
                         state.previewID = id
                         state.previewRevealed = false
+                        state.previewFailed = false
+                        state.previewZoomed = false
                         return loadPreview(id)
                     }
                     return .send(.closePreview)
@@ -484,7 +544,10 @@ struct HistoryFeature {
                 state.flashID = id
                 return .run { send in
                     guard var payload = try await clipboardStore.payload(id) else { return }
-                    if let transform = options.transform {
+                    if let replacement = options.replacementText {
+                        payload.text = replacement
+                        payload.richText = nil
+                    } else if let transform = options.transform {
                         guard let text = payload.text, let transformed = transform.apply(to: text) else {
                             await send(.showToast("Not valid JSON", symbol: "exclamationmark.triangle.fill"), animation: .bouncy)
                             await send(.binding(.set(\.flashID, nil)))
@@ -493,7 +556,7 @@ struct HistoryFeature {
                         payload.text = transformed
                         payload.richText = nil
                     }
-                    await paste.write(payload, id, options.plainText || options.transform != nil)
+                    await paste.write(payload, id, options.plainText || options.transform != nil || options.replacementText != nil)
                     await workspace.haptic(.levelChange)
                     try await clock.sleep(for: .milliseconds(150))
                     await send(.dismiss(.pasted))
@@ -558,6 +621,33 @@ struct HistoryFeature {
                     animated(.showToast(pinned ? "Pinned" : "Unpinned", symbol: pinned ? "pin.fill" : "pin.slash"), .bouncy)
                 )
 
+            case .toggleImageZoom:
+                guard state.isPreviewOpen else { return .none }
+                state.previewZoomed.toggle()
+                return .none
+
+            case let .toggleSensitive(id):
+                // Only text: a password pasted from Slack is text; links and files
+                // have titles and thumbnails that would leak around the mask.
+                guard let item = state.items[id: id], item.kind == .text else {
+                    return .run { _ in await workspace.haptic(.generic) }
+                }
+                let sensitive = !item.isSensitive
+                if state.previewID == id { state.previewRevealed = false }
+                return .merge(
+                    .run { send in
+                        guard let updated = try await clipboardStore.setSensitive(id, sensitive) else { return }
+                        await send(.itemUpdated(updated), animation: .smooth(duration: 0.25))
+                        await workspace.haptic(.alignment)
+                    } catch: { error, _ in
+                        logger.error("Marking sensitive failed: \(error.localizedDescription)")
+                    },
+                    animated(
+                        .showToast(sensitive ? "Marked sensitive" : "No longer sensitive", symbol: sensitive ? "lock.fill" : "lock.open"),
+                        .bouncy
+                    )
+                )
+
             case let .revealInFinder(id):
                 return .run { _ in
                     guard let url = try await clipboardStore.payload(id).flatMap({ $0.fileURL ?? $0.imageFileURL }) else { return }
@@ -573,6 +663,33 @@ struct HistoryFeature {
                               let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)) {
                         await workspace.open(url)
                     }
+                }
+
+            case let .performSmartAction(id, action):
+                switch action.kind {
+                case let .pasteResult(result):
+                    var options = PasteOptions.plain
+                    options.replacementText = result
+                    return .send(.paste(id, options))
+                case let .showPath(path):
+                    let url = URL(fileURLWithPath: UserHome.expand(path))
+                    return .run { _ in await workspace.revealInFinder(url) }
+                case let .openPath(path):
+                    let url = URL(fileURLWithPath: UserHome.expand(path))
+                    return .run { _ in await workspace.open(url) }
+                case let .openLinks(urls):
+                    return .run { _ in for url in urls { await workspace.open(url) } }
+                case let .addToCalendar(start, duration, allDay, title):
+                    return .run { send in
+                        let file = try CalendarEvent.file(title: title, start: start, duration: duration, allDay: allDay)
+                        await workspace.open(file)
+                    } catch: { error, send in
+                        logger.error("Calendar event failed: \(error.localizedDescription)")
+                        await send(.showToast("Couldn’t create the event", symbol: "exclamationmark.triangle.fill"), animation: .bouncy)
+                    }
+                default:
+                    guard let url = action.url else { return .none }
+                    return .run { _ in await workspace.open(url) }
                 }
 
             case let .copyPath(id):
@@ -650,6 +767,10 @@ struct HistoryFeature {
 
             case let .dialogConfirmed(choice):
                 guard let dialog = state.dialog else { return .none }
+                // ↩ in the link picker opens them all.
+                if case let .openLinks(itemID) = dialog {
+                    return .send(.dialogOptionChosen(state.items[id: itemID]?.webLinks.count ?? 0))
+                }
                 let text = state.dialogText.trimmingCharacters(in: .whitespacesAndNewlines)
                 switch dialog {
                 case let .newFolder(thenAdd):
@@ -680,7 +801,7 @@ struct HistoryFeature {
                     } catch: { error, _ in
                         logger.error("Delete folder failed: \(error.localizedDescription)")
                     }
-                case .chooseFolder, .pasteAs, .copyAs:
+                case .chooseFolder, .pasteAs, .copyAs, .openLinks:
                     // ↩ picks the first option in chooser dialogs.
                     return .send(.dialogOptionChosen(0))
                 }
@@ -713,6 +834,13 @@ struct HistoryFeature {
                     state.dialog = nil
                     guard ColorFormat.allCases.indices.contains(index) else { return .none }
                     return .send(.copyColor(itemID, ColorFormat.allCases[index]))
+                case let .openLinks(itemID):
+                    state.dialog = nil
+                    let urls = state.items[id: itemID]?.webLinks ?? []
+                    if urls.indices.contains(index) {
+                        return .send(.performSmartAction(itemID, SmartAction(kind: .openLink(urls[index]))))
+                    }
+                    return .send(.performSmartAction(itemID, SmartAction(kind: .openLinks(urls))))
                 default:
                     return .none
                 }
@@ -752,10 +880,14 @@ struct HistoryFeature {
 
             case let .moveItem(id, folderID):
                 guard state.items[id: id] != nil || state.activeScope != .history else { return .none }
-                let leavesList = state.activeScope.folderID != folderID
+                // History search shows folder items too, so a move there just re-badges.
+                let staysInSearch = state.activeScope == .history && state.isSearching
+                let leavesList = state.activeScope.folderID != folderID && !staysInSearch
                 if leavesList {
                     state.remove(id)
                     state.selectionAnimated = true
+                } else {
+                    state.items[id: id]?.folderID = folderID
                 }
                 let destination = folderID.flatMap { state.folders[id: $0]?.name }
                 var effects: [Effect<Action>] = [
@@ -783,6 +915,8 @@ struct HistoryFeature {
                 state.selectionAnimated = true
                 state.previewID = id
                 state.previewRevealed = false
+                state.previewFailed = false
+                state.previewZoomed = false
                 return .merge(
                     .cancel(id: CancelID.previewResize),
                     .run { _ in await panel.resize(PanelMetrics.expandedHeight) },
@@ -805,6 +939,16 @@ struct HistoryFeature {
             case let .previewLoaded(id, payload):
                 guard state.previewID == id else { return .none }
                 state.previewPayload = payload
+                state.previewPayloadID = id
+                state.previewFailed = payload == nil
+                // Link details are fetched once, at copy time; if that failed (offline,
+                // slow site, or copied before this existed), try again now, once a session.
+                if let item = state.items[id: id], item.kind == .url,
+                   item.linkTitle == nil || item.thumbnailPath == nil
+                       || (MapsLink.isMaps(URL(string: item.preview)) && MapsLink.isGenericTitle(item.linkTitle)),
+                   state.linkRetries.insert(id).inserted {
+                    return enrichment(for: item)
+                }
                 return .none
 
             case .toggleCapturePaused:
@@ -844,6 +988,8 @@ struct HistoryFeature {
                 if state.isPreviewOpen {
                     state.previewID = id
                     state.previewRevealed = false
+                    state.previewFailed = false
+                    state.previewZoomed = false
                     return loadPreview(id)
                 }
                 return .none
@@ -864,8 +1010,32 @@ struct HistoryFeature {
                         return .none
                     }
                 }
+                if state.isPaletteOpen {
+                    switch command {
+                    case .escape, .commandPalette:
+                        return .send(.paletteClosed, animation: .easeOut(duration: 0.15))
+                    case .confirm:
+                        let results = state.paletteResults
+                        guard results.indices.contains(state.paletteSelection) else { return .none }
+                        return .send(.paletteRun(results[state.paletteSelection]))
+                    case .previous, .next, .vertical(.lineUp), .vertical(.lineDown):
+                        let count = state.paletteResults.count
+                        guard count > 0 else { return .none }
+                        let step = command == .previous || command == .vertical(.lineUp) ? -1 : 1
+                        state.paletteSelection = (state.paletteSelection + step + count) % count
+                        return .none
+                    default:
+                        return .none
+                    }
+                }
                 let flash = hintFlashEffect(for: command, state: &state)
                 switch command {
+                case .commandPalette:
+                    state.isPaletteOpen = true
+                    state.paletteQuery = ""
+                    state.paletteSelection = 0
+                    state.isSearchFocused = false
+                    return flash
                 case .escape:
                     if state.isSearchFocused, !state.searchText.isEmpty {
                         state.searchText = ""
@@ -880,6 +1050,17 @@ struct HistoryFeature {
                 case let .confirm(plainText):
                     guard let id = state.selectedID else { return flash }
                     return .merge(flash, .send(.paste(id, plainText ? .plain : .standard)))
+                case let .vertical(move):
+                    if state.previewScrollsText {
+                        state.previewScroll = PreviewScrollRequest(move: move, id: (state.previewScroll?.id ?? 0) + 1)
+                        return .none
+                    }
+                    switch move {
+                    case .lineUp, .pageUp: return .send(.move(.previous))
+                    case .lineDown, .pageDown: return .send(.move(.next))
+                    case .top: return .send(.move(.first))
+                    case .bottom: return .send(.move(.last))
+                    }
                 case .previous: return .send(.move(.previous))
                 case .next: return .send(.move(.next))
                 case .first: return .send(.move(.first))
@@ -891,6 +1072,9 @@ struct HistoryFeature {
                     state.isSearchFocused = true
                     return flash
                 case let .typeToSearch(text):
+                    if state.isPreviewOpen, state.selectedItem?.kind == .image, text.lowercased() == "z" {
+                        return .send(.toggleImageZoom, animation: .smooth(duration: 0.25))
+                    }
                     if state.isPreviewOpen, let item = state.selectedItem, item.kind == .color,
                        let number = Int(text), ColorFormat.allCases.indices.contains(number - 1) {
                         return .send(.copyColor(item.id, ColorFormat.allCases[number - 1]))
@@ -907,6 +1091,9 @@ struct HistoryFeature {
                 case .togglePin:
                     guard let id = state.selectedID else { return flash }
                     return .merge(flash, animated(.togglePin(id), .smooth(duration: 0.25)))
+                case .toggleSensitive:
+                    guard let id = state.selectedID else { return flash }
+                    return .merge(flash, .send(.toggleSensitive(id)))
                 case .togglePreview:
                     return .merge(flash, .send(.togglePreview))
                 case .openSettings:
@@ -920,6 +1107,12 @@ struct HistoryFeature {
                     return .merge(flash, .send(.cycleScope(-1)))
                 case .nextScope:
                     return .merge(flash, .send(.cycleScope(1)))
+                case let .selectScope(index):
+                    let scopes: [HistoryScope] = [.history] + state.folders.map { .folder($0.id) }
+                    guard scopes.indices.contains(index) else {
+                        return .run { _ in await workspace.haptic(.generic) }
+                    }
+                    return .merge(flash, .send(.setScope(scopes[index])))
                 case .newFolder:
                     return .send(.newFolderTapped(thenAdd: nil))
                 case .renameFolder:
@@ -940,33 +1133,51 @@ struct HistoryFeature {
                     guard let id = state.selectedID else { return .none }
                     return .send(.pasteAsTapped(id))
                 case .secondaryCopy:
-                    guard let item = state.selectedItem else { return .none }
+                    // ⇧⌘C is always "copy as text": the text form of whatever this is.
+                    guard let item = state.selectedItem else { return flash }
                     switch item.kind {
                     case .color:
-                        return .send(.copyAsTapped(item.id))
+                        return .merge(flash, .send(.copyText(item.preview, toast: "Hex copied")))
                     case .file, .video:
-                        return .send(.copyPath(item.id))
+                        return .merge(flash, .send(.copyPath(item.id)))
                     default:
                         let id = item.id
                         let toast = item.kind == .image ? "Image text copied" : "Plain text copied"
-                        return .run { send in
+                        return .merge(flash, .run { send in
                             guard let text = try await clipboardStore.payload(id)?.text, !text.isEmpty else { return }
                             await send(.copyText(text, toast: toast))
-                        }
+                        })
                     }
                 case .reveal:
                     if state.isPreviewOpen { return .send(.toggleReveal) }
                     guard let item = state.selectedItem else { return .none }
                     return .concatenate(.send(.previewItem(item.id)), item.isSensitive ? .send(.toggleReveal) : .none)
                 case .open:
-                    guard let id = state.selectedID else { return .none }
-                    return .send(.openItem(id))
+                    guard let item = state.selectedItem else { return flash }
+                    if !item.isSensitive, item.kind == .text, item.webLinks.count >= 2 {
+                        state.dialog = .openLinks(item.id)
+                        state.isSearchFocused = false
+                        return flash
+                    }
+                    // ⌘O only ever means Open: a file, a link, or a link or path found in text.
+                    if let action = item.openSmartAction { return .merge(flash, .send(.performSmartAction(item.id, action))) }
+                    return .merge(flash, .send(.openItem(item.id)))
+                case let .joker(index):
+                    guard let item = state.selectedItem, item.jokerActions.indices.contains(index) else {
+                        return .merge(flash, .run { _ in await workspace.haptic(.generic) })
+                    }
+                    return .merge(flash, .send(.performSmartAction(item.id, item.jokerActions[index])))
                 case .revealInFinder:
-                    guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return .none }
-                    return .send(.revealInFinder(item.id))
+                    guard let item = state.selectedItem else { return flash }
+                    // ⇧⌘R means Show in Finder for a copied path too, not just a copied file.
+                    if let show = item.showInFinderAction {
+                        return .merge(flash, .send(.performSmartAction(item.id, show)))
+                    }
+                    guard item.kind.isFileBacked || item.kind == .image else { return flash }
+                    return .merge(flash, .send(.revealInFinder(item.id)))
                 case .copyPath:
-                    guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return .none }
-                    return .send(.copyPath(item.id))
+                    guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return flash }
+                    return .merge(flash, .send(.copyPath(item.id)))
                 }
 
             case .panelEvent(.didResignKey), .panelEvent(.clickedOutside):
@@ -974,6 +1185,31 @@ struct HistoryFeature {
 
             case let .panelEvent(.key(command)):
                 return .send(.keyCommand(command))
+
+            case let .panelEvent(.modifiers(held)):
+                state.modifierHint = held
+                return .none
+
+            case .paletteClosed:
+                state.isPaletteOpen = false
+                state.paletteQuery = ""
+                return .none
+
+            case let .paletteRun(command):
+                state.isPaletteOpen = false
+                state.paletteQuery = ""
+                switch command.kind {
+                case let .key(key):
+                    return .send(.keyCommand(key))
+                case let .scope(scope):
+                    return .send(.setScope(scope), animation: .smooth(duration: 0.25))
+                case let .saveTo(folderID):
+                    guard let id = state.selectedID else { return .none }
+                    return .send(.moveItem(id, toFolder: folderID), animation: .smooth(duration: 0.25))
+                case let .smart(action):
+                    guard let id = state.selectedID else { return .none }
+                    return .send(.performSmartAction(id, action))
+                }
 
             // MARK: Retention
 
@@ -1069,8 +1305,9 @@ struct HistoryFeature {
         .run { send in
             let payload = try await clipboardStore.payload(id)
             await send(.previewLoaded(id, payload), animation: .smooth(duration: 0.2))
-        } catch: { error, _ in
+        } catch: { error, send in
             logger.error("Preview load failed: \(error.localizedDescription)")
+            await send(.previewLoaded(id, nil))
         }
         .cancellable(id: CancelID.preview, cancelInFlight: true)
     }
@@ -1080,6 +1317,9 @@ struct HistoryFeature {
         guard state.isPreviewOpen else { return .none }
         state.previewID = nil
         state.previewPayload = nil
+        state.previewPayloadID = nil
+        state.previewFailed = false
+        state.previewZoomed = false
         state.previewRevealed = false
         return .merge(
             .cancel(id: CancelID.preview),
@@ -1141,7 +1381,14 @@ struct HistoryFeature {
         case .focusSearch, .typeToSearch: "⌘F"
         case .escape: "esc"
         case .saveToFolder: "⌘S"
-        case .previousScope, .nextScope: "⌘[ ]"
+        case .commandPalette: "⌘K"
+        case .toggleSensitive: "⌘L"
+        case .open: "⌘O"
+        case let .joker(index): SmartAction.jokerKeys[min(index, SmartAction.jokerKeys.count - 1)]
+        case .revealInFinder: "⇧⌘R"
+        case .copyPath: "⌥⌘C"
+        case .secondaryCopy: "⇧⌘C"
+        case .previousScope, .nextScope, .selectScope: KeyboardLayout.scopeKeysLabel
         case .setFilter: "⌥1–6"
         default: nil
         }

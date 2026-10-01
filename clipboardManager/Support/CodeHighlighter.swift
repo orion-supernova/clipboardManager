@@ -6,6 +6,7 @@
 //  code snippets instantly recognisable in cards and the quick preview.
 //
 
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -108,10 +109,20 @@ enum CodeLanguage: String, Sendable, CaseIterable, Equatable {
 }
 
 enum CodeHighlighter {
-    private static let keywordColor = Color(red: 0.68, green: 0.30, blue: 0.75)
-    private static let stringColor = Color(red: 0.84, green: 0.40, blue: 0.25)
-    private static let numberColor = Color(red: 0.20, green: 0.50, blue: 0.85)
-    private static let commentColor = Color(red: 0.45, green: 0.55, blue: 0.45)
+    // Xcode's default palettes, light and dark: fixed mid-tones vanished on dark glass.
+    private static let keywordColor = adaptive(light: 0x9B2393, dark: 0xFF7AB2)
+    private static let stringColor = adaptive(light: 0xC41A16, dark: 0xFF8170)
+    private static let numberColor = adaptive(light: 0x1C00CF, dark: 0xD9C97C)
+    private static let commentColor = adaptive(light: 0x5D6C79, dark: 0x8C9BA8)
+
+    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+        func color(_ hex: UInt32) -> NSColor {
+            NSColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255, blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+        }
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? color(dark) : color(light)
+        })
+    }
     private static let maxLength = 20_000
 
     private static func tokenRegex(hashComments: Bool) -> NSRegularExpression? {

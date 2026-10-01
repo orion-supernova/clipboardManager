@@ -41,13 +41,20 @@ struct SettingsView: View {
         .navigationSplitViewStyle(.balanced)
         .animation(.smooth(duration: 0.22), value: store.section)
         .frame(minWidth: 720, minHeight: 480)
-        .task { await store.send(.task).finish() }
     }
 
     // MARK: - General
 
     @ViewBuilder
     private var generalSection: some View {
+        Section("Welcome guide") {
+            LabeledContent {
+                Button("Show Guide…") { store.send(.showOnboardingTapped) }
+            } label: {
+                Text("Walk through setup again")
+                Text("Shortcuts, auto-paste and file access, in about 30 seconds.")
+            }
+        }
         Section("Startup") {
             Toggle("Launch Mahmut at login", isOn: Binding(
                 get: { store.launchAtLogin },
@@ -113,6 +120,25 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var privacySection: some View {
+        Section("Permissions") {
+            LabeledContent {
+                if store.isAccessibilityTrusted {
+                    Label("Allowed", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Button("Allow…") { store.send(.requestAccessibility) }
+                }
+            } label: {
+                Text("Accessibility · recommended")
+                Text("Lets Mahmut press ⌘V for you after you pick an item. Without it, items are copied and you paste yourself.")
+            }
+            LabeledContent {
+                Button("Open Settings…") { store.send(.openFullDiskAccessSettings) }
+            } label: {
+                Text("Full Disk Access · optional")
+                Text("Stops macOS asking once per folder when you copy files from Desktop, Documents or Downloads. macOS doesn't report whether it's on.")
+            }
+        }
         Section("Sensitive content") {
             Toggle("Record card numbers, IBANs, keys and passwords", isOn: Binding(store.$recordSensitive))
             Text(store.recordSensitive
@@ -257,17 +283,19 @@ struct SettingsView: View {
                     onReset: { store.send(.resetShortcut) }
                 )
             }
-            Text("Use at least one of ⌘, ⌃ or ⌥. The default ⌘⇧V overlaps “Paste and Match Style” in some apps — pick something else if that bothers you.")
+            Text("Use at least one of ⌘, ⌃ or ⌥. The default ⇧⌘V overlaps “Paste and Match Style” in some apps — pick something else if that bothers you.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         Section("Navigate") {
-            shortcutRow("Move between items", "← →")
+            shortcutRow("Move between items", "← →  or  ↑ ↓")
             shortcutRow("Jump to first / last", "⌘ ← / ⌘ →")
+            shortcutRow("In Quick Look: scroll text · a page · to the ends", "↑ ↓  ·  ⌥ ↑ ↓  ·  ⌘ ↑ ↓")
+            shortcutRow("In Quick Look: zoom an image to actual size", "Z")
+            shortcutRow("In Quick Look: copy the selected text", "⌘ C")
             shortcutRow("Search", "⌘ F  or just type")
             shortcutRow("Switch focus between search and list", "⇥")
             shortcutRow("Filter: all · text · links · images · files · colors", "⌥ 1 … ⌥ 6")
-            shortcutRow("Previous / next folder", "⌘ [  /  ⌘ ]")
             shortcutRow("Close", "esc")
         }
         Section("Act on the selected item") {
@@ -276,21 +304,27 @@ struct SettingsView: View {
             shortcutRow("Paste as… (case, trim, JSON)", "⌘ T")
             shortcutRow("Paste item 1–9", "⌘ 1 … ⌘ 9")
             shortcutRow("Copy without pasting", "⌘ C")
-            shortcutRow("Copy plain text · image text · color format · file path", "⌘ ⇧ C")
+            shortcutRow("Copy as text (plain text, image text, color hex, file path)", "⇧ ⌘ C")
             shortcutRow("Quick Look", "space")
             shortcutRow("Reveal a masked value in Quick Look", "⌘ E")
             shortcutRow("Pin or unpin", "⌘ P")
             shortcutRow("Save to folder", "⌘ S")
             shortcutRow("Open file or link", "⌘ O")
-            shortcutRow("Reveal in Finder", "⌘ ⇧ R")
+            shortcutRow("Show in Finder", "⇧ ⌘ R")
             shortcutRow("Copy file path", "⌥ ⌘ C")
             shortcutRow("Delete", "⌫")
         }
         Section("Folders & capture") {
+            shortcutRow("Previous / next folder", "\(KeyboardLayout.scopeKeysLabel)   or   ⌃ ⇧ ⇥ / ⌃ ⇥")
+            shortcutRow("Jump to History / a folder", "⌥ ⌘ 1 … 9")
+            shortcutRow("Command palette", "⌘ K")
+            shortcutRow("The item's own action: call, email, maps, calendar, track, paste a sum", "⌘ D")
+            shortcutRow("Its second action (e.g. message a phone number)", "⇧ ⌘ D")
+            shortcutRow("Mark as sensitive / not sensitive", "⌘ L")
             shortcutRow("New folder", "⌘ N")
             shortcutRow("Rename current folder", "⌘ R")
             shortcutRow("Delete current folder", "⌘ ⌫")
-            shortcutRow("Pause / resume capturing", "⌘ ⇧ P")
+            shortcutRow("Pause / resume capturing", "⇧ ⌘ P")
             shortcutRow("Open the App Store update", "⌘ U")
             shortcutRow("Settings", "⌘ \(String(KeyboardLayout.settingsKeyCharacter).uppercased())")
             shortcutRow("In choosers: pick option 1–9 / first option / secondary", "1 … 9  /  ↩  /  ⇧ ↩")
@@ -322,7 +356,7 @@ struct SettingsView: View {
                     Text("Version \(AppVersion.current) (\(AppVersion.build))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("Free, private, and fully on-device.")
+                    Text("Private, and fully on-device.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

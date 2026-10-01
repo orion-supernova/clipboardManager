@@ -15,12 +15,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store: StoreOf<AppFeature>
     private let panelController: PanelController
     private let settingsWindowController: SettingsWindowController
+    private let onboardingWindowController: OnboardingWindowController
 
     override init() {
         let panelController = PanelController()
         let settingsWindowController = SettingsWindowController()
+        let onboardingWindowController = OnboardingWindowController()
         self.panelController = panelController
         self.settingsWindowController = settingsWindowController
+        self.onboardingWindowController = onboardingWindowController
 
         store = Store(initialState: AppFeature.State()) {
             AppFeature()
@@ -34,6 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dependencies.settingsWindow = SettingsWindowClient(
                 open: { await settingsWindowController.present() }
             )
+            dependencies.onboardingWindow = OnboardingWindowClient(
+                open: { await onboardingWindowController.present() },
+                close: { await onboardingWindowController.dismiss() }
+            )
         }
         super.init()
 
@@ -43,10 +50,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindowController.install(
             SettingsView(store: store.scope(state: \.settings, action: \.settings))
         )
+        settingsWindowController.onVisibilityChange = { [store] visible in
+            store.send(.settings(.windowVisibilityChanged(visible)))
+        }
+        onboardingWindowController.install(
+            OnboardingView(store: store.scope(state: \.onboarding, action: \.onboarding))
+        )
+        onboardingWindowController.onVisibilityChange = { [store] visible in
+            store.send(.onboarding(.windowVisibilityChanged(visible)))
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        // Rendering stills must not touch the real history, clipboard or hotkey.
+        let rendering = ProcessInfo.processInfo.environment["MAHMUT_RENDER_DESIGN"] == "1"
+        if !rendering { store.send(.appLaunched) }
+        #else
         store.send(.appLaunched)
+        #endif
         #if DEBUG
         // Developer conveniences: preview the panel or settings without the hotkey.
         let environment = ProcessInfo.processInfo.environment
@@ -57,6 +79,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         if environment["MAHMUT_SHOW_SETTINGS"] == "1" { store.send(.menuOpenSettings) }
+        if environment["MAHMUT_RENDER_DESIGN"] == "1" {
+            Task { @MainActor in
+                let directory = environment["MAHMUT_RENDER_DIR"].map { URL(fileURLWithPath: $0) }
+                    ?? FileManager.default.temporaryDirectory.appending(path: "design-review", directoryHint: .isDirectory)
+                MarketingRenderer.renderDesignReview(to: directory)
+                NSApp.terminate(nil)
+            }
+        }
         if environment["MAHMUT_RENDER_MARKETING"] == "1" {
             Task { @MainActor in
                 let directory = FileManager.default.temporaryDirectory.appending(path: "marketing", directoryHint: .isDirectory)

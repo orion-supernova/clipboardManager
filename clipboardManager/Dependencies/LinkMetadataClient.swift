@@ -19,19 +19,81 @@ struct LinkMetadata: Sendable, Equatable {
     var isEmpty: Bool { title == nil && imagePNG == nil && iconPNG == nil }
 }
 
+/// What a page says about itself, for the preview: not stored, fetched on view.
+struct LinkDetails: Sendable, Equatable {
+    var siteName: String?
+    var summary: String?
+}
+
 struct LinkMetadataClient: Sendable {
     var fetch: @Sendable (URL) async -> LinkMetadata?
+    var details: @Sendable (URL) async -> LinkDetails?
 }
 
 extension LinkMetadataClient: DependencyKey {
-    static let liveValue = LinkMetadataClient { url in
-        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return nil }
-        if let rich = await LinkPresentationFetcher.fetch(url), !rich.isEmpty { return rich }
-        if let title = await HTMLTitleFetcher.title(for: url) { return LinkMetadata(title: title) }
-        return nil
+    static let liveValue: LinkMetadataClient = {
+        let cache = LinkDetailsCache()
+        return LinkMetadataClient(
+            fetch: { url in
+                guard isWeb(url) else { return nil }
+                if MapsLink.isMaps(url) { return await mapsMetadata(for: url, cache: cache) }
+                let rich = await LinkPresentationFetcher.fetch(url)
+                if let rich, rich.title != nil, rich.imagePNG != nil { return rich }
+                // LinkPresentation came back empty or partial: read the page's own
+                // Open Graph tags and fill in whatever it missed.
+                guard let page = await HTMLMetaFetcher.meta(for: url) else { return rich.flatMap { $0.isEmpty ? nil : $0 } }
+                async let image = rich?.imagePNG == nil ? HTMLMetaFetcher.thumbnail(at: page.imageURL, maxPixelSize: 900) : nil
+                async let icon = rich?.iconPNG == nil ? HTMLMetaFetcher.thumbnail(at: page.iconURL, maxPixelSize: 128) : nil
+                let (fetchedImage, fetchedIcon) = await (image, icon)
+                let merged = LinkMetadata(
+                    title: rich?.title ?? page.title,
+                    imagePNG: rich?.imagePNG ?? fetchedImage,
+                    iconPNG: rich?.iconPNG ?? fetchedIcon
+                )
+                await cache.store(LinkDetails(siteName: page.siteName, summary: page.summary), for: url)
+                return merged.isEmpty ? nil : merged
+            },
+            details: { url in
+                guard isWeb(url) else { return nil }
+                if let cached = await cache.details(for: url) { return cached }
+                guard let page = await HTMLMetaFetcher.meta(for: url) else { return nil }
+                let details = LinkDetails(siteName: page.siteName, summary: page.summary)
+                await cache.store(details, for: url)
+                return details
+            }
+        )
+    }()
+
+    static let previewValue = LinkMetadataClient(fetch: { _ in nil }, details: { _ in nil })
+
+    /// Every maps page is titled "Google Maps"; the place is in the (redirected) URL.
+    private static func mapsMetadata(for url: URL, cache: LinkDetailsCache) async -> LinkMetadata? {
+        let page = await HTMLMetaFetcher.meta(for: url)
+        let place = MapsLink.describe(page?.finalURL ?? url) ?? MapsLink.describe(url)
+        async let image = HTMLMetaFetcher.thumbnail(at: page?.imageURL, maxPixelSize: 900)
+        async let icon = HTMLMetaFetcher.thumbnail(at: page?.iconURL, maxPixelSize: 128)
+        let (fetchedImage, fetchedIcon) = await (image, icon)
+        await cache.store(LinkDetails(siteName: page?.siteName ?? "Maps", summary: nil), for: url)
+        let metadata = LinkMetadata(title: place ?? page?.title, imagePNG: fetchedImage, iconPNG: fetchedIcon)
+        return metadata.isEmpty ? nil : metadata
     }
 
-    static let previewValue = LinkMetadataClient { _ in nil }
+    private static func isWeb(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased() else { return false }
+        return scheme == "http" || scheme == "https"
+    }
+}
+
+/// Arrowing back and forth through links must not refetch each page.
+private actor LinkDetailsCache {
+    private var entries: [URL: LinkDetails] = [:]
+
+    func details(for url: URL) -> LinkDetails? { entries[url] }
+
+    func store(_ details: LinkDetails, for url: URL) {
+        if entries.count > 200 { entries.removeAll() }
+        entries[url] = details
+    }
 }
 
 @MainActor
@@ -61,8 +123,19 @@ private enum LinkPresentationFetcher {
     }
 }
 
-enum HTMLTitleFetcher {
-    static func title(for url: URL) async -> String? {
+/// What a page's `<head>` says about it: Open Graph first, then plain HTML.
+struct PageMeta: Sendable {
+    var title: String?
+    var summary: String?
+    var siteName: String?
+    var imageURL: URL?
+    var iconURL: URL?
+    /// Where redirects ended: short links (maps.app.goo.gl) only make sense from here.
+    var finalURL: URL?
+}
+
+enum HTMLMetaFetcher {
+    static func meta(for url: URL) async -> PageMeta? {
         var request = URLRequest(url: url, timeoutInterval: 8)
         request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X) MahmutClipboard/3", forHTTPHeaderField: "User-Agent")
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
@@ -75,13 +148,37 @@ enum HTMLTitleFetcher {
             data.reserveCapacity(64 * 1024)
             for try await byte in bytes {
                 data.append(byte)
-                if data.count >= 200_000 { break }
-                if data.count % 8192 == 0, data.range(of: Data("</title>".utf8)) != nil { break }
+                if data.count >= 300_000 { break }
+                // Everything we want lives in <head>; stop once it closes.
+                if data.count % 8192 == 0, data.range(of: Data("</head>".utf8)) != nil { break }
             }
-            return HTMLTitle.extract(from: String(decoding: data, as: UTF8.self))
+            let html = String(decoding: data, as: UTF8.self)
+            let base = http.url ?? url
+            return PageMeta(
+                title: HTMLTitle.extract(from: html),
+                summary: HTMLTitle.meta(["og:description", "twitter:description", "description"], in: html),
+                siteName: HTMLTitle.meta(["og:site_name", "application-name"], in: html),
+                imageURL: HTMLTitle.meta(["og:image", "og:image:url", "twitter:image"], in: html).flatMap { URL(string: $0, relativeTo: base)?.absoluteURL },
+                iconURL: HTMLTitle.iconHref(in: html).flatMap { URL(string: $0, relativeTo: base)?.absoluteURL }
+                    ?? URL(string: "/favicon.ico", relativeTo: base)?.absoluteURL,
+                finalURL: http.url
+            )
         } catch {
             return nil
         }
+    }
+
+    /// Downloads and downsamples a page image; capped so a huge hero can't stall anything.
+    static func thumbnail(at url: URL?, maxPixelSize: Int) async -> Data? {
+        guard let url, url.scheme?.hasPrefix("http") == true else { return nil }
+        var request = URLRequest(url: url, timeoutInterval: 8)
+        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X) MahmutClipboard/3", forHTTPHeaderField: "User-Agent")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              data.count < 8_000_000,
+              let image = ImageCoding.thumbnail(from: data, maxPixelSize: maxPixelSize)
+        else { return nil }
+        return ImageCoding.encodePNG(image)
     }
 }
 
@@ -103,6 +200,45 @@ enum HTMLTitle {
                 .filter { !$0.isEmpty }
                 .joined(separator: " ")
             if !title.isEmpty { return String(title.prefix(200)) }
+        }
+        return nil
+    }
+
+    /// The first non-empty `<meta property|name="…" content="…">` among `names`.
+    static func meta(_ names: [String], in html: String) -> String? {
+        for name in names {
+            let escaped = NSRegularExpression.escapedPattern(for: name)
+            let patterns = [
+                #"<meta[^>]+(?:property|name)=["']"# + escaped + #"["'][^>]+content=["']([^"']+)["']"#,
+                #"<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']"# + escaped + #"["']"#,
+            ]
+            for pattern in patterns {
+                guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                      let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                      let range = Range(match.range(at: 1), in: html)
+                else { continue }
+                let value = decodeEntities(String(html[range])).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty { return String(value.prefix(400)) }
+            }
+        }
+        return nil
+    }
+
+    /// `<link rel="icon" | "apple-touch-icon" href="…">`, preferring the larger touch icon.
+    static func iconHref(in html: String) -> String? {
+        for rel in ["apple-touch-icon", "icon", "shortcut icon"] {
+            let escaped = NSRegularExpression.escapedPattern(for: rel)
+            let patterns = [
+                #"<link[^>]+rel=["']"# + escaped + #"["'][^>]+href=["']([^"']+)["']"#,
+                #"<link[^>]+href=["']([^"']+)["'][^>]+rel=["']"# + escaped + #"["']"#,
+            ]
+            for pattern in patterns {
+                guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                      let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+                      let range = Range(match.range(at: 1), in: html)
+                else { continue }
+                return String(html[range])
+            }
         }
         return nil
     }

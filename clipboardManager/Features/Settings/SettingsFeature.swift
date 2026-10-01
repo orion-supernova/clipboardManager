@@ -73,7 +73,9 @@ struct SettingsFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case task
+        /// The settings window was shown or closed. The window outlives its
+        /// content, so a view `.task` would keep polling after it closes.
+        case windowVisibilityChanged(Bool)
         case refresh
         case statusLoaded(launchAtLogin: Bool, accessibility: Bool, storage: Int64)
         case launchAtLoginToggled(Bool)
@@ -81,6 +83,8 @@ struct SettingsFeature {
         case requestAccessibility
         case openAccessibilitySettings
         case openAccessibilityDisplaySettings
+        case openFullDiskAccessSettings
+        case showOnboardingTapped
         case clearHistoryTapped
         case shortcutRecordingChanged(Bool)
         case shortcutRecorded(KeyboardShortcutSpec)
@@ -93,9 +97,12 @@ struct SettingsFeature {
 
         enum Delegate: Equatable {
             case clearHistory
+            case showOnboarding
             case shortcutRecording(Bool)
         }
     }
+
+    private enum CancelID { case statusPolling }
 
     @Dependency(\.launchAtLogin) var launchAtLogin
     @Dependency(\.paste) var paste
@@ -111,12 +118,14 @@ struct SettingsFeature {
             case .binding:
                 return .none
 
-            case .task:
+            case let .windowVisibilityChanged(visible):
+                guard visible else { return .cancel(id: CancelID.statusPolling) }
                 return .run { send in
                     await send(.refresh)
                     // Accessibility can be granted in System Settings while this window is open.
                     for await _ in clock.timer(interval: .seconds(2)) { await send(.refresh) }
                 }
+                .cancellable(id: CancelID.statusPolling, cancelInFlight: true)
 
             case .refresh:
                 return .run { send in
@@ -157,6 +166,9 @@ struct SettingsFeature {
                 return .run { send in
                     paste.requestAccessibility()
                     try await clock.sleep(for: .milliseconds(500))
+                    // macOS shows its prompt only once per app; after that the call
+                    // is silent, so take the user to the switch instead.
+                    if !paste.isAccessibilityTrusted() { await workspace.openAccessibilitySettings() }
                     await send(.refresh)
                 }
 
@@ -165,6 +177,12 @@ struct SettingsFeature {
 
             case .openAccessibilityDisplaySettings:
                 return .run { _ in await workspace.openAccessibilityDisplaySettings() }
+
+            case .openFullDiskAccessSettings:
+                return .run { _ in await workspace.openFullDiskAccessSettings() }
+
+            case .showOnboardingTapped:
+                return .send(.delegate(.showOnboarding))
 
             case .clearHistoryTapped:
                 return .send(.delegate(.clearHistory))

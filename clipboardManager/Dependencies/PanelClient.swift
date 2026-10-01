@@ -27,6 +27,14 @@ enum KeyCommand: Equatable, Sendable {
     case toggleFocus
     case previousScope
     case nextScope
+    /// ⌥⌘1 is History, ⌥⌘2… the folders in menu order.
+    case selectScope(Int)
+    case commandPalette
+    case toggleSensitive
+    /// ↑/↓ and friends: scroll the open preview, or move through items when closed.
+    case vertical(VerticalMove)
+    /// ⌘D / ⇧⌘D: the item's own first and second action.
+    case joker(Int)
     case newFolder
     case renameFolder
     case deleteFolder
@@ -42,10 +50,24 @@ enum KeyCommand: Equatable, Sendable {
     case copyPath
 }
 
+enum VerticalMove: Equatable, Sendable {
+    case lineUp, lineDown, pageUp, pageDown, top, bottom
+}
+
+/// Modifier keys held down on their own, which reveal the shortcuts they unlock.
+enum HeldModifiers: Equatable, Sendable {
+    case none
+    case command
+    case commandOption
+    /// ⌥ alone: the ⌥1–6 filters.
+    case option
+}
+
 enum PanelEvent: Equatable, Sendable {
     case didResignKey
     case clickedOutside
     case key(KeyCommand)
+    case modifiers(HeldModifiers)
 }
 
 struct PanelClient: Sendable {

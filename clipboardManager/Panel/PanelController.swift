@@ -16,6 +16,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private let panel: FloatingPanel
     private var localKeyMonitor: Any?
     private var globalMouseMonitor: Any?
+    private var heldModifiers = HeldModifiers.none
     private let subscribers = Mutex<[UUID: AsyncStream<PanelEvent>.Continuation]>([:])
 
     override init() {
@@ -116,8 +117,12 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     private func installMonitors() {
         removeMonitors()
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self, panel.isKeyWindow else { return event }
+            if event.type == .flagsChanged {
+                updateHeldModifiers(event.modifierFlags)
+                return event
+            }
             return handle(event) ? nil : event
         }
         globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
@@ -125,7 +130,43 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
     }
 
+    /// Sends copy: down the responder chain when something there has a selection.
+    private func copySelectionIfAny() -> Bool {
+        let copy = #selector(NSText.copy(_:))
+        guard let target = NSApp.target(forAction: copy, to: nil, from: panel) as? NSResponder else { return false }
+        let probe = NSMenuItem(title: "Copy", action: copy, keyEquivalent: "c")
+        let enabled: Bool
+        if let textView = target as? NSTextView {
+            enabled = textView.selectedRange().length > 0
+        } else if let validator = target as? NSMenuItemValidation {
+            enabled = validator.validateMenuItem(probe)
+        } else if let validator = target as? NSUserInterfaceValidations {
+            enabled = validator.validateUserInterfaceItem(probe)
+        } else {
+            enabled = false
+        }
+        guard enabled else { return false }
+        return NSApp.sendAction(copy, to: target, from: panel)
+    }
+
+    private func updateHeldModifiers(_ flags: NSEvent.ModifierFlags) {
+        let flags = flags.intersection(.deviceIndependentFlagsMask)
+        let held: HeldModifiers = switch (flags.contains(.command), flags.contains(.option)) {
+        case (true, true): .commandOption
+        case (true, false): .command
+        case (false, true): .option
+        default: .none
+        }
+        guard held != heldModifiers else { return }
+        heldModifiers = held
+        emit(.modifiers(held))
+    }
+
     private func removeMonitors() {
+        if heldModifiers != .none {
+            heldModifiers = .none
+            emit(.modifiers(.none))
+        }
         if let localKeyMonitor { NSEvent.removeMonitor(localKeyMonitor) }
         if let globalMouseMonitor { NSEvent.removeMonitor(globalMouseMonitor) }
         localKeyMonitor = nil
@@ -155,13 +196,16 @@ final class PanelController: NSObject, NSWindowDelegate {
             if editingText && !command { return false }
             emit(.key(command ? .last : .next)); return true
         case KeyboardLayout.upArrow:
-            emit(.key(.previous)); return true
+            emit(.key(.vertical(option ? .pageUp : command ? .top : .lineUp))); return true
         case KeyboardLayout.downArrow:
-            emit(.key(.next)); return true
+            emit(.key(.vertical(option ? .pageDown : command ? .bottom : .lineDown))); return true
         case KeyboardLayout.home:
             emit(.key(.first)); return true
         case KeyboardLayout.end:
             emit(.key(.last)); return true
+        case KeyboardLayout.tab where flags.contains(.control):
+            // ⌃⇥ / ⌃⇧⇥: tab-style folder switching that works on every layout.
+            emit(.key(shift ? .previousScope : .nextScope)); return true
         case KeyboardLayout.tab:
             emit(.key(.toggleFocus)); return true
         case KeyboardLayout.ansiComma where command:
@@ -182,9 +226,16 @@ final class PanelController: NSObject, NSWindowDelegate {
             let key = chars.lowercased()
             switch (key, shift, option) {
             case ("f", false, false): emit(.key(.focusSearch))
+            case ("k", false, false): emit(.key(.commandPalette))
+            case ("l", false, false): emit(.key(.toggleSensitive))
+            case ("d", false, false): emit(.key(.joker(0)))
+            case ("d", true, false): emit(.key(.joker(1)))
             case (",", _, _): emit(.key(.openSettings))
             case ("q", _, _): emit(.key(.quit))
-            case ("c", false, false): emit(.key(.copyOnly))
+            case ("c", false, false):
+                // Text selected in the preview: ⌘C copies that, like everywhere else on the Mac.
+                if copySelectionIfAny() { return true }
+                emit(.key(.copyOnly))
             case ("c", true, false): emit(.key(.secondaryCopy))
             case ("c", false, true): emit(.key(.copyPath))
             case ("p", false, false): emit(.key(.togglePin))
@@ -201,6 +252,7 @@ final class PanelController: NSObject, NSWindowDelegate {
             case ("[", _, _): emit(.key(.previousScope))
             case ("]", _, _): emit(.key(.nextScope))
             case ("1"..."9", false, false): emit(.key(.pasteIndex(Int(key)! - 1)))
+            case ("1"..."9", false, true): emit(.key(.selectScope(Int(key)! - 1)))
             default: return false
             }
             return true

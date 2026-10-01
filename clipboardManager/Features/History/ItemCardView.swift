@@ -19,6 +19,8 @@ struct ItemCardView: View {
         var copyColor: @MainActor (ColorFormat) -> Void
         var delete: @MainActor () -> Void
         var togglePin: @MainActor () -> Void
+        var toggleSensitive: @MainActor () -> Void
+        var smartAction: @MainActor (SmartAction) -> Void
         var reveal: @MainActor () -> Void
         var copyPath: @MainActor () -> Void
         var open: @MainActor () -> Void
@@ -44,6 +46,8 @@ struct ItemCardView: View {
     let interactionEnabled: Bool
     let sensitiveLifetime: TimeInterval?
     let folders: [ClipboardFolder]
+    /// The folder this item lives in, when it shows up outside it (search results in History).
+    var folderBadge: ClipboardFolder? = nil
     let actions: Actions
 
     @Environment(\.marketingRender) private var marketingRender
@@ -56,7 +60,8 @@ struct ItemCardView: View {
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: cornerRadius) }
 
     private var glassTint: Color? {
-        if isSelected { return .accentColor.opacity(0.45) }
+        // The moving ring carries selection; a heavy tint under it only washed it out.
+        if isSelected { return .accentColor.opacity(0.16) }
         if item.isSensitive { return .red.opacity(isHovered ? 0.22 : 0.16) }
         return isHovered ? .white.opacity(0.12) : nil
     }
@@ -68,9 +73,11 @@ struct ItemCardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             footer
         }
-        .padding(14)
+        .padding(PanelMetrics.cardPadding)
         .frame(width: PanelMetrics.cardWidth, height: PanelMetrics.cardHeight)
-        .panelGlass(tint: glassTint, interactive: true, in: shape)
+        // Not `interactive`: the overlay already drives hover and press, and the
+        // system's flex effect on every card was ~8% of main-thread time.
+        .panelGlass(tint: glassTint, in: shape)
         // Selection is otherwise carried by an accent tint alone, which is
         // invisible to anyone who can't separate it from the card behind it.
         .overlay {
@@ -123,7 +130,7 @@ struct ItemCardView: View {
         // `.combine` so VoiceOver reads the written description instead of
         // stitching together the header, badge, byte count and shortcut hint.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(item.accessibilityLabel)
+        .accessibilityLabel(folderBadge.map { "\(item.accessibilityLabel), in folder \($0.name)" } ?? item.accessibilityLabel)
         .accessibilityHint(item.accessibilityHint)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityActions { accessibilityActions }
@@ -138,10 +145,16 @@ struct ItemCardView: View {
         Button("Copy without pasting") { actions.copyOnly() }
         Button("Quick Look") { actions.preview() }
         Button(item.isPinned ? "Unpin" : "Pin") { actions.togglePin() }
+        if item.kind == .text {
+            Button(item.isSensitive ? "Not sensitive" : "Mark as sensitive") { actions.toggleSensitive() }
+        }
+        ForEach(item.smartActions) { action in
+            Button(action.title) { actions.smartAction(action) }
+        }
         Button("Paste as plain text") { actions.pastePlain() }
         if item.kind.isFileBacked {
             Button("Open") { actions.open() }
-            Button("Reveal in Finder") { actions.reveal() }
+            Button("Show in Finder") { actions.reveal() }
             Button("Copy file path") { actions.copyPath() }
         }
         ForEach(folders) { folder in
@@ -163,12 +176,14 @@ struct ItemCardView: View {
     // MARK: - Pieces
 
     private var header: some View {
-        HStack(spacing: 6) {
-            Image(systemName: item.headerSymbol)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(item.isSensitive ? Color.red : Color.accentColor)
-            Text(item.headerTitle)
-                .font(.caption.weight(.semibold))
+        HStack(spacing: 7) {
+            // The type: a small tinted icon tile and caption, like an app's icon and
+            // name on a notification.
+            TypeBadge(style: item.style)
+            Text(item.style.title.uppercased())
+                .font(.system(size: 10.5, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(headerTint)
                 .lineLimit(1)
             if item.isPinned {
                 Image(systemName: "pin.fill")
@@ -177,45 +192,59 @@ struct ItemCardView: View {
                     .transition(.opacity)
             }
             Spacer(minLength: 4)
-            Text(item.timestamp, format: .relative(presentation: .named, unitsStyle: .abbreviated))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
             if showShortcutHint {
-                Text("⌘\(index + 1)")
-                    .font(.caption2.weight(.semibold).monospaced())
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(.primary.opacity(0.08), in: .rect(cornerRadius: 4))
+                // Lit on the selected card: that's the digit that pastes it.
+                KeyCap(key: "⌘\(index + 1)", highlighted: isSelected)
                     .opacity(isHovered ? 0 : 1)
             }
         }
+        .frame(height: 20)
         .animation(.easeOut(duration: 0.18), value: item.isPinned)
     }
+
+    private var headerTint: Color { item.style.tint }
 
     private var footer: some View {
         HStack(spacing: 6) {
             AppIconView(source: item.source)
                 .frame(width: 16, height: 16)
-            Text(item.source.name)
+            (Text(item.source.name) + Text(" · ") + Text(item.timestamp, format: .relative(presentation: .numeric, unitsStyle: .narrow)))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 4)
-            Text(metaLabel)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
+            if let folderBadge {
+                Label(folderBadge.name, systemImage: folderBadge.symbol)
+                    .font(.caption2.weight(.semibold))
+                    .labelStyle(.titleAndIcon)
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.tint.opacity(0.16), in: .capsule)
+                    .layoutPriority(1)
+            } else if let metaLabel {
+                Text(metaLabel)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
     }
 
-    private var metaLabel: String {
+    /// Only when it says something: a count is noise on a one-liner.
+    private var metaLabel: String? {
         switch item.kind {
-        case .text: item.isSensitive ? "Masked" : Formatting.characterCount(Int(item.byteCount))
-        case .url: URL(string: item.preview)?.host() ?? ""
-        case .color: item.preview
-        case .image: item.pixelSize?.label ?? Formatting.bytes(item.byteCount)
-        case .file, .video: item.isFileAvailable ? Formatting.bytes(item.byteCount) : "Missing"
+        case .text:
+            if item.isSensitive || item.primarySmartAction != nil { return nil }
+            return item.byteCount > 80 ? Formatting.characterCount(Int(item.byteCount)) : nil
+        case .url: return nil
+        case .color: return nil
+        case .image: return item.pixelSize?.label ?? Formatting.bytes(item.byteCount)
+        case .file, .video:
+            // Where it lives is what tells two "Report.pdf"s apart.
+            guard item.isFileAvailable else { return "Missing" }
+            let folder = item.parentFolderPath.map { ($0 as NSString).lastPathComponent }
+            return [folder, Formatting.bytes(item.byteCount)].compactMap { $0 }.joined(separator: " · ")
         }
     }
 
@@ -301,7 +330,7 @@ struct ItemCardView: View {
         entries.append(.item(title: "Copy Without Pasting\t⌘C", symbol: "doc.on.doc", action: actions.copyOnly))
         if item.kind == .color {
             entries.append(.submenu(
-                title: "Copy As\t⌘⇧C",
+                title: "Copy As",
                 symbol: "paintpalette",
                 entries: ColorFormat.allCases.map { format in
                     .item(title: format.title, symbol: "swatchpalette") { actions.copyColor(format) }
@@ -310,11 +339,29 @@ struct ItemCardView: View {
         }
         entries.append(.item(title: item.isSensitive ? "Quick Look (masked)\tspace" : "Quick Look\tspace", symbol: "eye", action: actions.preview))
         entries.append(.item(title: item.isPinned ? "Unpin\t⌘P" : "Pin\t⌘P", symbol: item.isPinned ? "pin.slash" : "pin", action: actions.togglePin))
+        if !item.smartActions.isEmpty {
+            entries.append(.separator)
+            for action in item.smartActions {
+                entries.append(.item(
+                    title: item.key(for: action).map { "\(action.title)\t\($0)" } ?? action.title,
+                    symbol: action.symbol,
+                    action: { actions.smartAction(action) }
+                ))
+            }
+            entries.append(.separator)
+        }
+        if item.kind == .text {
+            entries.append(.item(
+                title: item.isSensitive ? "Not Sensitive\t⌘L" : "Mark as Sensitive\t⌘L",
+                symbol: item.isSensitive ? "lock.open" : "lock",
+                action: actions.toggleSensitive
+            ))
+        }
         entries.append(.submenu(title: item.folderID == nil ? "Add to Folder\t⌘S" : "Move to Folder\t⌘S", symbol: "folder", entries: folderMenuEntries()))
         entries.append(.separator)
         switch item.kind {
         case .file, .video, .image:
-            entries.append(.item(title: "Reveal in Finder\t⌘⇧R", symbol: "folder", action: actions.reveal))
+            entries.append(.item(title: "Show in Finder\t⇧⌘R", symbol: "folder", action: actions.reveal))
             entries.append(.item(title: "Open\t⌘O", symbol: "arrow.up.forward.app", action: actions.open))
             entries.append(.item(title: "Copy Path\t⌥⌘C", symbol: "link", action: actions.copyPath))
             entries.append(.separator)

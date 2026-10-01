@@ -10,8 +10,7 @@ Press ⌘⇧V and a glass panel slides up from the bottom of the screen with eve
 &nbsp;
 ![macOS 26+](https://img.shields.io/badge/macOS-26%2B-1c1c1c?style=for-the-badge)
 ![Swift 6](https://img.shields.io/badge/Swift-6-1c1c1c?style=for-the-badge)
-![Free](https://img.shields.io/badge/Free-no_IAP-1c1c1c?style=for-the-badge)
-![GPL-3.0](https://img.shields.io/badge/GPL--3.0-1c1c1c?style=for-the-badge)
+![All rights reserved](https://img.shields.io/badge/licence-all_rights_reserved-1c1c1c?style=for-the-badge)
 
 <br>
 
@@ -56,20 +55,12 @@ It also reads what you copied. Paste a Swift function and it comes back syntax-c
 ## FAQ
 
 <details>
-<summary><b>Is it actually free, or free-until-it-isn't?</b></summary>
+<summary><b>Is "Mahmut: Clipboard Manager" on the App Store this app?</b></summary>
 <br>
 
-Free. There is no StoreKit code left in this repository — no subscription, no unlock, no trial, no "Pro" tier. Earlier versions had all of that; 3.0 deleted it along with everything it gated.
+Yes. **Mahmut: Clipboard Manager** is the name on the store (it used to be listed as "Clipboard Mahmut"); **Mahmut Clipboard** is what the app calls itself once it's running. Same app either way.
 
-</details>
-
-<details>
-<summary><b>The App Store says "Clipboard Mahmut", version 1.7.1. Is that this?</b></summary>
-<br>
-
-Yes. **Clipboard Mahmut** is the name on the store and it's staying that way; **Mahmut Clipboard** is what the app calls itself once it's running. Same app either way.
-
-The version gap is real, though: 3.0 is a rewrite and it's in review right now. Until it lands the listing still serves 1.7.1, which looks nothing like the screenshots on this page and predates most of what it describes. If you want 3.0 today, build it from source.
+The store can trail this repository by a review cycle. If you want the newest version today, build it from source.
 
 </details>
 
@@ -157,7 +148,7 @@ Two DEBUG-only environment variables are handy while working on it: `MAHMUT_SHOW
 
 Found a language it highlights wrong, a secret it should have masked and didn't, or an app it refuses to paste into — [open an issue](https://github.com/orion-supernova/clipboardManager/issues) with what you copied and where it came from, or email **info@walhallaa.com**. Every message gets read.
 
-[GPL-3.0](LICENSE). Fork it, ship it, sell it if you like — your version has to be open source too.
+© Murat Can Koç. All rights reserved — the source is here to read, not to redistribute. See [LICENSE](LICENSE).
 
 <div align="center">
 <br>
