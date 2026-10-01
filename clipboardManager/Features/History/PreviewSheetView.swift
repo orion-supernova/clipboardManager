@@ -531,8 +531,11 @@ private struct LinkBody: View {
         HStack(alignment: .top, spacing: 20) {
             if let heroURL {
                 // Open Graph images are 1.91:1; a fixed square-ish frame cropped most of them.
-                ThumbnailImage(url: heroURL, placeholderSymbol: "photo", contentMode: .fill)
+                // A fixed 1.91:1 box first, then the image fills it. Without the box a
+                // large or square image (Google's 900×900 map) spilled over the whole sheet.
+                Color.clear
                     .aspectRatio(1.91, contentMode: .fit)
+                    .overlay { ThumbnailImage(url: heroURL, placeholderSymbol: "photo", contentMode: .fill) }
                     .clipShape(.rect(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.primary.opacity(0.08), lineWidth: 1))
                     .frame(maxHeight: .infinity, alignment: .top)
