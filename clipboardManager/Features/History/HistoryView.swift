@@ -245,15 +245,17 @@ struct HistoryView: View {
             Button {
                 store.send(.setScope(.history), animation: quickAnimation)
             } label: {
-                Label("History", systemImage: "clock")
+                Label("History  ⌥⌘1", systemImage: "clock")
             }
             if !store.folders.isEmpty {
                 Divider()
-                ForEach(store.folders) { folder in
+                ForEach(Array(store.folders.enumerated()), id: \.element.id) { index, folder in
                     Button {
                         store.send(.setScope(.folder(folder.id)), animation: quickAnimation)
                     } label: {
-                        Label("\(folder.name)  (\(folder.itemCount))", systemImage: folder.symbol)
+                        // ⌥⌘1 is History, so folders start at 2 and stop at 9.
+                        let shortcut = index < 8 ? "  ⌥⌘\(index + 2)" : ""
+                        Label("\(folder.name)  (\(folder.itemCount))\(shortcut)", systemImage: folder.symbol)
                     }
                 }
             }

@@ -27,6 +27,8 @@ enum KeyCommand: Equatable, Sendable {
     case toggleFocus
     case previousScope
     case nextScope
+    /// ⌥⌘1 is History, ⌥⌘2… the folders in menu order.
+    case selectScope(Int)
     case newFolder
     case renameFolder
     case deleteFolder

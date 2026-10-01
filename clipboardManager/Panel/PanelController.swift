@@ -201,6 +201,7 @@ final class PanelController: NSObject, NSWindowDelegate {
             case ("[", _, _): emit(.key(.previousScope))
             case ("]", _, _): emit(.key(.nextScope))
             case ("1"..."9", false, false): emit(.key(.pasteIndex(Int(key)! - 1)))
+            case ("1"..."9", false, true): emit(.key(.selectScope(Int(key)! - 1)))
             default: return false
             }
             return true

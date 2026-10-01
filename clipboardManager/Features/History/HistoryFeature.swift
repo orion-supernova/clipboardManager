@@ -923,6 +923,12 @@ struct HistoryFeature {
                     return .merge(flash, .send(.cycleScope(-1)))
                 case .nextScope:
                     return .merge(flash, .send(.cycleScope(1)))
+                case let .selectScope(index):
+                    let scopes: [HistoryScope] = [.history] + state.folders.map { .folder($0.id) }
+                    guard scopes.indices.contains(index) else {
+                        return .run { _ in await workspace.haptic(.generic) }
+                    }
+                    return .merge(flash, .send(.setScope(scopes[index])))
                 case .newFolder:
                     return .send(.newFolderTapped(thenAdd: nil))
                 case .renameFolder:
@@ -1144,7 +1150,7 @@ struct HistoryFeature {
         case .focusSearch, .typeToSearch: "⌘F"
         case .escape: "esc"
         case .saveToFolder: "⌘S"
-        case .previousScope, .nextScope: "⌘[ ]"
+        case .previousScope, .nextScope, .selectScope: "⌘[ ]"
         case .setFilter: "⌥1–6"
         default: nil
         }
