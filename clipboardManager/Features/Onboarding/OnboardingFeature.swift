@@ -83,7 +83,13 @@ struct OnboardingFeature {
                 return .none
 
             case .requestAccessibility:
-                return .run { _ in paste.requestAccessibility() }
+                return .run { _ in
+                    paste.requestAccessibility()
+                    try await clock.sleep(for: .milliseconds(500))
+                    // macOS shows its prompt only once per app; after that the call
+                    // is silent, so take the user to the switch instead.
+                    if !paste.isAccessibilityTrusted() { await workspace.openAccessibilitySettings() }
+                }
 
             case .openAccessibilitySettings:
                 return .run { _ in await workspace.openAccessibilitySettings() }
