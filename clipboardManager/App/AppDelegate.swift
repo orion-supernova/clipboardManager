@@ -62,7 +62,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        // Rendering stills must not touch the real history, clipboard or hotkey.
+        let rendering = ProcessInfo.processInfo.environment["MAHMUT_RENDER_DESIGN"] == "1"
+        if !rendering { store.send(.appLaunched) }
+        #else
         store.send(.appLaunched)
+        #endif
         #if DEBUG
         // Developer conveniences: preview the panel or settings without the hotkey.
         let environment = ProcessInfo.processInfo.environment
@@ -73,6 +79,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         if environment["MAHMUT_SHOW_SETTINGS"] == "1" { store.send(.menuOpenSettings) }
+        if environment["MAHMUT_RENDER_DESIGN"] == "1" {
+            Task { @MainActor in
+                let directory = environment["MAHMUT_RENDER_DIR"].map { URL(fileURLWithPath: $0) }
+                    ?? FileManager.default.temporaryDirectory.appending(path: "design-review", directoryHint: .isDirectory)
+                MarketingRenderer.renderDesignReview(to: directory)
+                NSApp.terminate(nil)
+            }
+        }
         if environment["MAHMUT_RENDER_MARKETING"] == "1" {
             Task { @MainActor in
                 let directory = FileManager.default.temporaryDirectory.appending(path: "marketing", directoryHint: .isDirectory)

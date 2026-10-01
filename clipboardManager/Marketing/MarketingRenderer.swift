@@ -48,6 +48,12 @@ enum MarketingRenderer {
         try? manifest.joined(separator: "\n").write(to: directory.appending(path: "manifest.txt"), atomically: true, encoding: .utf8)
     }
 
+    /// Design-review stills only, into `directory` (MAHMUT_RENDER_DESIGN=1).
+    static func renderDesignReview(to directory: URL) {
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for still in MarketingScenes().designReview() { _ = write(still, to: directory) }
+    }
+
     private static func write(_ still: Still, to directory: URL) -> Bool {
         guard let image = render(still.view, size: still.size, scale: still.scale),
               let data = ImageCoding.encodePNG(image)

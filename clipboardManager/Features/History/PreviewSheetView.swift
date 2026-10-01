@@ -88,6 +88,7 @@ struct PreviewSheetView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             }
+            .layoutPriority(-1)
             Spacer(minLength: 12)
             if item.isSensitive {
                 keyedButton(revealed ? "Hide" : "Reveal", symbol: revealed ? "eye.slash" : "eye", key: "⌘E", action: onToggleReveal)
@@ -142,7 +143,10 @@ struct PreviewSheetView: View {
                 Text(title)
                 KeyCap(key: key, onProminent: prominent)
             }
+            .lineLimit(1)
         }
+        // Buttons keep their size; the title is what truncates when space runs out.
+        .fixedSize()
         .accessibilityLabel(title)
         .accessibilityHint("Shortcut \(key)")
     }
@@ -199,7 +203,9 @@ struct PreviewSheetView: View {
     private func body(for kind: ClipboardKind) -> some View {
         switch kind {
         case .text:
-            if item.isSensitive, !revealed {
+            if let result = item.calculatedResult {
+                CalculationBody(expression: payload?.text ?? item.preview, result: result)
+            } else if item.isSensitive, !revealed {
                 MaskedBody(masked: item.preview, kind: item.sensitivity ?? .credential, detail: item.sensitivityDetail)
             } else {
                 TextBody(id: item.id, text: payload?.text ?? item.preview, language: item.codeLanguage, isLoading: payload == nil)
@@ -379,6 +385,41 @@ private struct TextBody: View {
                     .padding(16)
             }
         }
+    }
+}
+
+/// A sum is a calculator: the answer is the content, not a button label.
+private struct CalculationBody: View {
+    let expression: String
+    let result: String
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(expression.trimmingCharacters(in: .whitespacesAndNewlines))
+                .font(.system(size: 20, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .textSelection(.enabled)
+            Text("= \(result)")
+                .font(.system(size: 64, weight: .semibold, design: .rounded).monospacedDigit())
+                .foregroundStyle(.tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.4)
+                .textSelection(.enabled)
+                .contentTransition(.numericText())
+            HStack(spacing: 6) {
+                KeyCap(key: "⌘O")
+                Text("pastes \(result) ·")
+                KeyCap(key: "↩")
+                Text("pastes the expression")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .padding(.top, 6)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
     }
 }
 

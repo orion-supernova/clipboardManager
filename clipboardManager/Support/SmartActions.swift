@@ -43,7 +43,7 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
         case .showPath: "Show in Finder"
         case .track: "Track Package"
         case .flight: "Flight Status"
-        case let .pasteResult(result): "Paste Result (\(result))"
+        case let .pasteResult(result): "Paste \(result)"
         }
     }
 

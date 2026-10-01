@@ -72,13 +72,46 @@ private struct PanelGlassModifier<S: Shape>: ViewModifier {
 
 private struct PanelButtonStyleModifier: ViewModifier {
     let prominent: Bool
-    @Environment(\.marketingRender) private var marketingRender
 
     func body(content: Content) -> some View {
-        if marketingRender {
-            if prominent { content.buttonStyle(.borderedProminent) } else { content.buttonStyle(.bordered) }
+        content.buttonStyle(PanelButtonStyle(prominent: prominent))
+    }
+}
+
+/// SwiftUI draws the whole label. The system bordered/glass styles hand it to an
+/// AppKit button, which flattens it to a title and an image — so a key cap inside
+/// the label came out as "…" depending on how AppKit measured it.
+private struct PanelButtonStyle: ButtonStyle {
+    let prominent: Bool
+    @Environment(\.marketingRender) private var marketingRender
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
+    @Environment(\.resolvedAppearance) private var appearance
+
+    private var compact: Bool { controlSize == .mini }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(compact ? .caption.weight(.medium) : .callout.weight(.medium))
+            .foregroundStyle(prominent ? AnyShapeStyle(Color.white) : AnyShapeStyle(.primary))
+            .lineLimit(1)
+            .padding(.horizontal, compact ? 8 : 12)
+            .frame(height: compact ? 22 : 28)
+            .background { background(pressed: configuration.isPressed) }
+            .contentShape(.capsule)
+            .opacity(isEnabled ? 1 : 0.4)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+
+    @ViewBuilder
+    private func background(pressed: Bool) -> some View {
+        if marketingRender || appearance.solidSurface {
+            Capsule().fill(prominent ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(pressed ? 0.16 : 0.1)))
+        } else if prominent {
+            Color.clear.glassEffect(.regular.tint(.accentColor).interactive(), in: .capsule)
         } else {
-            if prominent { content.buttonStyle(.glassProminent) } else { content.buttonStyle(.glass) }
+            Color.clear.glassEffect(.regular.interactive(), in: .capsule)
         }
     }
 }
