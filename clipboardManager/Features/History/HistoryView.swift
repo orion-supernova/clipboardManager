@@ -125,6 +125,7 @@ struct HistoryView: View {
                     onPaste: { store.send(.paste(item.id, .standard)) },
                     onOpen: { store.send(.openItem(item.id)) },
                     onRevealInFinder: { store.send(.revealInFinder(item.id)) },
+                    onSmartAction: { store.send(.performSmartAction(item.id, $0)) },
                     onToggleReveal: { store.send(.toggleReveal) },
                     onCopyColor: { store.send(.copyColor(item.id, $0)) },
                     onCopyText: { store.send(.copyText($0, toast: "Text copied")) },
@@ -246,7 +247,8 @@ struct HistoryView: View {
             if let item = store.selectedItem {
                 if item.isSensitive { hint("⌘E", "Reveal") }
                 if item.kind == .color { hint("1–\(ColorFormat.allCases.count)", "Copy format") }
-                if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
+                if let action = item.primarySmartAction { hint("⌘O", action.title) }
+                else if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
                 if item.kind == .text { hint("⌘L", item.isSensitive ? "Not Sensitive" : "Sensitive") }
             }
             hint("⌘K", "Commands")
@@ -785,6 +787,7 @@ struct HistoryView: View {
             delete: { store.send(.delete(id), animation: .smooth(duration: 0.25)) },
             togglePin: { store.send(.togglePin(id), animation: .smooth(duration: 0.25)) },
             toggleSensitive: { store.send(.toggleSensitive(id)) },
+            smartAction: { store.send(.performSmartAction(id, $0)) },
             reveal: { store.send(.revealInFinder(id)) },
             copyPath: { store.send(.copyPath(id)) },
             open: { store.send(.openItem(id)) },

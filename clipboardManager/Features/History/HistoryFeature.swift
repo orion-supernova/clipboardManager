@@ -158,6 +158,8 @@ struct HistoryFeature {
     struct PasteOptions: Equatable, Sendable {
         var plainText = false
         var transform: TextTransform?
+        /// Paste this instead of the item's text (a calculation's result).
+        var replacementText: String?
 
         static let standard = PasteOptions()
         static let plain = PasteOptions(plainText: true)
@@ -214,6 +216,7 @@ struct HistoryFeature {
         case revealInFinder(UUID)
         case copyPath(UUID)
         case openItem(UUID)
+        case performSmartAction(UUID, SmartAction)
         case setKindFilter(KindFilter)
         case setScope(HistoryScope)
         case cycleScope(Int)
@@ -514,7 +517,10 @@ struct HistoryFeature {
                 state.flashID = id
                 return .run { send in
                     guard var payload = try await clipboardStore.payload(id) else { return }
-                    if let transform = options.transform {
+                    if let replacement = options.replacementText {
+                        payload.text = replacement
+                        payload.richText = nil
+                    } else if let transform = options.transform {
                         guard let text = payload.text, let transformed = transform.apply(to: text) else {
                             await send(.showToast("Not valid JSON", symbol: "exclamationmark.triangle.fill"), animation: .bouncy)
                             await send(.binding(.set(\.flashID, nil)))
@@ -523,7 +529,7 @@ struct HistoryFeature {
                         payload.text = transformed
                         payload.richText = nil
                     }
-                    await paste.write(payload, id, options.plainText || options.transform != nil)
+                    await paste.write(payload, id, options.plainText || options.transform != nil || options.replacementText != nil)
                     await workspace.haptic(.levelChange)
                     try await clock.sleep(for: .milliseconds(150))
                     await send(.dismiss(.pasted))
@@ -625,6 +631,30 @@ struct HistoryFeature {
                               let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)) {
                         await workspace.open(url)
                     }
+                }
+
+            case let .performSmartAction(id, action):
+                switch action.kind {
+                case let .pasteResult(result):
+                    var options = PasteOptions.plain
+                    options.replacementText = result
+                    return .send(.paste(id, options))
+                case let .showPath(path):
+                    let url = URL(fileURLWithPath: UserHome.expand(path))
+                    return .run { _ in await workspace.revealInFinder(url) }
+                case let .openLinks(urls):
+                    return .run { _ in for url in urls { await workspace.open(url) } }
+                case let .addToCalendar(start, duration, allDay, title):
+                    return .run { send in
+                        let file = try CalendarEvent.file(title: title, start: start, duration: duration, allDay: allDay)
+                        await workspace.open(file)
+                    } catch: { error, send in
+                        logger.error("Calendar event failed: \(error.localizedDescription)")
+                        await send(.showToast("Couldn’t create the event", symbol: "exclamationmark.triangle.fill"), animation: .bouncy)
+                    }
+                default:
+                    guard let url = action.url else { return .none }
+                    return .run { _ in await workspace.open(url) }
                 }
 
             case let .copyPath(id):
@@ -1059,8 +1089,10 @@ struct HistoryFeature {
                     guard let item = state.selectedItem else { return .none }
                     return .concatenate(.send(.previewItem(item.id)), item.isSensitive ? .send(.toggleReveal) : .none)
                 case .open:
-                    guard let id = state.selectedID else { return .none }
-                    return .send(.openItem(id))
+                    guard let item = state.selectedItem else { return .none }
+                    // ⌘O is "do the obvious thing": the smart action when the text has one.
+                    if let action = item.primarySmartAction { return .send(.performSmartAction(item.id, action)) }
+                    return .send(.openItem(item.id))
                 case .revealInFinder:
                     guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return .none }
                     return .send(.revealInFinder(item.id))
@@ -1095,6 +1127,9 @@ struct HistoryFeature {
                 case let .saveTo(folderID):
                     guard let id = state.selectedID else { return .none }
                     return .send(.moveItem(id, toFolder: folderID), animation: .smooth(duration: 0.25))
+                case let .smart(action):
+                    guard let id = state.selectedID else { return .none }
+                    return .send(.performSmartAction(id, action))
                 }
 
             // MARK: Retention

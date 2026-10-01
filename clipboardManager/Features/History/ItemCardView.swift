@@ -20,6 +20,7 @@ struct ItemCardView: View {
         var delete: @MainActor () -> Void
         var togglePin: @MainActor () -> Void
         var toggleSensitive: @MainActor () -> Void
+        var smartAction: @MainActor (SmartAction) -> Void
         var reveal: @MainActor () -> Void
         var copyPath: @MainActor () -> Void
         var open: @MainActor () -> Void
@@ -146,6 +147,9 @@ struct ItemCardView: View {
         if item.kind == .text {
             Button(item.isSensitive ? "Not sensitive" : "Mark as sensitive") { actions.toggleSensitive() }
         }
+        ForEach(item.smartActions) { action in
+            Button(action.title) { actions.smartAction(action) }
+        }
         Button("Paste as plain text") { actions.pastePlain() }
         if item.kind.isFileBacked {
             Button("Open") { actions.open() }
@@ -183,6 +187,14 @@ struct ItemCardView: View {
                     .font(.caption2)
                     .foregroundStyle(.orange)
                     .transition(.opacity)
+            }
+            if let action = item.primarySmartAction {
+                // What ⌘O will do, at a glance.
+                Image(systemName: action.symbol)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .help("\(action.title) (⌘O)")
+                    .accessibilityHidden(true)
             }
             Spacer(minLength: 4)
             Text(item.timestamp, format: .relative(presentation: .named, unitsStyle: .abbreviated))
@@ -329,6 +341,17 @@ struct ItemCardView: View {
         }
         entries.append(.item(title: item.isSensitive ? "Quick Look (masked)\tspace" : "Quick Look\tspace", symbol: "eye", action: actions.preview))
         entries.append(.item(title: item.isPinned ? "Unpin\t⌘P" : "Pin\t⌘P", symbol: item.isPinned ? "pin.slash" : "pin", action: actions.togglePin))
+        if !item.smartActions.isEmpty {
+            entries.append(.separator)
+            for action in item.smartActions {
+                entries.append(.item(
+                    title: action.isPrimary ? "\(action.title)\t⌘O" : action.title,
+                    symbol: action.symbol,
+                    action: { actions.smartAction(action) }
+                ))
+            }
+            entries.append(.separator)
+        }
         if item.kind == .text {
             entries.append(.item(
                 title: item.isSensitive ? "Not Sensitive\t⌘L" : "Mark as Sensitive\t⌘L",

@@ -86,8 +86,17 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
     var linkIconPath: String?
     /// Detected once when the item is loaded, never in view bodies.
     var codeLanguage: CodeLanguage?
+    /// What the text is and what to do with it (email, phone, sum…). Detected
+    /// once on load, like `codeLanguage`; primary action first.
+    var smartActions: [SmartAction] = []
 
     var isSensitive: Bool { sensitivity != nil }
+    var primarySmartAction: SmartAction? { smartActions.first(where: \.isPrimary) }
+    /// The answer, when the text is a sum: shown on the card, pasted on request.
+    var calculatedResult: String? {
+        if case let .pasteResult(result)? = primarySmartAction?.kind { return result }
+        return nil
+    }
 
     /// Pinning or filing an item takes it out of every retention rule — count,
     /// age and the sensitive-content timer alike. `ClipboardStore.prune` fetches

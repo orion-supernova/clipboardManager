@@ -28,6 +28,7 @@ struct PreviewSheetView: View {
     let onPaste: @MainActor () -> Void
     let onOpen: @MainActor () -> Void
     var onRevealInFinder: @MainActor () -> Void = {}
+    var onSmartAction: @MainActor (SmartAction) -> Void = { _ in }
     let onToggleReveal: @MainActor () -> Void
     let onCopyColor: @MainActor (ColorFormat) -> Void
     let onCopyText: @MainActor (String) -> Void
@@ -99,6 +100,23 @@ struct PreviewSheetView: View {
             if item.kind.isFileBacked || item.kind == .url || item.kind == .image {
                 keyedButton(item.kind == .url ? "Open Link" : "Open", symbol: "arrow.up.forward.app", key: "⌘O", action: onOpen)
                     .panelButtonStyle()
+            }
+            if !item.isSensitive, let primary = item.primarySmartAction {
+                keyedButton(primary.title, symbol: primary.symbol, key: "⌘O") { onSmartAction(primary) }
+                    .panelButtonStyle()
+            }
+            let secondary = item.isSensitive ? [] : item.smartActions.filter { !$0.isPrimary }
+            if !secondary.isEmpty {
+                Menu {
+                    ForEach(secondary) { action in
+                        Button(action.title, systemImage: action.symbol) { onSmartAction(action) }
+                    }
+                } label: {
+                    Label("More", systemImage: "ellipsis.circle")
+                }
+                .menuStyle(.button)
+                .fixedSize()
+                .panelButtonStyle()
             }
             keyedButton("Paste", symbol: "arrow.down.doc", key: "↩", prominent: true, action: onPaste)
                 .panelButtonStyle(prominent: true)

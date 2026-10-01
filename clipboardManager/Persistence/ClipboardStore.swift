@@ -674,7 +674,10 @@ extension ClipboardItem {
             linkIconPath: row["linkIconPath"] as? String,
             codeLanguage: nil
         )
-        if kind == .text, sensitivity == nil { codeLanguage = CodeLanguage.detect(preview) }
+        if kind == .text, sensitivity == nil {
+            codeLanguage = CodeLanguage.detect(preview)
+            if codeLanguage == nil { smartActions = SmartDetector.actions(for: preview) }
+        }
     }
 
     init(entity: ClipboardEntity) {
@@ -703,6 +706,9 @@ extension ClipboardItem {
             linkIconPath: entity.linkIconPath,
             codeLanguage: nil
         )
-        if kind == .text, sensitivity == nil { codeLanguage = CodeLanguage.detect(preview) }
+        if kind == .text, sensitivity == nil {
+            codeLanguage = CodeLanguage.detect(preview)
+            if codeLanguage == nil { smartActions = SmartDetector.actions(for: preview) }
+        }
     }
 }

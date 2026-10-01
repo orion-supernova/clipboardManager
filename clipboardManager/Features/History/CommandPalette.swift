@@ -13,6 +13,7 @@ struct PaletteCommand: Identifiable, Equatable, Sendable {
         case key(KeyCommand)
         case scope(HistoryScope)
         case saveTo(UUID)
+        case smart(SmartAction)
     }
 
     let id: String
@@ -40,6 +41,16 @@ enum CommandCatalog {
             ]
             for folder in state.folders where folder.id != item.folderID {
                 commands.append(.init(id: "save-\(folder.id)", title: "Save to “\(folder.name)”", symbol: folder.symbol, keywords: "move folder", kind: .saveTo(folder.id)))
+            }
+            for action in item.smartActions where !item.isSensitive {
+                commands.append(.init(
+                    id: "smart-\(action.id)",
+                    title: action.title,
+                    symbol: action.symbol,
+                    shortcut: action.isPrimary ? "⌘O" : nil,
+                    keywords: "smart action",
+                    kind: .smart(action)
+                ))
             }
             if item.kind != .text, item.kind != .color {
                 commands.append(.init(id: "open", title: "Open", symbol: "arrow.up.forward.app", shortcut: "⌘O", keywords: "launch browser", kind: .key(.open)))

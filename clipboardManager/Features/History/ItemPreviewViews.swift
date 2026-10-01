@@ -22,7 +22,12 @@ struct ItemPreviewView: View {
             SensitivePreview(item: item, kind: sensitivity, lifetime: item.isRetentionExempt ? nil : sensitiveLifetime)
         } else {
             switch item.kind {
-            case .text: TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)
+            case .text:
+                if let result = item.calculatedResult {
+                    CalculationPreview(expression: item.preview, result: result)
+                } else {
+                    TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)
+                }
             case .url: LinkPreview(item: item, heroURL: thumbnailURL, iconURL: iconURL, highlight: highlight)
             case .color: ColorPreview(hex: item.preview)
             case .image: ImagePreview(thumbnailURL: thumbnailURL, recognizedText: item.preview, highlight: highlight)
@@ -142,6 +147,29 @@ private struct LinkPreview: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .animation(.easeOut(duration: 0.25), value: heroURL)
         .animation(.easeOut(duration: 0.25), value: item.linkTitle)
+    }
+}
+
+/// A sum shows its answer: the card itself is the calculator.
+private struct CalculationPreview: View {
+    let expression: String
+    let result: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(expression)
+                .font(.system(.callout, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+            Text("= \(result)")
+                .font(.system(size: 30, weight: .semibold, design: .rounded).monospacedDigit())
+                .foregroundStyle(.tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .textSelection(.enabled)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .combine)
     }
 }
 
