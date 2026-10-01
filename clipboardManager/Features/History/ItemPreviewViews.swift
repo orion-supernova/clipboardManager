@@ -24,6 +24,10 @@ struct ItemPreviewView: View {
             switch item.kind {
             case .text:
                 VStack(alignment: .leading, spacing: 8) {
+                    // Like a link's hero image: a small visual says what this is at a glance.
+                    if let action = item.primarySmartAction {
+                        SmartCardBanner(item: item, action: action)
+                    }
                     TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)
                     // The text stays as it is; a small pill says what the item's key does.
                     if let action = item.primarySmartAction, let key = item.key(for: action) {
@@ -95,6 +99,127 @@ private struct SensitivePreview: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// A 72pt visual band for smart cards, in the spirit of a link's hero image.
+/// Flat gradients and SF Symbols only, so a strip of them scrolls cheaply.
+private struct SmartCardBanner: View {
+    let item: ClipboardItem
+    let action: SmartAction
+
+    var body: some View {
+        ZStack {
+            background
+            content
+        }
+        .frame(height: 72)
+        .frame(maxWidth: .infinity)
+        .clipShape(.rect(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.primary.opacity(0.08), lineWidth: 1))
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        switch action.kind {
+        case let .email(address): Hue.gradient(for: String(address.split(separator: "@").last ?? ""))
+        case .call, .message: gradient(.green, .mint)
+        case .map: MapCard()
+        case .addToCalendar: gradient(.red, .orange)
+        case .track: gradient(.brown, .orange)
+        case .flight: gradient(.blue, .cyan)
+        case .openPath, .showPath: gradient(Color(hue: 0.6, saturation: 0.15, brightness: 0.7), .gray)
+        case let .openLinks(urls): Hue.gradient(for: urls.first?.host() ?? "")
+        case let .openLink(url): Hue.gradient(for: url.host() ?? "")
+        case .pasteResult: gradient(.indigo, .purple)
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch action.kind {
+        case let .email(address):
+            glyphCircle {
+                Text(String(address.prefix(1)).uppercased())
+                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+            }
+        case .call, .message:
+            glyphCircle { Image(systemName: "phone.fill").font(.system(size: 16, weight: .semibold)) }
+        case .map:
+            EmptyView()
+        case let .addToCalendar(start, _, allDay, _):
+            HStack(spacing: 10) {
+                VStack(spacing: 0) {
+                    Text(start.formatted(.dateTime.month(.abbreviated)).uppercased())
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 13)
+                        .background(Color.red)
+                    Text(start.formatted(.dateTime.day()))
+                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.black.opacity(0.8))
+                        .frame(maxHeight: .infinity)
+                }
+                .frame(width: 40, height: 46)
+                .background(.white)
+                .clipShape(.rect(cornerRadius: 7))
+                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                Text(allDay ? start.formatted(.dateTime.weekday(.wide)) : start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.white)
+            }
+        case let .track(number):
+            HStack(spacing: 8) {
+                Image(systemName: "shippingbox.fill").font(.system(size: 22))
+                Text(number.hasPrefix("1Z") ? "UPS" : number.hasPrefix("JD") || number.hasPrefix("JJD") ? "DHL" : number.allSatisfy(\.isNumber) ? "Parcel" : "Postal")
+                    .font(.callout.weight(.bold))
+            }
+            .foregroundStyle(.white)
+        case .flight:
+            Image(systemName: "airplane")
+                .font(.system(size: 26, weight: .semibold))
+                .rotationEffect(.degrees(-20))
+                .foregroundStyle(.white)
+        case let .openPath(path), let .showPath(path):
+            Image(nsImage: FileTypeIcon.icon(forName: (path as NSString).lastPathComponent))
+                .resizable()
+                .frame(width: 44, height: 44)
+        case let .openLinks(urls):
+            HStack(spacing: -8) {
+                ForEach(Array(urls.prefix(3).enumerated()), id: \.offset) { _, url in
+                    monogram(url.host() ?? "?")
+                }
+            }
+        case let .openLink(url):
+            monogram(url.host() ?? "?")
+        case .pasteResult:
+            Image(systemName: "plus.forwardslash.minus")
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func gradient(_ a: Color, _ b: Color) -> LinearGradient {
+        LinearGradient(colors: [a.opacity(0.75), b.opacity(0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    private func glyphCircle(@ViewBuilder _ label: () -> some View) -> some View {
+        label()
+            .foregroundStyle(.white)
+            .frame(width: 40, height: 40)
+            .background(.white.opacity(0.22), in: .circle)
+            .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+    }
+
+    private func monogram(_ host: String) -> some View {
+        Text(String(host.replacingOccurrences(of: "www.", with: "").prefix(1)).uppercased())
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+            .frame(width: 32, height: 32)
+            .background(Hue.gradient(for: host), in: .rect(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
     }
 }
 

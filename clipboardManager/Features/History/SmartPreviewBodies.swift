@@ -194,7 +194,7 @@ private struct AddressHero: View {
 }
 
 /// Reads as "a map" without MapKit or the network: a faint street grid and a pin.
-private struct MapCard: View {
+struct MapCard: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16).fill(Color.primary.opacity(0.06))
@@ -501,6 +501,15 @@ private struct CalcHero: View {
     private static func grouped(_ result: String) -> String {
         guard let value = Double(result), abs(value) >= 10_000 else { return result }
         return value.formatted(.number.precision(.fractionLength(0...10)))
+    }
+}
+
+/// A file type's icon from its name alone: no file access, so it works in the sandbox.
+enum FileTypeIcon {
+    static func icon(forName name: String) -> NSImage {
+        let ext = (name as NSString).pathExtension
+        let type = ext.isEmpty ? UTType.folder : (UTType(filenameExtension: ext) ?? .data)
+        return NSWorkspace.shared.icon(for: type)
     }
 }
 
