@@ -55,12 +55,12 @@ It also reads what you copied. Paste a Swift function and it comes back syntax-c
 ## FAQ
 
 <details>
-<summary><b>The App Store says "Clipboard Mahmut", version 1.7.1. Is that this?</b></summary>
+<summary><b>Is "Mahmut: Clipboard Manager" on the App Store this app?</b></summary>
 <br>
 
-Yes. **Clipboard Mahmut** is the name on the store and it's staying that way; **Mahmut Clipboard** is what the app calls itself once it's running. Same app either way.
+Yes. **Mahmut: Clipboard Manager** is the name on the store (it used to be listed as "Clipboard Mahmut"); **Mahmut Clipboard** is what the app calls itself once it's running. Same app either way.
 
-The version gap is real, though: 3.0 is a rewrite and it's in review right now. Until it lands the listing still serves 1.7.1, which looks nothing like the screenshots on this page and predates most of what it describes. If you want 3.0 today, build it from source.
+The store can trail this repository by a review cycle. If you want the newest version today, build it from source.
 
 </details>
 
