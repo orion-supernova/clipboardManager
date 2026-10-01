@@ -44,6 +44,13 @@ enum KeyboardLayout {
         return first
     }
 
+    /// The previous/next folder chord as the current layout prints it: the two
+    /// keys right of P, which are `[ ]` on US layouts but `Ğ Ü` on Turkish Q.
+    /// Matching is by key position, so the label must follow the layout too.
+    static var scopeKeysLabel: String {
+        "⌘\(displayName(for: leftBracket)) \(displayName(for: rightBracket))"
+    }
+
     static let modifierKeyCodes: Set<UInt16> = [0x37, 0x36, 0x38, 0x3C, 0x3A, 0x3D, 0x3B, 0x3E, 0x39, 0x3F]
 
     private static let specialNames: [UInt16: String] = [

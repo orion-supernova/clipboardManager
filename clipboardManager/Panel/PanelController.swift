@@ -183,6 +183,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             emit(.key(.first)); return true
         case KeyboardLayout.end:
             emit(.key(.last)); return true
+        case KeyboardLayout.tab where flags.contains(.control):
+            // ⌃⇥ / ⌃⇧⇥: tab-style folder switching that works on every layout.
+            emit(.key(shift ? .previousScope : .nextScope)); return true
         case KeyboardLayout.tab:
             emit(.key(.toggleFocus)); return true
         case KeyboardLayout.ansiComma where command:

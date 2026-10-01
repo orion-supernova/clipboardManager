@@ -203,12 +203,12 @@ struct HistoryView: View {
         .transition(.opacity)
     }
 
-    private static let commandHints: [(key: String, label: String)] = [
+    private static var commandHints: [(key: String, label: String)] { [
         ("⌘K", "Commands"), ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"), ("⌘L", "Sensitive"),
-        ("⌘S", "Save to Folder"), ("⌘F", "Search"), ("⌘[ ]", "Folders"), ("⌘O", "Open"),
+        ("⌘S", "Save to Folder"), ("⌘F", "Search"), (KeyboardLayout.scopeKeysLabel, "Folders"), ("⌘O", "Open"),
         ("⌘E", "Reveal"), ("⌘N", "New Folder"), ("⌥⌘C", "Copy Path"), ("⇧⌘R", "Show in Finder"),
-        ("⇧⌘P", "Pause"), ("⌘,", "Settings"),
-    ]
+        ("⇧⌘P", "Pause"), ("⌘\(KeyboardLayout.settingsKeyCharacter)", "Settings"),
+    ] }
 
     private func commandHintRow(_ hints: [(key: String, label: String)]) -> some View {
         HStack(spacing: 12) {
@@ -244,7 +244,7 @@ struct HistoryView: View {
                 hint("⌫", "Delete")
                 hint("⌘F", "Search")
                 hint("⌥1–6", "Filter")
-                hint("⌘[ ]", "Scope")
+                hint(KeyboardLayout.scopeKeysLabel, "Scope")
                 hint("⌘K", "Commands")
                 hint("hold ⌘", "More")
             }
@@ -370,7 +370,7 @@ struct HistoryView: View {
         .menuIndicator(.hidden)
         .panelGlass(interactive: true, in: .capsule)
         .animation(quickAnimation, value: store.activeScope)
-        .help("Switch between History and your folders (⌘[ ⌘])")
+        .help("Switch between History and your folders (\(KeyboardLayout.scopeKeysLabel), ⌃⇥, or ⌥⌘1–9)")
     }
 
     private var filterControl: some View {

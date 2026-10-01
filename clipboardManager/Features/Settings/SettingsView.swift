@@ -286,6 +286,10 @@ struct SettingsView: View {
             shortcutRow("Delete", "⌫")
         }
         Section("Folders & capture") {
+            shortcutRow("Previous / next folder", "\(KeyboardLayout.scopeKeysLabel)   or   ⌃ ⇧ ⇥ / ⌃ ⇥")
+            shortcutRow("Jump to History / a folder", "⌥ ⌘ 1 … 9")
+            shortcutRow("Command palette", "⌘ K")
+            shortcutRow("Mark as sensitive / not sensitive", "⌘ L")
             shortcutRow("New folder", "⌘ N")
             shortcutRow("Rename current folder", "⌘ R")
             shortcutRow("Delete current folder", "⌘ ⌫")

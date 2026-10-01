@@ -1246,7 +1246,7 @@ struct HistoryFeature {
         case .saveToFolder: "⌘S"
         case .commandPalette: "⌘K"
         case .toggleSensitive: "⌘L"
-        case .previousScope, .nextScope, .selectScope: "⌘[ ]"
+        case .previousScope, .nextScope, .selectScope: KeyboardLayout.scopeKeysLabel
         case .setFilter: "⌥1–6"
         default: nil
         }
