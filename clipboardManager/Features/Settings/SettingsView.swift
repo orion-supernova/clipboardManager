@@ -47,6 +47,14 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var generalSection: some View {
+        Section("Welcome guide") {
+            LabeledContent {
+                Button("Show Guide…") { store.send(.showOnboardingTapped) }
+            } label: {
+                Text("Walk through setup again")
+                Text("Shortcuts, auto-paste and file access, in about 30 seconds.")
+            }
+        }
         Section("Startup") {
             Toggle("Launch Mahmut at login", isOn: Binding(
                 get: { store.launchAtLogin },
@@ -112,6 +120,25 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var privacySection: some View {
+        Section("Permissions") {
+            LabeledContent {
+                if store.isAccessibilityTrusted {
+                    Label("Allowed", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Button("Allow…") { store.send(.requestAccessibility) }
+                }
+            } label: {
+                Text("Accessibility · recommended")
+                Text("Lets Mahmut press ⌘V for you after you pick an item. Without it, items are copied and you paste yourself.")
+            }
+            LabeledContent {
+                Button("Open Settings…") { store.send(.openFullDiskAccessSettings) }
+            } label: {
+                Text("Full Disk Access · optional")
+                Text("Stops macOS asking once per folder when you copy files from Desktop, Documents or Downloads. macOS doesn't report whether it's on.")
+            }
+        }
         Section("Sensitive content") {
             Toggle("Record card numbers, IBANs, keys and passwords", isOn: Binding(store.$recordSensitive))
             Text(store.recordSensitive

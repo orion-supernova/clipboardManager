@@ -13,6 +13,7 @@ struct WorkspaceClient: Sendable {
     var open: @Sendable (URL) async -> Void
     var openAccessibilitySettings: @Sendable () async -> Void
     var openAccessibilityDisplaySettings: @Sendable () async -> Void
+    var openFullDiskAccessSettings: @Sendable () async -> Void
     var haptic: @Sendable (NSHapticFeedbackManager.FeedbackPattern) async -> Void
     var confirm: @Sendable (_ title: String, _ message: String, _ confirmTitle: String) async -> Bool
     var terminate: @Sendable () async -> Void
@@ -40,6 +41,12 @@ extension WorkspaceClient: DependencyKey {
                 _ = NSWorkspace.shared.open(url)
             }
         },
+        openFullDiskAccessSettings: {
+            await MainActor.run {
+                let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")!
+                _ = NSWorkspace.shared.open(url)
+            }
+        },
         haptic: { pattern in
             await MainActor.run { NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .now) }
         },
@@ -62,7 +69,7 @@ extension WorkspaceClient: DependencyKey {
     )
 
     static let previewValue = WorkspaceClient(
-        revealInFinder: { _ in }, open: { _ in }, openAccessibilitySettings: {}, openAccessibilityDisplaySettings: {},
+        revealInFinder: { _ in }, open: { _ in }, openAccessibilitySettings: {}, openAccessibilityDisplaySettings: {}, openFullDiskAccessSettings: {},
         haptic: { _ in }, confirm: { _, _, _ in true }, terminate: {}
     )
 }

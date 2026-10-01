@@ -15,6 +15,8 @@ struct AppFeature {
     struct State: Equatable {
         var history = HistoryFeature.State()
         var settings = SettingsFeature.State()
+        var onboarding = OnboardingFeature.State()
+        @Shared(.hasCompletedOnboarding) var hasCompletedOnboarding
         @Shared(.toggleShortcut) var toggleShortcut
         @Shared(.availableUpdate) var availableUpdate
         @Shared(.skippedUpdateVersion) var skippedUpdateVersion
@@ -27,17 +29,20 @@ struct AppFeature {
         case updateChecked(AppStoreListing?)
         case menuShowPanel
         case menuOpenSettings
+        case menuShowOnboarding
         case menuClearHistory
         case menuOpenUpdate
         case menuQuit
         case history(HistoryFeature.Action)
         case settings(SettingsFeature.Action)
+        case onboarding(OnboardingFeature.Action)
     }
 
     private enum CancelID { case hotKey, updates }
 
     @Dependency(\.hotKeys) var hotKeys
     @Dependency(\.settingsWindow) var settingsWindow
+    @Dependency(\.onboardingWindow) var onboardingWindow
     @Dependency(\.workspace) var workspace
     @Dependency(\.updates) var updates
     @Dependency(\.continuousClock) var clock
@@ -45,13 +50,20 @@ struct AppFeature {
     var body: some ReducerOf<Self> {
         Scope(state: \.history, action: \.history) { HistoryFeature() }
         Scope(state: \.settings, action: \.settings) { SettingsFeature() }
+        Scope(state: \.onboarding, action: \.onboarding) { OnboardingFeature() }
 
         Reduce { state, action in
             switch action {
             case .appLaunched:
                 let shortcut = state.$toggleShortcut
+                let showOnboarding = !state.hasCompletedOnboarding
                 return .merge(
                     .send(.history(.task)),
+                    .run { _ in
+                        guard showOnboarding else { return }
+                        try await clock.sleep(for: .seconds(1))
+                        await onboardingWindow.open()
+                    },
                     hotKeyEffect(state.toggleShortcut),
                     .run { send in
                         for await spec in shortcut.publisher.values.dropFirst() { await send(.shortcutChanged(spec)) }
@@ -97,6 +109,20 @@ struct AppFeature {
                     .run { _ in await settingsWindow.open() }
                 )
 
+            case .menuShowOnboarding, .settings(.delegate(.showOnboarding)):
+                return .merge(
+                    .send(.history(.dismiss(.lostFocus))),
+                    .run { _ in await onboardingWindow.open() }
+                )
+
+            case let .onboarding(.delegate(.finished(openPanel))):
+                return .run { send in
+                    await onboardingWindow.close()
+                    guard openPanel else { return }
+                    try await clock.sleep(for: .milliseconds(300))
+                    await send(.history(.present))
+                }
+
             case .menuClearHistory, .settings(.delegate(.clearHistory)):
                 return .send(.history(.clearAllTapped))
 
@@ -107,7 +133,7 @@ struct AppFeature {
             case .menuQuit, .history(.delegate(.quit)):
                 return .run { _ in await workspace.terminate() }
 
-            case .history, .settings:
+            case .history, .settings, .onboarding:
                 return .none
             }
         }

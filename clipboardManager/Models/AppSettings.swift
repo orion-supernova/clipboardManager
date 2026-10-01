@@ -178,6 +178,11 @@ extension SharedReaderKey where Self == AppStorageKey<Int>.Default {
 }
 
 extension SharedReaderKey where Self == AppStorageKey<Bool>.Default {
+    /// Set when the welcome guide is finished or skipped, so it shows once.
+    static var hasCompletedOnboarding: Self {
+        Self[.appStorage("hasCompletedOnboarding"), default: false]
+    }
+
     static var keyboardNavigation: Self {
         Self[.appStorage("enableKeyboardNavigationUserDefaultsKey"), default: true]
     }

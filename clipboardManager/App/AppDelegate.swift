@@ -15,12 +15,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let store: StoreOf<AppFeature>
     private let panelController: PanelController
     private let settingsWindowController: SettingsWindowController
+    private let onboardingWindowController: OnboardingWindowController
 
     override init() {
         let panelController = PanelController()
         let settingsWindowController = SettingsWindowController()
+        let onboardingWindowController = OnboardingWindowController()
         self.panelController = panelController
         self.settingsWindowController = settingsWindowController
+        self.onboardingWindowController = onboardingWindowController
 
         store = Store(initialState: AppFeature.State()) {
             AppFeature()
@@ -34,6 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             dependencies.settingsWindow = SettingsWindowClient(
                 open: { await settingsWindowController.present() }
             )
+            dependencies.onboardingWindow = OnboardingWindowClient(
+                open: { await onboardingWindowController.present() },
+                close: { await onboardingWindowController.dismiss() }
+            )
         }
         super.init()
 
@@ -45,6 +52,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         settingsWindowController.onVisibilityChange = { [store] visible in
             store.send(.settings(.windowVisibilityChanged(visible)))
+        }
+        onboardingWindowController.install(
+            OnboardingView(store: store.scope(state: \.onboarding, action: \.onboarding))
+        )
+        onboardingWindowController.onVisibilityChange = { [store] visible in
+            store.send(.onboarding(.windowVisibilityChanged(visible)))
         }
     }
 

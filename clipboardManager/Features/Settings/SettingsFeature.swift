@@ -83,6 +83,8 @@ struct SettingsFeature {
         case requestAccessibility
         case openAccessibilitySettings
         case openAccessibilityDisplaySettings
+        case openFullDiskAccessSettings
+        case showOnboardingTapped
         case clearHistoryTapped
         case shortcutRecordingChanged(Bool)
         case shortcutRecorded(KeyboardShortcutSpec)
@@ -95,6 +97,7 @@ struct SettingsFeature {
 
         enum Delegate: Equatable {
             case clearHistory
+            case showOnboarding
             case shortcutRecording(Bool)
         }
     }
@@ -171,6 +174,12 @@ struct SettingsFeature {
 
             case .openAccessibilityDisplaySettings:
                 return .run { _ in await workspace.openAccessibilityDisplaySettings() }
+
+            case .openFullDiskAccessSettings:
+                return .run { _ in await workspace.openFullDiskAccessSettings() }
+
+            case .showOnboardingTapped:
+                return .send(.delegate(.showOnboarding))
 
             case .clearHistoryTapped:
                 return .send(.delegate(.clearHistory))

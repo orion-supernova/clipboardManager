@@ -66,7 +66,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         // Back to a menu bar utility.
-        NSApp.setActivationPolicy(.accessory)
+        let otherWindowOpen = NSApp.windows.contains { $0 !== window && $0.isVisible && $0.styleMask.contains(.titled) }
+        if !otherWindowOpen { NSApp.setActivationPolicy(.accessory) }
         onVisibilityChange?(false)
     }
 }
