@@ -217,11 +217,6 @@ struct CommandPaletteView: View {
     }
 
     private func keycap(_ key: String) -> some View {
-        Text(key)
-            .font(.caption2.weight(.semibold).monospaced())
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(.primary.opacity(0.08), in: .rect(cornerRadius: 4))
+        KeyCap(key: key).foregroundStyle(.secondary)
     }
 }

@@ -44,6 +44,10 @@ struct HistoryFeature {
         var kindFilter: KindFilter = .all
         var previewID: UUID?
         var previewPayload: ClipboardPayload?
+        /// Which item `previewPayload` belongs to. It is kept while the next item
+        /// loads, so Quick Look can swap files instead of being rebuilt per keypress.
+        var previewPayloadID: UUID?
+        var previewFailed = false
         var previewRevealed = false
         var dialog: Dialog?
         var dialogText = ""
@@ -342,6 +346,8 @@ struct HistoryFeature {
                 state.kindFilter = .all
                 state.previewID = nil
                 state.previewPayload = nil
+                state.previewPayloadID = nil
+                state.previewFailed = false
                 state.previewRevealed = false
                 state.dialog = nil
                 state.selectionAnimated = false
@@ -379,6 +385,8 @@ struct HistoryFeature {
                 state.paletteQuery = ""
                 state.previewID = nil
                 state.previewPayload = nil
+                state.previewPayloadID = nil
+                state.previewFailed = false
                 state.previewRevealed = false
                 state.dialog = nil
                 let simulate = reason == .pasted && state.autoPaste
@@ -433,7 +441,7 @@ struct HistoryFeature {
                     if let id = state.selectedID {
                         state.previewID = id
                         state.previewRevealed = false
-                        state.previewPayload = nil
+                        state.previewFailed = false
                         return loadPreview(id)
                     }
                     return .send(.closePreview)
@@ -829,7 +837,7 @@ struct HistoryFeature {
                 state.selectionAnimated = true
                 state.previewID = id
                 state.previewRevealed = false
-                state.previewPayload = nil
+                state.previewFailed = false
                 return .merge(
                     .cancel(id: CancelID.previewResize),
                     .run { _ in await panel.resize(PanelMetrics.expandedHeight) },
@@ -852,6 +860,8 @@ struct HistoryFeature {
             case let .previewLoaded(id, payload):
                 guard state.previewID == id else { return .none }
                 state.previewPayload = payload
+                state.previewPayloadID = id
+                state.previewFailed = payload == nil
                 return .none
 
             case .toggleCapturePaused:
@@ -891,7 +901,7 @@ struct HistoryFeature {
                 if state.isPreviewOpen {
                     state.previewID = id
                     state.previewRevealed = false
-                    state.previewPayload = nil
+                    state.previewFailed = false
                     return loadPreview(id)
                 }
                 return .none
@@ -1172,8 +1182,9 @@ struct HistoryFeature {
         .run { send in
             let payload = try await clipboardStore.payload(id)
             await send(.previewLoaded(id, payload), animation: .smooth(duration: 0.2))
-        } catch: { error, _ in
+        } catch: { error, send in
             logger.error("Preview load failed: \(error.localizedDescription)")
+            await send(.previewLoaded(id, nil))
         }
         .cancellable(id: CancelID.preview, cancelInFlight: true)
     }
@@ -1183,6 +1194,8 @@ struct HistoryFeature {
         guard state.isPreviewOpen else { return .none }
         state.previewID = nil
         state.previewPayload = nil
+        state.previewPayloadID = nil
+        state.previewFailed = false
         state.previewRevealed = false
         return .merge(
             .cancel(id: CancelID.preview),

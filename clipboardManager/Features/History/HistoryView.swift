@@ -110,15 +110,21 @@ struct HistoryView: View {
     private var content: some View {
         VStack(spacing: PanelMetrics.rowSpacing) {
             if let previewID = store.previewID, let item = store.items[id: previewID] {
+                // Marketing scenes set a payload without an id; treat that as current.
+                let payloadIsCurrent = store.previewPayloadID == nil || store.previewPayloadID == previewID
                 PreviewSheetView(
                     item: item,
-                    payload: store.previewPayload,
+                    payload: payloadIsCurrent ? store.previewPayload : nil,
+                    stalePayload: store.previewPayload,
+                    failed: store.previewFailed,
                     revealed: store.previewRevealed,
+                    sensitiveLifetime: store.sensitiveLifetime,
                     thumbnailURL: item.thumbnailPath.map(clipboardStore.thumbnailURL),
                     iconURL: item.linkIconPath.map(clipboardStore.thumbnailURL),
                     imageURL: item.imagePath.map(clipboardStore.imageURL),
                     onPaste: { store.send(.paste(item.id, .standard)) },
                     onOpen: { store.send(.openItem(item.id)) },
+                    onRevealInFinder: { store.send(.revealInFinder(item.id)) },
                     onToggleReveal: { store.send(.toggleReveal) },
                     onCopyColor: { store.send(.copyColor(item.id, $0)) },
                     onCopyText: { store.send(.copyText($0, toast: "Text copied")) },
@@ -232,7 +238,31 @@ struct HistoryView: View {
         .transition(.opacity)
     }
 
+    /// While the sheet is open the useful keys change: show those instead.
+    private var previewHints: some View {
+        HStack(spacing: 12) {
+            hint("← →", "Item")
+            hint("↩", "Paste")
+            if let item = store.selectedItem {
+                if item.isSensitive { hint("⌘E", "Reveal") }
+                if item.kind == .color { hint("1–\(ColorFormat.allCases.count)", "Copy format") }
+                if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
+                if item.kind == .text { hint("⌘L", item.isSensitive ? "Not Sensitive" : "Sensitive") }
+            }
+            hint("⌘K", "Commands")
+            hint("space", "Close")
+        }
+        .transition(.opacity)
+    }
+
     private var defaultHints: some View {
+        if store.isPreviewOpen && store.keyboardNavigation {
+            return AnyView(previewHints)
+        }
+        return AnyView(regularHints)
+    }
+
+    private var regularHints: some View {
         HStack(spacing: 12) {
             if store.keyboardNavigation {
                 hint("↩", "Paste")

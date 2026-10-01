@@ -69,13 +69,12 @@ enum SensitiveContent {
 
     /// The masked preview for an item the user marked sensitive by hand.
     static func markedByUser(_ text: String) -> SensitiveMatch {
-        SensitiveMatch(kind: .marked, masked: bullets(for: text), detail: nil)
+        SensitiveMatch(kind: .marked, masked: bullets, detail: nil)
     }
 
-    private static func bullets(for text: String) -> String {
-        let length = text.trimmingCharacters(in: .whitespacesAndNewlines).count
-        return String(repeating: "•", count: min(max(length, 6), 16)) + "  ·  \(length) characters"
-    }
+    /// A fixed run, never one bullet per character: a mask that shows the
+    /// length gives away how strong (or short) the secret is.
+    private static let bullets = String(repeating: "•", count: 12)
 
     // MARK: - Passwords
 
@@ -112,7 +111,7 @@ enum SensitiveContent {
         }
         let classes = [lower, upper, digit, symbol].filter { $0 }.count
         guard digit, realSymbol, classes >= 3 else { return nil }
-        return SensitiveMatch(kind: .password, masked: bullets(for: token), detail: nil)
+        return SensitiveMatch(kind: .password, masked: bullets, detail: nil)
     }
 
     // MARK: - Private keys
