@@ -642,6 +642,9 @@ struct HistoryFeature {
                 case let .showPath(path):
                     let url = URL(fileURLWithPath: UserHome.expand(path))
                     return .run { _ in await workspace.revealInFinder(url) }
+                case let .openPath(path):
+                    let url = URL(fileURLWithPath: UserHome.expand(path))
+                    return .run { _ in await workspace.open(url) }
                 case let .openLinks(urls):
                     return .run { _ in for url in urls { await workspace.open(url) } }
                 case let .addToCalendar(start, duration, allDay, title):
@@ -897,7 +900,8 @@ struct HistoryFeature {
                 // Link details are fetched once, at copy time; if that failed (offline,
                 // slow site, or copied before this existed), try again now, once a session.
                 if let item = state.items[id: id], item.kind == .url,
-                   item.linkTitle == nil || item.thumbnailPath == nil,
+                   item.linkTitle == nil || item.thumbnailPath == nil
+                       || (MapsLink.isMaps(URL(string: item.preview)) && MapsLink.isGenericTitle(item.linkTitle)),
                    state.linkRetries.insert(id).inserted {
                     return enrichment(for: item)
                 }
@@ -1074,10 +1078,11 @@ struct HistoryFeature {
                     guard let id = state.selectedID else { return .none }
                     return .send(.pasteAsTapped(id))
                 case .secondaryCopy:
+                    // ⇧⌘C is always "copy as text": the text form of whatever this is.
                     guard let item = state.selectedItem else { return .none }
                     switch item.kind {
                     case .color:
-                        return .send(.copyAsTapped(item.id))
+                        return .send(.copyText(item.preview, toast: "Hex copied"))
                     case .file, .video:
                         return .send(.copyPath(item.id))
                     default:
@@ -1098,7 +1103,12 @@ struct HistoryFeature {
                     if let action = item.primarySmartAction { return .send(.performSmartAction(item.id, action)) }
                     return .send(.openItem(item.id))
                 case .revealInFinder:
-                    guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return .none }
+                    guard let item = state.selectedItem else { return .none }
+                    // ⇧⌘R means Show in Finder for a copied path too, not just a copied file.
+                    if let show = item.smartActions.first(where: { if case .showPath = $0.kind { true } else { false } }) {
+                        return .send(.performSmartAction(item.id, show))
+                    }
+                    guard item.kind.isFileBacked || item.kind == .image else { return .none }
                     return .send(.revealInFinder(item.id))
                 case .copyPath:
                     guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return .none }

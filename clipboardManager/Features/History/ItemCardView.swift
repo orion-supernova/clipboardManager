@@ -154,7 +154,7 @@ struct ItemCardView: View {
         Button("Paste as plain text") { actions.pastePlain() }
         if item.kind.isFileBacked {
             Button("Open") { actions.open() }
-            Button("Reveal in Finder") { actions.reveal() }
+            Button("Show in Finder") { actions.reveal() }
             Button("Copy file path") { actions.copyPath() }
         }
         ForEach(folders) { folder in
@@ -327,7 +327,7 @@ struct ItemCardView: View {
         entries.append(.item(title: "Copy Without Pasting\t⌘C", symbol: "doc.on.doc", action: actions.copyOnly))
         if item.kind == .color {
             entries.append(.submenu(
-                title: "Copy As\t⌘⇧C",
+                title: "Copy As",
                 symbol: "paintpalette",
                 entries: ColorFormat.allCases.map { format in
                     .item(title: format.title, symbol: "swatchpalette") { actions.copyColor(format) }
@@ -340,7 +340,7 @@ struct ItemCardView: View {
             entries.append(.separator)
             for action in item.smartActions {
                 entries.append(.item(
-                    title: action.isPrimary ? "\(action.title)\t⌘O" : action.title,
+                    title: action.isPrimary ? "\(action.title)\t⌘O" : action.fixedKey.map { "\(action.title)\t\($0)" } ?? action.title,
                     symbol: action.symbol,
                     action: { actions.smartAction(action) }
                 ))
@@ -358,7 +358,7 @@ struct ItemCardView: View {
         entries.append(.separator)
         switch item.kind {
         case .file, .video, .image:
-            entries.append(.item(title: "Reveal in Finder\t⌘⇧R", symbol: "folder", action: actions.reveal))
+            entries.append(.item(title: "Show in Finder\t⇧⌘R", symbol: "folder", action: actions.reveal))
             entries.append(.item(title: "Open\t⌘O", symbol: "arrow.up.forward.app", action: actions.open))
             entries.append(.item(title: "Copy Path\t⌥⌘C", symbol: "link", action: actions.copyPath))
             entries.append(.separator)

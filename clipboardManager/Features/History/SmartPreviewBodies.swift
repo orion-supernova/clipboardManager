@@ -44,7 +44,7 @@ struct SmartBody: View {
         case let .addToCalendar(start, duration, allDay, title): DateHero(start: start, duration: duration, allDay: allDay, title: title)
         case let .track(number): TrackingHero(number: number, confident: primary.isPrimary)
         case let .flight(code): FlightHero(code: code)
-        case let .showPath(path): PathHero(path: path)
+        case let .openPath(path), let .showPath(path): PathHero(path: path)
         case let .openLinks(urls): LinksHero(urls: urls, onOpen: { onAction(SmartAction(kind: .openLink($0))) })
         case let .openLink(url): LinksHero(urls: [url], onOpen: { onAction(SmartAction(kind: .openLink($0))) })
         case let .pasteResult(result): CalcHero(expression: text, result: result)
@@ -55,7 +55,7 @@ struct SmartBody: View {
     private var context: String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         switch primary.kind {
-        case let .email(value), let .call(value), let .message(value), let .map(value), let .showPath(value), let .track(value):
+        case let .email(value), let .call(value), let .message(value), let .map(value), let .openPath(value), let .showPath(value), let .track(value):
             return trimmed.count > value.count + 4 ? trimmed : nil
         case .addToCalendar, .openLinks, .flight:
             return trimmed.count > 24 ? trimmed : nil
@@ -82,12 +82,12 @@ struct SmartBody: View {
                 ActionTile(symbol: "equal.circle.fill", title: "Paste \(result)", subtitle: "The answer", key: "⌘O", isPrimary: true) { onAction(primary) }
                 ActionTile(symbol: "function", title: "Paste Expression", subtitle: "As copied", key: "↩", isPrimary: false, action: onPasteOriginal)
             } else {
-                ForEach(Array(tileActions.enumerated()), id: \.element.id) { index, action in
+                ForEach(tileActions, id: \.id) { action in
                     ActionTile(
                         symbol: action.symbol,
                         title: action.title,
                         subtitle: action.destination,
-                        key: action.isPrimary ? "⌘O" : "\(index)",
+                        key: key(for: action),
                         isPrimary: action.isPrimary
                     ) { onAction(action) }
                 }
@@ -96,7 +96,15 @@ struct SmartBody: View {
         .frame(width: 240)
     }
 
-    /// Primary first, then the rest numbered from 1 (so index == digit).
+    /// ⌘O for the primary, the app-wide key where one exists, else a digit.
+    private func key(for action: SmartAction) -> String {
+        if action.isPrimary { return "⌘O" }
+        if let fixed = action.fixedKey { return fixed }
+        let numbered = tileActions.filter { !$0.isPrimary && $0.fixedKey == nil }
+        return numbered.firstIndex(of: action).map { "\($0 + 1)" } ?? ""
+    }
+
+    /// Primary first, then the rest.
     private var tileActions: [SmartAction] {
         [primary] + item.smartActions.filter { $0 != primary && !Self.isSingleLink($0, in: primary) }.prefix(3)
     }
@@ -115,7 +123,7 @@ enum SmartPreviewKeys {
         if case let .openLinks(urls) = primary.kind {
             return urls.indices.contains(digit - 1) ? SmartAction(kind: .openLink(urls[digit - 1])) : nil
         }
-        let secondary = item.smartActions.filter { $0 != primary }
+        let secondary = item.smartActions.filter { $0 != primary && $0.fixedKey == nil }
         return secondary.indices.contains(digit - 1) ? secondary[digit - 1] : nil
     }
 }
@@ -182,6 +190,7 @@ extension SmartAction {
         case let .openLink(url): url.host()
         case .openLinks: "Browser"
         case .addToCalendar: "Calendar"
+        case .openPath: "Default app"
         case .showPath: "Finder"
         case .track: "17TRACK"
         case .flight: "Web search"
@@ -198,7 +207,7 @@ extension SmartAction {
         case .openLink: "Link"
         case let .openLinks(urls): "\(urls.count) Links"
         case .addToCalendar: "Event"
-        case .showPath: "Path"
+        case .openPath, .showPath: "Path"
         case .track: "Tracking"
         case .flight: "Flight"
         case .pasteResult: "Sum"
@@ -214,7 +223,7 @@ extension SmartAction {
         case .openLink: "link"
         case .openLinks: "link"
         case .addToCalendar: "calendar"
-        case .showPath: "folder.fill"
+        case .openPath, .showPath: "folder.fill"
         case .track: "shippingbox.fill"
         case .flight: "airplane"
         case .pasteResult: "plus.forwardslash.minus"
@@ -230,7 +239,7 @@ extension SmartAction {
         case .openLink: "Link"
         case let .openLinks(urls): "\(urls.count) links"
         case .addToCalendar: "Event"
-        case .showPath: "File path"
+        case .openPath, .showPath: "File path"
         case .track: "Tracking number"
         case .flight: "Flight"
         case .pasteResult: "Calculation"

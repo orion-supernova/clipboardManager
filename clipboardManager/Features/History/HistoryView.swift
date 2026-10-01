@@ -477,7 +477,7 @@ struct HistoryView: View {
         }
         .buttonStyle(.plain)
         .panelGlass(tint: store.capturePaused ? .orange.opacity(0.3) : nil, interactive: true, in: .circle)
-        .help(store.capturePaused ? "Resume capturing (⌘⇧P)" : "Pause capturing (⌘⇧P)")
+        .help(store.capturePaused ? "Resume capturing (⇧⌘P)" : "Pause capturing (⇧⌘P)")
         .accessibilityLabel(store.capturePaused ? "Resume capturing" : "Pause capturing")
         .accessibilityValue(store.capturePaused ? "Paused" : "Recording")
     }

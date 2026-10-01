@@ -118,6 +118,7 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
         if let codeLanguage { return codeLanguage.displayName }
         // Say what the text *is*: "Phone", not "Text" next to a tiny glyph.
         if let primarySmartAction { return primarySmartAction.shortSubject }
+        if kind == .url, MapsLink.isMaps(URL(string: preview)) { return "Place" }
         return kind.title
     }
 
@@ -125,6 +126,7 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
         if let sensitivity { return sensitivity.symbol }
         if codeLanguage != nil { return "chevron.left.forwardslash.chevron.right" }
         if let primarySmartAction { return primarySmartAction.subjectSymbol }
+        if kind == .url, MapsLink.isMaps(URL(string: preview)) { return "mappin.and.ellipse" }
         return kind.symbolName
     }
 

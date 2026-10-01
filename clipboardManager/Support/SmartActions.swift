@@ -19,6 +19,7 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
         case openLink(URL)
         case openLinks([URL])
         case addToCalendar(start: Date, duration: TimeInterval, allDay: Bool, title: String)
+        case openPath(String)
         case showPath(String)
         case track(String)
         case flight(String)
@@ -31,6 +32,15 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
 
     var id: String { "\(kind)" }
 
+    /// Actions that mean the same thing as an app-wide shortcut answer to that
+    /// shortcut everywhere, never to a per-item digit: muscle memory holds.
+    var fixedKey: String? {
+        switch kind {
+        case .showPath: "⇧⌘R"
+        default: nil
+        }
+    }
+
     var title: String {
         switch kind {
         case .email: "Write Email"
@@ -40,6 +50,7 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
         case let .openLink(url): url.host().map { "Open \($0)" } ?? "Open Link"
         case let .openLinks(urls): "Open All \(urls.count) Links"
         case .addToCalendar: "Add to Calendar"
+        case .openPath: "Open"
         case .showPath: "Show in Finder"
         case .track: "Track Package"
         case .flight: "Flight Status"
@@ -56,6 +67,7 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
         case .openLink: "safari"
         case .openLinks: "square.stack.3d.up"
         case .addToCalendar: "calendar.badge.plus"
+        case .openPath: "arrow.up.forward.app"
         case .showPath: "folder"
         case .track: "shippingbox"
         case .flight: "airplane"
@@ -80,7 +92,7 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
             return Self.query("https://t.17track.net/en", [:]).flatMap { URL(string: "\($0.absoluteString)#nums=\(number)") }
         case let .flight(code):
             return Self.query("https://www.google.com/search", ["q": "\(code) flight status"])
-        case .openLinks, .addToCalendar, .showPath, .pasteResult:
+        case .openLinks, .addToCalendar, .openPath, .showPath, .pasteResult:
             return nil
         }
     }
@@ -115,7 +127,8 @@ enum SmartDetector {
             return [SmartAction(kind: .pasteResult(result), isPrimary: true)]
         }
         if let path = path(in: text) {
-            return [SmartAction(kind: .showPath(path), isPrimary: true)]
+            // Same keys as a copied file: ⌘O opens it, ⇧⌘R shows it in Finder.
+            return [SmartAction(kind: .openPath(path), isPrimary: true), SmartAction(kind: .showPath(path))]
         }
         if let tracking = trackingNumber(in: text) {
             return [SmartAction(kind: .track(tracking.number), isPrimary: tracking.confident)]

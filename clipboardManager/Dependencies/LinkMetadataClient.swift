@@ -36,6 +36,7 @@ extension LinkMetadataClient: DependencyKey {
         return LinkMetadataClient(
             fetch: { url in
                 guard isWeb(url) else { return nil }
+                if MapsLink.isMaps(url) { return await mapsMetadata(for: url, cache: cache) }
                 let rich = await LinkPresentationFetcher.fetch(url)
                 if let rich, rich.title != nil, rich.imagePNG != nil { return rich }
                 // LinkPresentation came back empty or partial: read the page's own
@@ -64,6 +65,18 @@ extension LinkMetadataClient: DependencyKey {
     }()
 
     static let previewValue = LinkMetadataClient(fetch: { _ in nil }, details: { _ in nil })
+
+    /// Every maps page is titled "Google Maps"; the place is in the (redirected) URL.
+    private static func mapsMetadata(for url: URL, cache: LinkDetailsCache) async -> LinkMetadata? {
+        let page = await HTMLMetaFetcher.meta(for: url)
+        let place = MapsLink.describe(page?.finalURL ?? url) ?? MapsLink.describe(url)
+        async let image = HTMLMetaFetcher.thumbnail(at: page?.imageURL, maxPixelSize: 900)
+        async let icon = HTMLMetaFetcher.thumbnail(at: page?.iconURL, maxPixelSize: 128)
+        let (fetchedImage, fetchedIcon) = await (image, icon)
+        await cache.store(LinkDetails(siteName: page?.siteName ?? "Maps", summary: nil), for: url)
+        let metadata = LinkMetadata(title: place ?? page?.title, imagePNG: fetchedImage, iconPNG: fetchedIcon)
+        return metadata.isEmpty ? nil : metadata
+    }
 
     private static func isWeb(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
@@ -117,6 +130,8 @@ struct PageMeta: Sendable {
     var siteName: String?
     var imageURL: URL?
     var iconURL: URL?
+    /// Where redirects ended: short links (maps.app.goo.gl) only make sense from here.
+    var finalURL: URL?
 }
 
 enum HTMLMetaFetcher {
@@ -145,7 +160,8 @@ enum HTMLMetaFetcher {
                 siteName: HTMLTitle.meta(["og:site_name", "application-name"], in: html),
                 imageURL: HTMLTitle.meta(["og:image", "og:image:url", "twitter:image"], in: html).flatMap { URL(string: $0, relativeTo: base)?.absoluteURL },
                 iconURL: HTMLTitle.iconHref(in: html).flatMap { URL(string: $0, relativeTo: base)?.absoluteURL }
-                    ?? URL(string: "/favicon.ico", relativeTo: base)?.absoluteURL
+                    ?? URL(string: "/favicon.ico", relativeTo: base)?.absoluteURL,
+                finalURL: http.url
             )
         } catch {
             return nil

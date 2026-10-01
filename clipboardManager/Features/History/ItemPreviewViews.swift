@@ -168,7 +168,7 @@ private struct SmartCardPreview: View {
         case let .flight(code):
             big(code, size: 28, rounded: true)
             Text("Flight number").font(.caption).foregroundStyle(.secondary)
-        case let .showPath(path):
+        case let .openPath(path), let .showPath(path):
             let name = (path as NSString).lastPathComponent
             big(name)
             Text((path as NSString).deletingLastPathComponent)
@@ -236,6 +236,7 @@ extension SmartAction {
         case .openLink: "Open"
         case let .openLinks(urls): "Open \(urls.count)"
         case .addToCalendar: "Add to Calendar"
+        case .openPath: "Open"
         case .showPath: "Show in Finder"
         case .track: "Track"
         case .flight: "Flight Status"
@@ -304,7 +305,11 @@ private struct LinkPreview: View {
     /// fetched title doesn't just repeat its host.
     static func readableTitle(_ url: URL?) -> String? {
         guard let last = url?.pathComponents.last(where: { $0 != "/" }), last.count > 2 else { return nil }
-        let words = (last as NSString).deletingPathExtension
+        // Only real slugs ("liquid-glass-design"), never IDs like "MATKngnjTPb1gwWQ7".
+        let stem = (last as NSString).deletingPathExtension
+        let isSlug = stem.contains("-") || stem.contains("_") || stem.allSatisfy { $0.isLowercase }
+        guard isSlug, !MapsLink.isMaps(url) else { return nil }
+        let words = stem
             .replacingOccurrences(of: "-", with: " ")
             .replacingOccurrences(of: "_", with: " ")
         guard words.contains(where: \.isLetter), !words.allSatisfy({ $0.isNumber || $0 == " " }) else { return nil }

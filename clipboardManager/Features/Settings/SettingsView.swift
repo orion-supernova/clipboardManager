@@ -283,7 +283,7 @@ struct SettingsView: View {
                     onReset: { store.send(.resetShortcut) }
                 )
             }
-            Text("Use at least one of ⌘, ⌃ or ⌥. The default ⌘⇧V overlaps “Paste and Match Style” in some apps — pick something else if that bothers you.")
+            Text("Use at least one of ⌘, ⌃ or ⌥. The default ⇧⌘V overlaps “Paste and Match Style” in some apps — pick something else if that bothers you.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -302,13 +302,13 @@ struct SettingsView: View {
             shortcutRow("Paste as… (case, trim, JSON)", "⌘ T")
             shortcutRow("Paste item 1–9", "⌘ 1 … ⌘ 9")
             shortcutRow("Copy without pasting", "⌘ C")
-            shortcutRow("Copy plain text · image text · color format · file path", "⌘ ⇧ C")
+            shortcutRow("Copy as text (plain text, image text, color hex, file path)", "⇧ ⌘ C")
             shortcutRow("Quick Look", "space")
             shortcutRow("Reveal a masked value in Quick Look", "⌘ E")
             shortcutRow("Pin or unpin", "⌘ P")
             shortcutRow("Save to folder", "⌘ S")
             shortcutRow("Open file or link", "⌘ O")
-            shortcutRow("Reveal in Finder", "⌘ ⇧ R")
+            shortcutRow("Show in Finder", "⇧ ⌘ R")
             shortcutRow("Copy file path", "⌥ ⌘ C")
             shortcutRow("Delete", "⌫")
         }
@@ -320,7 +320,7 @@ struct SettingsView: View {
             shortcutRow("New folder", "⌘ N")
             shortcutRow("Rename current folder", "⌘ R")
             shortcutRow("Delete current folder", "⌘ ⌫")
-            shortcutRow("Pause / resume capturing", "⌘ ⇧ P")
+            shortcutRow("Pause / resume capturing", "⇧ ⌘ P")
             shortcutRow("Open the App Store update", "⌘ U")
             shortcutRow("Settings", "⌘ \(String(KeyboardLayout.settingsKeyCharacter).uppercased())")
             shortcutRow("In choosers: pick option 1–9 / first option / secondary", "1 … 9  /  ↩  /  ⇧ ↩")
