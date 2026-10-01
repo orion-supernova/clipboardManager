@@ -207,6 +207,16 @@ private struct FilePreview: View {
                 if let thumbnailURL {
                     ThumbnailImage(url: thumbnailURL, placeholderSymbol: item.kind.symbolName)
                         .clipShape(.rect(cornerRadius: 8))
+                        .overlay {
+                            if item.kind == .video {
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 28, height: 28)
+                                    .background(.black.opacity(0.45), in: .circle)
+                                    .accessibilityHidden(true)
+                            }
+                        }
                 } else {
                     FileIconView(path: item.filePath)
                 }

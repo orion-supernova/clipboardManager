@@ -7,6 +7,7 @@
 //  with any recognised text, a rich link card, color formats, or Quick Look.
 //
 
+import AVKit
 import ComposableArchitecture
 import Quartz
 import SwiftUI
@@ -205,11 +206,21 @@ struct PreviewSheetView: View {
             if !item.isFileAvailable, payload != nil {
                 ContentUnavailableView("File not available", systemImage: "doc.questionmark", description: Text("The original file was moved or deleted."))
                     .foregroundStyle(.orange)
-            } else if let url = payload?.fileURL ?? stalePayload?.fileURL {
+            } else if let source = payload ?? stalePayload.flatMap({ $0.kind == kind ? $0 : nil }), let url = source.fileURL {
                 VStack(spacing: 6) {
-                    QuickLookFilePreview(url: url, bookmark: payload?.bookmark ?? stalePayload?.bookmark)
-                        .clipShape(.rect(cornerRadius: 14))
-                        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.primary.opacity(0.08)))
+                    Group {
+                        if kind == .video {
+                            // Quick Look sizes its player inconsistently and keeps the old
+                            // layout after a swap; a real player always fills and letterboxes.
+                            VideoFilePreview(url: url, bookmark: source.bookmark)
+                                .background(.black)
+                        } else {
+                            QuickLookFilePreview(url: url, bookmark: source.bookmark)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipShape(.rect(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.primary.opacity(0.08)))
                     if let folder = item.parentFolderPath {
                         Label(folder, systemImage: "folder")
                             .font(.caption)
@@ -393,8 +404,27 @@ private struct LinkBody: View {
     let iconURL: URL?
 
     private static let visibleQueryItems = 6
+    @Dependency(\.linkMetadata) private var linkMetadata
+    @SharedReader(.fetchLinkTitles) private var fetchLinkTitles
+    @State private var details: (url: String, value: LinkDetails)?
+
+    private var currentDetails: LinkDetails? {
+        details.flatMap { $0.url == urlString ? $0.value : nil }
+    }
 
     var body: some View {
+        content
+            .task(id: urlString) {
+                // Respects the same privacy switch as title fetching: no request otherwise.
+                guard fetchLinkTitles, let url = URL(string: urlString) else { return }
+                let urlString = urlString
+                guard let fetched = await linkMetadata.details(url), !Task.isCancelled else { return }
+                withAnimation(.easeOut(duration: 0.2)) { details = (urlString, fetched) }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         let url = URL(string: urlString)
         HStack(alignment: .top, spacing: 20) {
             if let heroURL {
@@ -415,13 +445,21 @@ private struct LinkBody: View {
                         }
                     }
                     .frame(width: 16, height: 16)
-                    if let host = url?.host() {
-                        Text(host).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
+                    if let site = currentDetails?.siteName ?? url?.host() {
+                        Text(site).font(.callout.weight(.semibold)).foregroundStyle(.secondary)
                     }
                 }
                 Text(title ?? url?.host() ?? "Link")
                     .font(.title2.weight(.semibold))
                     .lineLimit(2)
+                if let summary = currentDetails?.summary {
+                    Text(summary)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.opacity)
+                }
                 Text(Self.styledURL(urlString, host: url?.host()))
                     .font(.callout.monospaced())
                     .textSelection(.enabled)
@@ -639,6 +677,8 @@ private struct QuickLookFilePreview: NSViewRepresentable {
             context.coordinator.endAccess()
             context.coordinator.beginAccess(url: url, bookmark: bookmark)
             nsView.previewItem = url as NSURL
+            // Without this Quick Look keeps the previous item's layout after a swap.
+            nsView.refreshPreviewItem()
         }
     }
 
@@ -647,18 +687,65 @@ private struct QuickLookFilePreview: NSViewRepresentable {
         coordinator.endAccess()
     }
 
-    @MainActor
-    final class Coordinator {
-        private var accessedURL: URL?
+    typealias Coordinator = ScopedFileAccess
+}
 
-        func beginAccess(url: URL, bookmark: Data?) {
-            let target = bookmark.flatMap { FileBookmark.resolve($0)?.url } ?? url
-            if target.startAccessingSecurityScopedResource() { accessedURL = target }
-        }
+// MARK: - Video
 
-        func endAccess() {
-            accessedURL?.stopAccessingSecurityScopedResource()
-            accessedURL = nil
-        }
+/// A real player: fills the stage, letterboxes any aspect ratio, never autoplays.
+private struct VideoFilePreview: NSViewRepresentable {
+    let url: URL
+    let bookmark: Data?
+
+    func makeCoordinator() -> ScopedFileAccess { ScopedFileAccess() }
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .inline
+        view.videoGravity = .resizeAspect
+        view.showsFullScreenToggleButton = false
+        view.allowsPictureInPicturePlayback = false
+        load(url, into: view, access: context.coordinator)
+        return view
+    }
+
+    func updateNSView(_ nsView: AVPlayerView, context: Context) {
+        guard context.coordinator.sourceURL != url else { return }
+        nsView.player?.pause()
+        context.coordinator.endAccess()
+        load(url, into: nsView, access: context.coordinator)
+    }
+
+    static func dismantleNSView(_ nsView: AVPlayerView, coordinator: ScopedFileAccess) {
+        nsView.player?.pause()
+        nsView.player = nil
+        coordinator.endAccess()
+    }
+
+    private func load(_ url: URL, into view: AVPlayerView, access: ScopedFileAccess) {
+        let playable = access.beginAccess(url: url, bookmark: bookmark)
+        view.player = AVPlayer(url: playable)
+    }
+}
+
+/// Holds a security-scoped grant on a copied file for as long as it's shown.
+@MainActor
+final class ScopedFileAccess {
+    private var accessedURL: URL?
+    private(set) var sourceURL: URL?
+
+    /// Returns the URL to read: the bookmark's resolved location when it has one.
+    @discardableResult
+    func beginAccess(url: URL, bookmark: Data?) -> URL {
+        sourceURL = url
+        let target = bookmark.flatMap { FileBookmark.resolve($0)?.url } ?? url
+        if target.startAccessingSecurityScopedResource() { accessedURL = target }
+        return target
+    }
+
+    func endAccess() {
+        accessedURL?.stopAccessingSecurityScopedResource()
+        accessedURL = nil
+        sourceURL = nil
     }
 }

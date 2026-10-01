@@ -48,6 +48,8 @@ struct HistoryFeature {
         /// loads, so Quick Look can swap files instead of being rebuilt per keypress.
         var previewPayloadID: UUID?
         var previewFailed = false
+        /// Links whose missing title or image was already re-fetched this session.
+        var linkRetries: Set<UUID> = []
         var previewRevealed = false
         var dialog: Dialog?
         var dialogText = ""
@@ -862,6 +864,13 @@ struct HistoryFeature {
                 state.previewPayload = payload
                 state.previewPayloadID = id
                 state.previewFailed = payload == nil
+                // Link details are fetched once, at copy time; if that failed (offline,
+                // slow site, or copied before this existed), try again now, once a session.
+                if let item = state.items[id: id], item.kind == .url,
+                   item.linkTitle == nil || item.thumbnailPath == nil,
+                   state.linkRetries.insert(id).inserted {
+                    return enrichment(for: item)
+                }
                 return .none
 
             case .toggleCapturePaused:
