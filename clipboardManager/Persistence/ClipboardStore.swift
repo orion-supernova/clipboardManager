@@ -68,6 +68,10 @@ final class ClipboardStore: @unchecked Sendable {
         "folderID", "sensitivity", "linkTitle", "linkIconPath",
     ]
 
+    static func searchTerms(_ search: String) -> [String] {
+        search.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+
     func load(_ query: ItemQuery) async throws -> [ClipboardItem] {
         try await persistence.ready()
         return try await context.perform { [self] in
@@ -79,17 +83,20 @@ final class ClipboardStore: @unchecked Sendable {
                 NSSortDescriptor(key: "timestamp", ascending: false),
             ]
             var predicates: [NSPredicate] = []
+            let terms = Self.searchTerms(query.search)
             switch query.scope {
             case .history:
-                predicates.append(NSPredicate(format: "folderID == nil"))
+                // Searching from History looks inside folders too; browsing doesn't.
+                if terms.isEmpty { predicates.append(NSPredicate(format: "folderID == nil")) }
             case let .folder(id):
                 predicates.append(NSPredicate(format: "folderID == %@", id as CVarArg))
             }
-            let search = query.search.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !search.isEmpty {
+            // Every word must appear somewhere, in any order: "phd karolinska"
+            // finds an email that mentions both.
+            for term in terms {
                 predicates.append(NSPredicate(
                     format: "previewText CONTAINS[cd] %@ OR text CONTAINS[cd] %@ OR fileName CONTAINS[cd] %@ OR sourceAppName CONTAINS[cd] %@ OR linkTitle CONTAINS[cd] %@",
-                    search, search, search, search, search
+                    term, term, term, term, term
                 ))
             }
             if let kinds = query.kinds {

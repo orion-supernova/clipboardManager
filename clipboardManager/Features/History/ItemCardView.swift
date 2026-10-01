@@ -44,6 +44,8 @@ struct ItemCardView: View {
     let interactionEnabled: Bool
     let sensitiveLifetime: TimeInterval?
     let folders: [ClipboardFolder]
+    /// The folder this item lives in, when it shows up outside it (search results in History).
+    var folderBadge: ClipboardFolder? = nil
     let actions: Actions
 
     @Environment(\.marketingRender) private var marketingRender
@@ -125,7 +127,7 @@ struct ItemCardView: View {
         // `.combine` so VoiceOver reads the written description instead of
         // stitching together the header, badge, byte count and shortcut hint.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(item.accessibilityLabel)
+        .accessibilityLabel(folderBadge.map { "\(item.accessibilityLabel), in folder \($0.name)" } ?? item.accessibilityLabel)
         .accessibilityHint(item.accessibilityHint)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityActions { accessibilityActions }
@@ -204,10 +206,21 @@ struct ItemCardView: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 4)
-            Text(metaLabel)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
+            if let folderBadge {
+                Label(folderBadge.name, systemImage: folderBadge.symbol)
+                    .font(.caption2.weight(.semibold))
+                    .labelStyle(.titleAndIcon)
+                    .lineLimit(1)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.tint.opacity(0.16), in: .capsule)
+                    .layoutPriority(1)
+            } else {
+                Text(metaLabel)
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
         }
     }
 

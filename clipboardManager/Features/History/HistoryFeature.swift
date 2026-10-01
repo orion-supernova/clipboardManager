@@ -101,7 +101,8 @@ struct HistoryFeature {
         /// Keeps the in-memory list consistent with the retention policy without a round trip.
         mutating func applyRetention() {
             guard activeScope == .history, let maxCount = retention.maxCount else { return }
-            let unpinned = items.filter { !$0.isPinned }
+            // Folder items only appear here as search results; they never count.
+            let unpinned = items.filter { !$0.isRetentionExempt }
             guard unpinned.count > maxCount else { return }
             let doomed = Set(unpinned.suffix(unpinned.count - maxCount).map(\.id))
             items.removeAll { doomed.contains($0.id) }
@@ -753,10 +754,14 @@ struct HistoryFeature {
 
             case let .moveItem(id, folderID):
                 guard state.items[id: id] != nil || state.activeScope != .history else { return .none }
-                let leavesList = state.activeScope.folderID != folderID
+                // History search shows folder items too, so a move there just re-badges.
+                let staysInSearch = state.activeScope == .history && state.isSearching
+                let leavesList = state.activeScope.folderID != folderID && !staysInSearch
                 if leavesList {
                     state.remove(id)
                     state.selectionAnimated = true
+                } else {
+                    state.items[id: id]?.folderID = folderID
                 }
                 let destination = folderID.flatMap { state.folders[id: $0]?.name }
                 var effects: [Effect<Action>] = [

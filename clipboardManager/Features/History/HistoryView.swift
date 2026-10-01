@@ -442,7 +442,7 @@ struct HistoryView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            TextField("Search \(store.scopeTitle.lowercased())", text: $store.searchText)
+            TextField(store.activeScope == .history ? "Search history and folders" : "Search \(store.scopeTitle.lowercased())", text: $store.searchText)
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
                 .onSubmit {
@@ -551,6 +551,10 @@ struct HistoryView: View {
         let interactionEnabled = store.dialog == nil
         let sensitiveLifetime = store.sensitiveLifetime
         let folders = Array(store.folders)
+        // Only History mixes in folder items (as search results), so only it badges them.
+        let foldersByID = store.activeScope == .history
+            ? Dictionary(uniqueKeysWithValues: folders.map { ($0.id, $0) })
+            : [:]
         return ForEach(rows) { row in
             HStack(spacing: PanelMetrics.cardSpacing) {
                 if row.showsPinnedDivider {
@@ -570,6 +574,7 @@ struct HistoryView: View {
                     interactionEnabled: interactionEnabled,
                     sensitiveLifetime: sensitiveLifetime,
                     folders: folders,
+                    folderBadge: row.item.folderID.flatMap { foldersByID[$0] },
                     actions: cardActions(for: row.item)
                 )
             }
