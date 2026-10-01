@@ -318,9 +318,9 @@ private struct ColorPreview: View {
     var body: some View {
         let parsed = ParsedColor.parse(hex)
         let light = parsed?.isLight ?? false
-        RoundedRectangle(cornerRadius: 14)
+        RoundedRectangle(cornerRadius: 8)
             .fill(parsed?.swiftUIColor ?? .gray)
-            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(.primary.opacity(0.1), lineWidth: 1) }
+            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(.primary.opacity(0.1), lineWidth: 1) }
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(hex.uppercased())
@@ -348,9 +348,9 @@ private struct ImagePreview: View {
         Color.clear
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay { ThumbnailImage(url: thumbnailURL, placeholderSymbol: "photo", contentMode: .fill) }
-            .clipShape(.rect(cornerRadius: 12))
+            .clipShape(.rect(cornerRadius: 8))
             .overlay {
-                RoundedRectangle(cornerRadius: 12).strokeBorder(.primary.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 8).strokeBorder(.primary.opacity(0.08), lineWidth: 1)
             }
             .overlay(alignment: .bottomLeading) {
                 if !recognizedText.isEmpty {
@@ -377,12 +377,18 @@ private struct FilePreview: View {
     let item: ClipboardItem
     let thumbnailURL: URL?
 
+    private var fileExtension: String? {
+        let ext = ((item.fileName ?? item.preview) as NSString).pathExtension
+        return ext.isEmpty ? nil : ext.uppercased()
+    }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        VStack(spacing: 10) {
             ZStack {
                 if let thumbnailURL {
                     ThumbnailImage(url: thumbnailURL, placeholderSymbol: item.kind.symbolName)
                         .clipShape(.rect(cornerRadius: 8))
+                        .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
                         .overlay {
                             if item.kind == .video {
                                 Image(systemName: "play.fill")
@@ -397,28 +403,30 @@ private struct FilePreview: View {
                     FileIconView(path: item.filePath)
                 }
             }
-            .frame(width: 84, height: 84)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.fileName ?? item.preview)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-                if let folder = item.parentFolderPath {
-                    Label(folder, systemImage: "folder")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.head)
+            .frame(width: 96, height: 84)
+            .frame(maxWidth: .infinity)
+            Text(item.fileName ?? item.preview)
+                .font(.subheadline.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .truncationMode(.middle)
+            HStack(spacing: 6) {
+                if let fileExtension {
+                    Text(fileExtension)
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Color.primary.opacity(0.1), in: .capsule)
                 }
                 if !item.isFileAvailable {
-                    Label("Original file not found", systemImage: "exclamationmark.triangle.fill")
+                    Label("Original missing", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(.orange)
                         .transition(.opacity)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 

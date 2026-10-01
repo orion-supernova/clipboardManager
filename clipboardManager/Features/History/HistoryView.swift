@@ -283,13 +283,8 @@ struct HistoryView: View {
 
     private func hint(_ key: String, _ label: String, active: Bool = false) -> some View {
         let isFlashing = store.flashHintKey == key || active
-        return HStack(spacing: 4) {
-            Text(key)
-                .font(.caption2.weight(.semibold).monospaced())
-                .foregroundStyle(isFlashing ? Color.white : Color.primary)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 1)
-                .background(isFlashing ? Color.accentColor : Color.primary.opacity(0.08), in: .rect(cornerRadius: 4))
+        return HStack(spacing: 5) {
+            KeyCap(key: key, highlighted: isFlashing)
             Text(label)
                 .foregroundStyle(isFlashing ? Color.primary : Color.secondary)
         }
@@ -362,8 +357,10 @@ struct HistoryView: View {
             }
         } label: {
             HStack(spacing: 8) {
+                // Accent is reserved for selection, the primary action and the
+                // active filter; everything else stays neutral so those read.
                 Image(systemName: store.activeScope == .history ? "clipboard.fill" : (store.currentFolder?.symbol ?? "folder.fill"))
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(.secondary)
                     .contentTransition(.symbolEffect(.replace))
                 Text(store.scopeTitle)
                     .font(.headline)
@@ -373,7 +370,7 @@ struct HistoryView: View {
                     .font(.caption.weight(.semibold).monospacedDigit())
                     .padding(.horizontal, 7)
                     .padding(.vertical, 2)
-                    .background(.tint.opacity(0.18), in: .capsule)
+                    .background(.primary.opacity(0.1), in: .capsule)
                     .contentTransition(.numericText())
                     .animation(.smooth(duration: 0.25), value: store.items.count)
                 if store.capturePaused {
@@ -409,13 +406,13 @@ struct HistoryView: View {
                     store.send(.setKindFilter(filter), animation: quickAnimation)
                 } label: {
                     Image(systemName: filter.symbol)
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
-                        .frame(width: 34, height: PanelMetrics.toolbarHeight - 10)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(isActive ? Color.primary : Color.secondary)
+                        .frame(width: 32, height: PanelMetrics.toolbarHeight - 12)
                         .background {
                             if isActive {
                                 Capsule()
-                                    .fill(Color.accentColor.opacity(0.18))
+                                    .fill(Color.accentColor.opacity(0.28))
                                     .matchedGeometryEffect(id: "filter", in: filterNamespace)
                             }
                         }
@@ -426,9 +423,9 @@ struct HistoryView: View {
                 .accessibilityLabel(filter.title)
             }
         }
-        .padding(5)
+        .padding(6)
         .panelGlass(in: .capsule)
-        .animation(quickAnimation, value: store.kindFilter)
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .snappy(duration: 0.2), value: store.kindFilter)
     }
 
     private func toastCapsule(_ toast: HistoryFeature.Toast) -> some View {
@@ -472,7 +469,7 @@ struct HistoryView: View {
             store.send(.toggleCapturePaused, animation: quickAnimation)
         } label: {
             Image(systemName: store.capturePaused ? "play.fill" : "pause.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(store.capturePaused ? Color.orange : Color.primary)
                 .contentTransition(.symbolEffect(.replace))
                 .frame(width: PanelMetrics.toolbarHeight, height: PanelMetrics.toolbarHeight)

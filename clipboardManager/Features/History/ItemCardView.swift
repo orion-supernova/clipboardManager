@@ -73,7 +73,7 @@ struct ItemCardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             footer
         }
-        .padding(14)
+        .padding(PanelMetrics.cardPadding)
         .frame(width: PanelMetrics.cardWidth, height: PanelMetrics.cardHeight)
         // Not `interactive`: the overlay already drives hover and press, and the
         // system's flex effect on every card was ~8% of main-thread time.
@@ -193,13 +193,8 @@ struct ItemCardView: View {
             }
             Spacer(minLength: 4)
             if showShortcutHint {
-                Text("⌘\(index + 1)")
-                    .font(.caption2.weight(.bold).monospaced())
-                    .foregroundStyle(isSelected ? Color.white : Color.primary)
-                    .padding(.horizontal, 6)
-                    .frame(height: 18)
-                    // Filled on the selected card: that's the digit that pastes it.
-                    .background(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.12)), in: .capsule)
+                // Lit on the selected card: that's the digit that pastes it.
+                KeyCap(key: "⌘\(index + 1)", highlighted: isSelected)
                     .opacity(isHovered ? 0 : 1)
             }
         }
@@ -242,7 +237,11 @@ struct ItemCardView: View {
         case .url: return nil
         case .color: return nil
         case .image: return item.pixelSize?.label ?? Formatting.bytes(item.byteCount)
-        case .file, .video: return item.isFileAvailable ? Formatting.bytes(item.byteCount) : "Missing"
+        case .file, .video:
+            // Where it lives is what tells two "Report.pdf"s apart.
+            guard item.isFileAvailable else { return "Missing" }
+            let folder = item.parentFolderPath.map { ($0 as NSString).lastPathComponent }
+            return [folder, Formatting.bytes(item.byteCount)].compactMap { $0 }.joined(separator: " · ")
         }
     }
 

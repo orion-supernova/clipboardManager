@@ -362,16 +362,36 @@ private struct TextBody: View {
                     .foregroundStyle(.secondary)
             }
         }
-        // A readable measure: full-width lines on a wide panel run to 250+ characters.
+        // A readable measure, starting under the header title (16 + 28 + 12 = 56pt
+        // from the sheet edge, minus the surface's own 8pt inset).
         .frame(maxWidth: language != nil ? 1100 : 720, alignment: .topLeading)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 48)
+        .padding(.trailing, 24)
         .padding(.vertical, 16)
+    }
+
+    /// One short line reads as a quote, not a lonely line in the corner of a page.
+    private var isShortLine: Bool {
+        language == nil && text.count <= 140 && !text.contains(where: \.isNewline)
+    }
+
+    private var quote: some View {
+        Text(text.trimmingCharacters(in: .whitespacesAndNewlines))
+            .font(.system(.title2, design: .serif))
+            .multilineTextAlignment(.center)
+            .lineSpacing(4)
+            .textSelection(.enabled)
+            .frame(maxWidth: 760)
+            .padding(32)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     var body: some View {
         Group {
-            if marketingRender {
+            if isShortLine {
+                quote
+            } else if marketingRender {
                 // Scroll views don't render under ImageRenderer.
                 content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).clipped()
             } else {
