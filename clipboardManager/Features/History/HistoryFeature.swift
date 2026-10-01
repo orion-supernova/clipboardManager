@@ -1139,9 +1139,14 @@ struct HistoryFeature {
                     return .concatenate(.send(.previewItem(item.id)), item.isSensitive ? .send(.toggleReveal) : .none)
                 case .open:
                     guard let item = state.selectedItem else { return flash }
-                    // ⌘O is "do the obvious thing": the smart action when the text has one.
-                    if let action = item.primarySmartAction { return .merge(flash, .send(.performSmartAction(item.id, action))) }
+                    // ⌘O only ever means Open: a file, a link, or a link or path found in text.
+                    if let action = item.openSmartAction { return .merge(flash, .send(.performSmartAction(item.id, action))) }
                     return .merge(flash, .send(.openItem(item.id)))
+                case let .joker(index):
+                    guard let item = state.selectedItem, item.jokerActions.indices.contains(index) else {
+                        return .merge(flash, .run { _ in await workspace.haptic(.generic) })
+                    }
+                    return .merge(flash, .send(.performSmartAction(item.id, item.jokerActions[index])))
                 case .revealInFinder:
                     guard let item = state.selectedItem else { return flash }
                     // ⇧⌘R means Show in Finder for a copied path too, not just a copied file.
@@ -1359,6 +1364,7 @@ struct HistoryFeature {
         case .commandPalette: "⌘K"
         case .toggleSensitive: "⌘L"
         case .open: "⌘O"
+        case let .joker(index): SmartAction.jokerKeys[min(index, SmartAction.jokerKeys.count - 1)]
         case .revealInFinder: "⇧⌘R"
         case .copyPath: "⌥⌘C"
         case .secondaryCopy: "⇧⌘C"

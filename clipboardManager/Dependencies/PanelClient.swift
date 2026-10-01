@@ -33,6 +33,8 @@ enum KeyCommand: Equatable, Sendable {
     case toggleSensitive
     /// ↑/↓ and friends: scroll the open preview, or move through items when closed.
     case vertical(VerticalMove)
+    /// ⌘D / ⇧⌘D: the item's own first and second action.
+    case joker(Int)
     case newFolder
     case renameFolder
     case deleteFolder
@@ -57,6 +59,8 @@ enum HeldModifiers: Equatable, Sendable {
     case none
     case command
     case commandOption
+    /// ⌥ alone: the ⌥1–6 filters.
+    case option
 }
 
 enum PanelEvent: Equatable, Sendable {

@@ -74,7 +74,7 @@ struct PreviewSheetView: View {
                 Text(headerTitle)
                     .font(.headline)
                     .lineLimit(1)
-                    .truncationMode(item.kind == .text ? .tail : .middle)
+                    .truncationMode(.middle)
                 HStack(spacing: 6) {
                     AppIconView(source: item.source).frame(width: 12, height: 12)
                     Text(item.source.name)
@@ -104,7 +104,11 @@ struct PreviewSheetView: View {
                 keyedButton(item.kind == .url ? "Open Link" : "Open", symbol: "arrow.up.forward.app", key: "⌘O", action: onOpen)
                     .panelButtonStyle()
             }
-            let secondary = item.isSensitive || bodyShowsActions ? [] : item.smartActions.filter { !$0.isPrimary }
+            ForEach(headerActions) { action in
+                keyedButton(action.title, symbol: action.symbol, key: item.key(for: action) ?? "") { onSmartAction(action) }
+                    .panelButtonStyle()
+            }
+            let secondary = item.isSensitive ? [] : item.smartActions.filter { item.key(for: $0) == nil }
             if !secondary.isEmpty {
                 Menu {
                     ForEach(secondary) { action in
@@ -136,20 +140,18 @@ struct PreviewSheetView: View {
 
     /// The body shows the content, so the title says what it is: the smart
     /// type, or the first line of text — never the same paragraph twice.
+    /// The item's own text, as before; what it *is* goes in the info line below.
     private var headerTitle: String {
         if item.isSensitive { return item.headerTitle }
-        if let primary = item.primarySmartAction { return primary.subjectTitle }
-        // The recognised text is in the body; as a title it read like a caption.
-        if item.kind == .image { return "Image" }
-        if item.kind == .text {
-            let firstLine = item.preview.split(whereSeparator: \.isNewline).first.map(String.init) ?? item.preview
-            return item.codeLanguage.map { "\($0.displayName) snippet" } ?? firstLine
-        }
-        return item.displayTitle
+        let title = item.displayTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? item.kind.title : title
     }
 
-    /// Smart text shows its actions as tiles in the body; the header keeps only Paste.
-    private var bodyShowsActions: Bool { !item.isSensitive && item.primarySmartAction != nil }
+    /// Actions with a key of their own (⌘O, ⇧⌘R, ⌘D, ⇧⌘D) get a header button;
+    /// anything beyond those waits in More.
+    private var headerActions: [SmartAction] {
+        item.isSensitive ? [] : item.smartActions.filter { item.key(for: $0) != nil }
+    }
 
     private func keyedButton(_ title: String, symbol: String, key: String, prominent: Bool = false, action: @escaping @MainActor () -> Void) -> some View {
         Button(action: action) {
@@ -180,7 +182,7 @@ struct PreviewSheetView: View {
         switch item.kind {
         case .text:
             var parts: [String] = []
-            if let language = item.codeLanguage { parts.append(language.displayName) }
+            if let primary = item.primarySmartAction { parts.append(primary.subjectTitle) }
             if let stats, stats.id == item.id {
                 parts.append(Formatting.characterCount(stats.characters))
                 if stats.lines > 1 { parts.append("\(stats.lines.formatted()) lines") }
@@ -448,11 +450,19 @@ private struct TextBody: View {
             rendered = result
         }
         .overlay(alignment: .topTrailing) {
-            if isLoading {
-                DelayedSpinner()
-                    .frame(width: 20, height: 20)
-                    .padding(16)
+            HStack(spacing: 8) {
+                if let language {
+                    Text(language.displayName)
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(.tint.opacity(0.14), in: .capsule)
+                }
+                if isLoading {
+                    DelayedSpinner().frame(width: 20, height: 20)
+                }
             }
+            .padding(16)
         }
     }
 }

@@ -340,7 +340,7 @@ struct ItemCardView: View {
             entries.append(.separator)
             for action in item.smartActions {
                 entries.append(.item(
-                    title: action.isPrimary ? "\(action.title)\t⌘O" : action.fixedKey.map { "\(action.title)\t\($0)" } ?? action.title,
+                    title: item.key(for: action).map { "\(action.title)\t\($0)" } ?? action.title,
                     symbol: action.symbol,
                     action: { actions.smartAction(action) }
                 ))

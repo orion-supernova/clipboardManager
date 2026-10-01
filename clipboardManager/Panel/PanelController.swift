@@ -154,6 +154,7 @@ final class PanelController: NSObject, NSWindowDelegate {
         let held: HeldModifiers = switch (flags.contains(.command), flags.contains(.option)) {
         case (true, true): .commandOption
         case (true, false): .command
+        case (false, true): .option
         default: .none
         }
         guard held != heldModifiers else { return }
@@ -227,6 +228,8 @@ final class PanelController: NSObject, NSWindowDelegate {
             case ("f", false, false): emit(.key(.focusSearch))
             case ("k", false, false): emit(.key(.commandPalette))
             case ("l", false, false): emit(.key(.toggleSensitive))
+            case ("d", false, false): emit(.key(.joker(0)))
+            case ("d", true, false): emit(.key(.joker(1)))
             case (",", _, _): emit(.key(.openSettings))
             case ("q", _, _): emit(.key(.quit))
             case ("c", false, false):

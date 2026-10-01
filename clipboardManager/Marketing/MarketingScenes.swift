@@ -182,6 +182,13 @@ struct MarketingScenes {
                 panel(baseState(items: cases.map(\.1)), width: width, height: PanelMetrics.height)
             }),
         ]
+        for (held, name) in [(HeldModifiers.command, "hold-cmd"), (.commandOption, "hold-cmd-opt")] {
+            var state = baseState(items: cases.map(\.1))
+            state.modifierHint = held
+            stills.append(.init(name: name, size: size, scale: 2, view: scene(size: size, caption: nil) {
+                panel(state, width: width, height: PanelMetrics.height)
+            }))
+        }
         // The strip doesn't scroll offline: show every card by starting at different items.
         let all = cases.map(\.1)
         for (offset, name) in [(0, "strip-a"), (6, "strip-b"), (12, "strip-c")] {

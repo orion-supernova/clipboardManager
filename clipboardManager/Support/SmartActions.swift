@@ -36,10 +36,15 @@ struct SmartAction: Equatable, Hashable, Sendable, Identifiable {
     /// shortcut everywhere, never to a per-item digit: muscle memory holds.
     var fixedKey: String? {
         switch kind {
+        case .openLink, .openLinks, .openPath: "⌘O"
         case .showPath: "⇧⌘R"
         default: nil
         }
     }
+
+    /// The two "joker" keys: whatever this item's own actions are, ⌘D does the
+    /// first and ⇧⌘D the second (Call / Message, Write Email, Maps, Add to Calendar…).
+    static let jokerKeys = ["⌘D", "⇧⌘D"]
 
     var title: String {
         switch kind {

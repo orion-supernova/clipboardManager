@@ -318,6 +318,8 @@ struct SettingsView: View {
             shortcutRow("Previous / next folder", "\(KeyboardLayout.scopeKeysLabel)   or   ⌃ ⇧ ⇥ / ⌃ ⇥")
             shortcutRow("Jump to History / a folder", "⌥ ⌘ 1 … 9")
             shortcutRow("Command palette", "⌘ K")
+            shortcutRow("The item's own action: call, email, maps, calendar, track, paste a sum", "⌘ D")
+            shortcutRow("Its second action (e.g. message a phone number)", "⇧ ⌘ D")
             shortcutRow("Mark as sensitive / not sensitive", "⌘ L")
             shortcutRow("New folder", "⌘ N")
             shortcutRow("Rename current folder", "⌘ R")

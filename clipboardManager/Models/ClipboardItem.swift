@@ -92,6 +92,23 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
 
     var isSensitive: Bool { sensitivity != nil }
     var primarySmartAction: SmartAction? { smartActions.first(where: \.isPrimary) }
+    /// The actions ⌘D and ⇧⌘D run: the first two without an app-wide key of their own.
+    var jokerActions: [SmartAction] {
+        guard !isSensitive else { return [] }
+        return Array(smartActions.filter { $0.fixedKey == nil }.prefix(SmartAction.jokerKeys.count))
+    }
+
+    /// The key that runs `action` on this item, wherever it's shown.
+    func key(for action: SmartAction) -> String? {
+        if let fixed = action.fixedKey { return fixed }
+        return jokerActions.firstIndex(of: action).map { SmartAction.jokerKeys[$0] }
+    }
+
+    /// The action ⌘O runs, when this item's Open is a smart one (a link or a path in text).
+    var openSmartAction: SmartAction? {
+        smartActions.first { $0.fixedKey == "⌘O" }
+    }
+
     /// A copied path answers ⇧⌘R like a copied file does.
     var showInFinderAction: SmartAction? {
         smartActions.first { if case .showPath = $0.kind { true } else { false } }

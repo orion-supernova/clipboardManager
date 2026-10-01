@@ -192,6 +192,7 @@ struct HistoryView: View {
             case .none: defaultHints
             case .command: commandHints
             case .commandOption: folderHints
+            case .option: filterHints
             }
         }
         .font(.caption2)
@@ -215,7 +216,7 @@ struct HistoryView: View {
     }
 
     private static var commandHints: [(key: String, label: String)] { [
-        ("⌘K", "Commands"), ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"), ("⌘L", "Sensitive"),
+        ("⌘K", "Commands"), ("⌘1–9", "Paste #"), ("⌘D", "Item Action"), ("⇧⌘D", "2nd Action"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"), ("⌘L", "Sensitive"),
         ("⌘S", "Save to Folder"), ("⌘F", "Search"), (KeyboardLayout.scopeKeysLabel, "Folders"), ("⌘O", "Open"),
         ("⌘E", "Reveal"), ("⌘N", "New Folder"), ("⌥⌘C", "Copy Path"), ("⇧⌘R", "Show in Finder"),
         ("⇧⌘P", "Pause"), ("⌘\(KeyboardLayout.settingsKeyCharacter)", "Settings"),
@@ -227,6 +228,18 @@ struct HistoryView: View {
             hint("+⌥", "Folders")
         }
         .fixedSize()
+    }
+
+    /// Holding ⌥ lists the filters by number, the active one highlighted.
+    private var filterHints: some View {
+        HStack(spacing: 12) {
+            ForEach(Array(KindFilter.allCases.enumerated()), id: \.element) { index, filter in
+                hint("⌥\(index + 1)", filter.title, active: filter == store.kindFilter)
+            }
+            hint("+⌘", "Folders")
+        }
+        .lineLimit(1)
+        .transition(.opacity)
     }
 
     /// Holding ⌥⌘ lists the folders by number, the current one highlighted.
@@ -253,8 +266,10 @@ struct HistoryView: View {
                 if item.isSensitive { hint("⌘E", "Reveal") }
                 if item.kind == .color { hint("1–\(ColorFormat.allCases.count)", "Copy format") }
                 if item.kind == .image { hint("Z", store.previewZoomed ? "Fit" : "Zoom") }
-                if let action = item.primarySmartAction { hint("⌘O", action.title) }
-                else if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
+                if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
+                ForEach(item.isSensitive ? [] : item.smartActions.filter { item.key(for: $0) != nil && $0.fixedKey != "⇧⌘R" }) { action in
+                    hint(item.key(for: action) ?? "", action.pillTitle)
+                }
                 if item.kind.isFileBacked || item.kind == .image || item.showInFinderAction != nil {
                     hint("⇧⌘R", "Show in Finder")
                 }
@@ -275,14 +290,19 @@ struct HistoryView: View {
 
     private var regularHints: some View {
         HStack(spacing: 12) {
-            // The essentials only; every other key is one ⌘ hold or ⌘K away.
             if store.keyboardNavigation {
                 hint("↩", "Paste")
+                hint("⇧↩", "Plain")
                 hint("space", "Preview")
                 hint("⌘C", "Copy")
+                hint("⌘P", "Pin")
+                hint("⌘S", "Folder")
+                hint("⌫", "Delete")
                 hint("⌘F", "Search")
+                hint("⌥1–6", "Filter")
+                hint(KeyboardLayout.scopeKeysLabel, "Scope")
                 hint("⌘K", "Commands")
-                hint("hold ⌘", "All Keys")
+                hint("hold ⌘", "More")
             }
             hint("esc", "Close")
         }

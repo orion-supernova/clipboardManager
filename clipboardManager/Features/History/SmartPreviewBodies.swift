@@ -79,7 +79,7 @@ struct SmartBody: View {
     private var actionColumn: some View {
         VStack(spacing: 8) {
             if case let .pasteResult(result) = primary.kind {
-                ActionTile(symbol: "equal.circle.fill", title: "Paste \(result)", subtitle: "The answer", key: "⌘O", isPrimary: true) { onAction(primary) }
+                ActionTile(symbol: "equal.circle.fill", title: "Paste \(result)", subtitle: "The answer", key: item.key(for: primary) ?? "", isPrimary: true) { onAction(primary) }
                 ActionTile(symbol: "function", title: "Paste Expression", subtitle: "As copied", key: "↩", isPrimary: false, action: onPasteOriginal)
             } else {
                 ForEach(tileActions, id: \.id) { action in
@@ -96,12 +96,10 @@ struct SmartBody: View {
         .frame(width: 240)
     }
 
-    /// ⌘O for the primary, the app-wide key where one exists, else a digit.
+    /// The same key the item answers to everywhere: ⌘O / ⇧⌘R for open and show,
+    /// the joker keys ⌘D / ⇧⌘D for the item's own actions.
     private func key(for action: SmartAction) -> String {
-        if action.isPrimary { return "⌘O" }
-        if let fixed = action.fixedKey { return fixed }
-        let numbered = tileActions.filter { !$0.isPrimary && $0.fixedKey == nil }
-        return numbered.firstIndex(of: action).map { "\($0 + 1)" } ?? ""
+        item.key(for: action) ?? ""
     }
 
     /// Primary first, then the rest.
@@ -116,15 +114,12 @@ struct SmartBody: View {
     }
 }
 
-/// The digit a secondary tile or link row answers to, matching `SmartBody`'s numbering.
+/// Digits open the individual rows of a several-links preview; every other
+/// action has a fixed or joker key instead.
 enum SmartPreviewKeys {
     static func action(forDigit digit: Int, in item: ClipboardItem) -> SmartAction? {
-        guard digit >= 1, let primary = item.primarySmartAction else { return nil }
-        if case let .openLinks(urls) = primary.kind {
-            return urls.indices.contains(digit - 1) ? SmartAction(kind: .openLink(urls[digit - 1])) : nil
-        }
-        let secondary = item.smartActions.filter { $0 != primary && $0.fixedKey == nil }
-        return secondary.indices.contains(digit - 1) ? secondary[digit - 1] : nil
+        guard digit >= 1, case let .openLinks(urls)? = item.primarySmartAction?.kind else { return nil }
+        return urls.indices.contains(digit - 1) ? SmartAction(kind: .openLink(urls[digit - 1])) : nil
     }
 }
 

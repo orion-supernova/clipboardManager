@@ -23,10 +23,12 @@ struct ItemPreviewView: View {
         } else {
             switch item.kind {
             case .text:
-                if let action = item.primarySmartAction {
-                    SmartCardPreview(item: item, action: action)
-                } else {
+                VStack(alignment: .leading, spacing: 8) {
                     TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)
+                    // The text stays as it is; a small pill says what the item's key does.
+                    if let action = item.primarySmartAction, let key = item.key(for: action) {
+                        CardPill(symbol: action.symbol, title: action.pillTitle, key: key, tint: .accentColor)
+                    }
                 }
             case .url: LinkPreview(item: item, heroURL: thumbnailURL, iconURL: iconURL, highlight: highlight)
             case .color: ColorPreview(hex: item.preview)
@@ -43,16 +45,13 @@ private struct TextPreview: View {
     let language: CodeLanguage?
     let highlight: String
 
-    /// A short single line ("Thanks!", a name) reads as a value, not a paragraph.
-    private var isShort: Bool { language == nil && text.count <= 40 && !text.contains("\n") }
-
     var body: some View {
         Group {
             if text.isEmpty {
                 Text("Empty text").foregroundStyle(.secondary)
             } else {
                 Text(AttributedTextCache.preview(id: id, text: text, language: language, highlight: highlight))
-                    .font(language != nil ? .system(size: 11.5, design: .monospaced) : isShort ? .title3.weight(.medium) : .callout)
+                    .font(language != nil ? .system(size: 11.5, design: .monospaced) : .callout)
             }
         }
         .multilineTextAlignment(.leading)
@@ -96,108 +95,6 @@ private struct SensitivePreview: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-/// What a smart card shows: the thing set large, and a pill saying what ⌘O does.
-private struct SmartCardPreview: View {
-    let item: ClipboardItem
-    let action: SmartAction
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            value
-            Spacer(minLength: 0)
-            CardPill(symbol: action.symbol, title: action.pillTitle, key: "⌘O", tint: .accentColor)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    @ViewBuilder
-    private var value: some View {
-        switch action.kind {
-        case let .pasteResult(result):
-            Text(item.preview)
-                .font(.callout.monospaced())
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-            (Text("= ").font(.system(size: 30, weight: .light, design: .rounded)).foregroundStyle(.secondary)
-             + Text(result).font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit()))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-        case let .email(address):
-            big(address)
-            Text(address.split(separator: "@").last.map(String.init) ?? "").font(.caption).foregroundStyle(.secondary)
-        case let .call(number), let .message(number):
-            big(number, size: 24, rounded: true)
-            Text(number.hasPrefix("+") ? "International" : "Phone number").font(.caption).foregroundStyle(.secondary)
-        case let .map(address):
-            let lines = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-            big(lines.first ?? address)
-            Text(lines.dropFirst().joined(separator: ", ")).font(.callout).foregroundStyle(.secondary).lineLimit(2)
-        case let .addToCalendar(start, _, allDay, title):
-            HStack(spacing: 10) {
-                VStack(spacing: 0) {
-                    Text(start.formatted(.dateTime.month(.abbreviated)).uppercased())
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 14)
-                        .background(Color.red)
-                    Text(start.formatted(.dateTime.day()))
-                        .font(.system(size: 22, weight: .semibold, design: .rounded))
-                        .frame(maxHeight: .infinity)
-                }
-                .frame(width: 44, height: 48)
-                .background(Color.primary.opacity(0.08))
-                .clipShape(.rect(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline).lineLimit(2)
-                    Text(allDay ? start.formatted(.dateTime.weekday(.wide)) : start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        case let .track(number):
-            Text(number.hasPrefix("1Z") ? "UPS" : number.hasPrefix("JD") || number.hasPrefix("JJD") ? "DHL" : number.allSatisfy(\.isNumber) ? "Parcel" : "Postal")
-                .font(.caption2.weight(.bold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 1)
-                .background(Color.primary.opacity(0.1), in: .capsule)
-            Text(number).font(.system(.title3, design: .monospaced).weight(.medium)).lineLimit(2).minimumScaleFactor(0.7)
-        case let .flight(code):
-            big(code, size: 28, rounded: true)
-            Text("Flight number").font(.caption).foregroundStyle(.secondary)
-        case let .openPath(path), let .showPath(path):
-            let name = (path as NSString).lastPathComponent
-            big(name)
-            Text((path as NSString).deletingLastPathComponent)
-                .font(.caption.monospaced())
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.head)
-        case let .openLinks(urls):
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(urls.prefix(3).enumerated()), id: \.offset) { _, url in
-                    Label(url.host() ?? url.absoluteString, systemImage: "globe")
-                        .font(.caption.weight(.medium))
-                        .lineLimit(1)
-                }
-                if urls.count > 3 {
-                    Text("+\(urls.count - 3) more").font(.caption).foregroundStyle(.secondary)
-                }
-            }
-        case let .openLink(url):
-            big(url.host() ?? url.absoluteString)
-            Text(url.path()).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-        }
-    }
-
-    private func big(_ text: String, size: CGFloat = 18, rounded: Bool = false) -> some View {
-        Text(text)
-            .font(.system(size: size, weight: .semibold, design: rounded ? .rounded : .default).monospacedDigit())
-            .lineLimit(2)
-            .minimumScaleFactor(0.7)
     }
 }
 

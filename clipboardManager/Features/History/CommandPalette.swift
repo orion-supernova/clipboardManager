@@ -47,7 +47,7 @@ enum CommandCatalog {
                     id: "smart-\(action.id)",
                     title: action.title,
                     symbol: action.symbol,
-                    shortcut: action.isPrimary ? "⌘O" : action.fixedKey,
+                    shortcut: item.key(for: action),
                     keywords: "smart action",
                     kind: .smart(action)
                 ))
