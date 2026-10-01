@@ -204,6 +204,7 @@ final class PanelController: NSObject, NSWindowDelegate {
             switch (key, shift, option) {
             case ("f", false, false): emit(.key(.focusSearch))
             case ("k", false, false): emit(.key(.commandPalette))
+            case ("l", false, false): emit(.key(.toggleSensitive))
             case (",", _, _): emit(.key(.openSettings))
             case ("q", _, _): emit(.key(.quit))
             case ("c", false, false): emit(.key(.copyOnly))

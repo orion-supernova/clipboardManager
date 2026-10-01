@@ -204,6 +204,7 @@ struct HistoryFeature {
         case copyColor(UUID, ColorFormat)
         case delete(UUID)
         case togglePin(UUID)
+        case toggleSensitive(UUID)
         case revealInFinder(UUID)
         case copyPath(UUID)
         case openItem(UUID)
@@ -575,6 +576,28 @@ struct HistoryFeature {
                         logger.error("Pin failed: \(error.localizedDescription)")
                     },
                     animated(.showToast(pinned ? "Pinned" : "Unpinned", symbol: pinned ? "pin.fill" : "pin.slash"), .bouncy)
+                )
+
+            case let .toggleSensitive(id):
+                // Only text: a password pasted from Slack is text; links and files
+                // have titles and thumbnails that would leak around the mask.
+                guard let item = state.items[id: id], item.kind == .text else {
+                    return .run { _ in await workspace.haptic(.generic) }
+                }
+                let sensitive = !item.isSensitive
+                if state.previewID == id { state.previewRevealed = false }
+                return .merge(
+                    .run { send in
+                        guard let updated = try await clipboardStore.setSensitive(id, sensitive) else { return }
+                        await send(.itemUpdated(updated), animation: .smooth(duration: 0.25))
+                        await workspace.haptic(.alignment)
+                    } catch: { error, _ in
+                        logger.error("Marking sensitive failed: \(error.localizedDescription)")
+                    },
+                    animated(
+                        .showToast(sensitive ? "Marked sensitive" : "No longer sensitive", symbol: sensitive ? "lock.fill" : "lock.open"),
+                        .bouncy
+                    )
                 )
 
             case let .revealInFinder(id):
@@ -956,6 +979,9 @@ struct HistoryFeature {
                 case .togglePin:
                     guard let id = state.selectedID else { return flash }
                     return .merge(flash, animated(.togglePin(id), .smooth(duration: 0.25)))
+                case .toggleSensitive:
+                    guard let id = state.selectedID else { return flash }
+                    return .merge(flash, .send(.toggleSensitive(id)))
                 case .togglePreview:
                     return .merge(flash, .send(.togglePreview))
                 case .openSettings:
@@ -1219,6 +1245,7 @@ struct HistoryFeature {
         case .escape: "esc"
         case .saveToFolder: "⌘S"
         case .commandPalette: "⌘K"
+        case .toggleSensitive: "⌘L"
         case .previousScope, .nextScope, .selectScope: "⌘[ ]"
         case .setFilter: "⌥1–6"
         default: nil

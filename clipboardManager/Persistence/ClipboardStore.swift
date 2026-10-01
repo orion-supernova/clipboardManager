@@ -343,6 +343,25 @@ final class ClipboardStore: @unchecked Sendable {
         }
     }
 
+    /// Masks a text item by hand, or clears any sensitivity (detected or marked).
+    /// Returns the updated item so the list can re-render it masked or plain.
+    func setSensitive(id: UUID, _ sensitive: Bool) async throws -> ClipboardItem? {
+        try await persistence.ready()
+        return try await context.perform { [self] in
+            guard let entity = try fetchEntity(id: id), let text = entity.text else { return nil }
+            if sensitive {
+                let match = SensitiveContent.markedByUser(text)
+                entity.sensitivity = Self.encodeSensitivity(match.kind, detail: nil)
+                entity.previewText = match.masked
+            } else {
+                entity.sensitivity = nil
+                entity.previewText = TextClassifier.preview(for: text)
+            }
+            try context.save()
+            return ClipboardItem(entity: entity)
+        }
+    }
+
     func delete(ids: [UUID]) async throws {
         try await persistence.ready()
         let files = try await context.perform { [self] in

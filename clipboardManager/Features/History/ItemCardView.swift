@@ -19,6 +19,7 @@ struct ItemCardView: View {
         var copyColor: @MainActor (ColorFormat) -> Void
         var delete: @MainActor () -> Void
         var togglePin: @MainActor () -> Void
+        var toggleSensitive: @MainActor () -> Void
         var reveal: @MainActor () -> Void
         var copyPath: @MainActor () -> Void
         var open: @MainActor () -> Void
@@ -142,6 +143,9 @@ struct ItemCardView: View {
         Button("Copy without pasting") { actions.copyOnly() }
         Button("Quick Look") { actions.preview() }
         Button(item.isPinned ? "Unpin" : "Pin") { actions.togglePin() }
+        if item.kind == .text {
+            Button(item.isSensitive ? "Not sensitive" : "Mark as sensitive") { actions.toggleSensitive() }
+        }
         Button("Paste as plain text") { actions.pastePlain() }
         if item.kind.isFileBacked {
             Button("Open") { actions.open() }
@@ -325,6 +329,13 @@ struct ItemCardView: View {
         }
         entries.append(.item(title: item.isSensitive ? "Quick Look (masked)\tspace" : "Quick Look\tspace", symbol: "eye", action: actions.preview))
         entries.append(.item(title: item.isPinned ? "Unpin\t⌘P" : "Pin\t⌘P", symbol: item.isPinned ? "pin.slash" : "pin", action: actions.togglePin))
+        if item.kind == .text {
+            entries.append(.item(
+                title: item.isSensitive ? "Not Sensitive\t⌘L" : "Mark as Sensitive\t⌘L",
+                symbol: item.isSensitive ? "lock.open" : "lock",
+                action: actions.toggleSensitive
+            ))
+        }
         entries.append(.submenu(title: item.folderID == nil ? "Add to Folder\t⌘S" : "Move to Folder\t⌘S", symbol: "folder", entries: folderMenuEntries()))
         entries.append(.separator)
         switch item.kind {

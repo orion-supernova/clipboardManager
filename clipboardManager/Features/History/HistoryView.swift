@@ -204,7 +204,7 @@ struct HistoryView: View {
     }
 
     private static let commandHints: [(key: String, label: String)] = [
-        ("⌘K", "Commands"), ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"),
+        ("⌘K", "Commands"), ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"), ("⌘L", "Sensitive"),
         ("⌘S", "Save to Folder"), ("⌘F", "Search"), ("⌘[ ]", "Folders"), ("⌘O", "Open"),
         ("⌘E", "Reveal"), ("⌘N", "New Folder"), ("⌥⌘C", "Copy Path"), ("⇧⌘R", "Show in Finder"),
         ("⇧⌘P", "Pause"), ("⌘,", "Settings"),
@@ -754,6 +754,7 @@ struct HistoryView: View {
             copyColor: { store.send(.copyColor(id, $0)) },
             delete: { store.send(.delete(id), animation: .smooth(duration: 0.25)) },
             togglePin: { store.send(.togglePin(id), animation: .smooth(duration: 0.25)) },
+            toggleSensitive: { store.send(.toggleSensitive(id)) },
             reveal: { store.send(.revealInFinder(id)) },
             copyPath: { store.send(.copyPath(id)) },
             open: { store.send(.openItem(id)) },

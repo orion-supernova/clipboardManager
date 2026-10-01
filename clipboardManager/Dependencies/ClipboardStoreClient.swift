@@ -16,6 +16,7 @@ struct ClipboardStoreClient: Sendable {
     var setRecognizedText: @Sendable (String, UUID) async throws -> ClipboardItem?
     var touch: @Sendable (UUID) async throws -> Void
     var setPinned: @Sendable (UUID, Bool) async throws -> Void
+    var setSensitive: @Sendable (UUID, Bool) async throws -> ClipboardItem?
     var delete: @Sendable ([UUID]) async throws -> Void
     var deleteAll: @Sendable () async throws -> Void
     var prune: @Sendable (RetentionPolicy) async throws -> [UUID]
@@ -39,6 +40,7 @@ struct ClipboardStoreClient: Sendable {
             setRecognizedText: { try await store.setRecognizedText($0, for: $1) },
             touch: { _ = try await store.touch(id: $0) },
             setPinned: { try await store.setPinned(id: $0, $1) },
+            setSensitive: { try await store.setSensitive(id: $0, $1) },
             delete: { try await store.delete(ids: $0) },
             deleteAll: { try await store.deleteAll() },
             prune: { try await store.prune($0) },

@@ -50,6 +50,16 @@ enum CommandCatalog {
                     .init(id: "path", title: "Copy Path", symbol: "link", shortcut: "⌥⌘C", kind: .key(.copyPath)),
                 ]
             }
+            if item.kind == .text {
+                commands.append(.init(
+                    id: "sensitive",
+                    title: item.isSensitive ? "Not Sensitive" : "Mark as Sensitive",
+                    symbol: item.isSensitive ? "lock.open" : "lock",
+                    shortcut: "⌘L",
+                    keywords: "password secret hide mask private",
+                    kind: .key(.toggleSensitive)
+                ))
+            }
             if item.isSensitive {
                 commands.append(.init(id: "reveal", title: "Reveal Hidden Value", symbol: "eye.slash", shortcut: "⌘E", keywords: "password secret show", kind: .key(.reveal)))
             }
