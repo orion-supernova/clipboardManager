@@ -10,7 +10,7 @@ Press ⌘⇧V and a glass panel slides up from the bottom of the screen with eve
 &nbsp;
 ![macOS 26+](https://img.shields.io/badge/macOS-26%2B-1c1c1c?style=for-the-badge)
 ![Swift 6](https://img.shields.io/badge/Swift-6-1c1c1c?style=for-the-badge)
-![GPL-3.0](https://img.shields.io/badge/GPL--3.0-1c1c1c?style=for-the-badge)
+![All rights reserved](https://img.shields.io/badge/licence-all_rights_reserved-1c1c1c?style=for-the-badge)
 
 <br>
 
@@ -148,7 +148,7 @@ Two DEBUG-only environment variables are handy while working on it: `MAHMUT_SHOW
 
 Found a language it highlights wrong, a secret it should have masked and didn't, or an app it refuses to paste into — [open an issue](https://github.com/orion-supernova/clipboardManager/issues) with what you copied and where it came from, or email **info@walhallaa.com**. Every message gets read.
 
-[GPL-3.0](LICENSE). Fork it, ship it, sell it if you like — your version has to be open source too.
+© Murat Can Koç. All rights reserved — the source is here to read, not to redistribute. See [LICENSE](LICENSE).
 
 <div align="center">
 <br>
