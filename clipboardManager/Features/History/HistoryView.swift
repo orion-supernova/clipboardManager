@@ -138,15 +138,17 @@ struct HistoryView: View {
                 .frame(height: PanelMetrics.toolbarHeight)
             cardStrip
                 .frame(height: PanelMetrics.stripHeight)
-                .opacity(store.dialog == nil ? 1 : 0.3)
-                .allowsHitTesting(store.dialog == nil)
+                .opacity(store.dialog == nil && !store.isPaletteOpen ? 1 : 0.3)
+                .allowsHitTesting(store.dialog == nil && !store.isPaletteOpen)
                 .overlay { dialogOverlay }
+                .overlay { paletteOverlay }
         }
         .padding(.top, PanelMetrics.topInset)
         .padding(.bottom, PanelMetrics.bottomInset)
         .padding(.horizontal, 6)
         .animation(.easeOut(duration: 0.22), value: store.previewID != nil)
         .animation(quickAnimation, value: store.dialog)
+        .animation(quickAnimation, value: store.isPaletteOpen)
         // The panel is a transient window with no title bar, so nothing tells a
         // screen reader it opened or what changed inside it. These do.
         .onChange(of: store.isPresented) { _, presented in
@@ -202,7 +204,7 @@ struct HistoryView: View {
     }
 
     private static let commandHints: [(key: String, label: String)] = [
-        ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"),
+        ("⌘K", "Commands"), ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"),
         ("⌘S", "Save to Folder"), ("⌘F", "Search"), ("⌘[ ]", "Folders"), ("⌘O", "Open"),
         ("⌘E", "Reveal"), ("⌘N", "New Folder"), ("⌥⌘C", "Copy Path"), ("⇧⌘R", "Show in Finder"),
         ("⇧⌘P", "Pause"), ("⌘,", "Settings"),
@@ -243,6 +245,7 @@ struct HistoryView: View {
                 hint("⌘F", "Search")
                 hint("⌥1–6", "Filter")
                 hint("⌘[ ]", "Scope")
+                hint("⌘K", "Commands")
                 hint("hold ⌘", "More")
             }
             hint("esc", "Close")
@@ -646,6 +649,19 @@ struct HistoryView: View {
         }
         .frame(height: PanelMetrics.cardHeight * 0.55)
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var paletteOverlay: some View {
+        if store.isPaletteOpen, store.dialog == nil {
+            CommandPaletteView(
+                query: $store.paletteQuery,
+                results: store.paletteResults,
+                selection: store.paletteSelection,
+                onRun: { store.send(.paletteRun($0)) }
+            )
+            .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        }
     }
 
     @ViewBuilder

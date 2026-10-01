@@ -35,6 +35,9 @@ struct HistoryFeature {
         var flashHintKey: String?
         /// Modifiers held long enough to reveal what they unlock.
         var modifierHint = HeldModifiers.none
+        var isPaletteOpen = false
+        var paletteQuery = ""
+        var paletteSelection = 0
         var toast: Toast?
         /// Set by keyboard navigation so the strip centres the selection.
         var scrollTarget: UUID?
@@ -68,6 +71,9 @@ struct HistoryFeature {
         var isPreviewOpen: Bool { previewID != nil }
         var selectedIndex: Int? { selectedID.flatMap { items.index(id: $0) } }
         var selectedItem: ClipboardItem? { selectedID.flatMap { items[id: $0] } }
+        var paletteResults: [PaletteCommand] {
+            CommandCatalog.matching(paletteQuery, in: CommandCatalog.commands(for: self))
+        }
         var currentFolder: ClipboardFolder? { activeScope.folderID.flatMap { folders[id: $0] } }
         var scopeTitle: String { currentFolder?.name ?? "History" }
         var sensitiveLifetime: TimeInterval? { sensitiveMaxAgeMinutes > 0 ? TimeInterval(sensitiveMaxAgeMinutes) * 60 : nil }
@@ -227,6 +233,8 @@ struct HistoryFeature {
         case keyCommand(KeyCommand)
         case panelEvent(PanelEvent)
         case modifierHintRevealed(HeldModifiers)
+        case paletteRun(PaletteCommand)
+        case paletteClosed
         case pruneTick
         case pruned([UUID])
         case clearAllTapped
@@ -261,6 +269,10 @@ struct HistoryFeature {
             switch action {
             case .binding(\.searchText):
                 return debouncedReload()
+
+            case .binding(\.paletteQuery):
+                state.paletteSelection = 0
+                return .none
 
             case .binding:
                 return .none
@@ -363,6 +375,8 @@ struct HistoryFeature {
                 state.isEntering = false
                 state.isSearchFocused = false
                 state.modifierHint = .none
+                state.isPaletteOpen = false
+                state.paletteQuery = ""
                 state.previewID = nil
                 state.previewPayload = nil
                 state.previewRevealed = false
@@ -876,8 +890,32 @@ struct HistoryFeature {
                         return .none
                     }
                 }
+                if state.isPaletteOpen {
+                    switch command {
+                    case .escape, .commandPalette:
+                        return .send(.paletteClosed, animation: .easeOut(duration: 0.15))
+                    case .confirm:
+                        let results = state.paletteResults
+                        guard results.indices.contains(state.paletteSelection) else { return .none }
+                        return .send(.paletteRun(results[state.paletteSelection]))
+                    case .previous, .next:
+                        let count = state.paletteResults.count
+                        guard count > 0 else { return .none }
+                        let step = command == .previous ? -1 : 1
+                        state.paletteSelection = (state.paletteSelection + step + count) % count
+                        return .none
+                    default:
+                        return .none
+                    }
+                }
                 let flash = hintFlashEffect(for: command, state: &state)
                 switch command {
+                case .commandPalette:
+                    state.isPaletteOpen = true
+                    state.paletteQuery = ""
+                    state.paletteSelection = 0
+                    state.isSearchFocused = false
+                    return flash
                 case .escape:
                     if state.isSearchFocused, !state.searchText.isEmpty {
                         state.searchText = ""
@@ -1013,6 +1051,24 @@ struct HistoryFeature {
             case let .modifierHintRevealed(held):
                 state.modifierHint = held
                 return .none
+
+            case .paletteClosed:
+                state.isPaletteOpen = false
+                state.paletteQuery = ""
+                return .none
+
+            case let .paletteRun(command):
+                state.isPaletteOpen = false
+                state.paletteQuery = ""
+                switch command.kind {
+                case let .key(key):
+                    return .send(.keyCommand(key))
+                case let .scope(scope):
+                    return .send(.setScope(scope), animation: .smooth(duration: 0.25))
+                case let .saveTo(folderID):
+                    guard let id = state.selectedID else { return .none }
+                    return .send(.moveItem(id, toFolder: folderID), animation: .smooth(duration: 0.25))
+                }
 
             // MARK: Retention
 
@@ -1180,6 +1236,7 @@ struct HistoryFeature {
         case .focusSearch, .typeToSearch: "⌘F"
         case .escape: "esc"
         case .saveToFolder: "⌘S"
+        case .commandPalette: "⌘K"
         case .previousScope, .nextScope, .selectScope: "⌘[ ]"
         case .setFilter: "⌥1–6"
         default: nil
