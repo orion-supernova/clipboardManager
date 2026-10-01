@@ -23,16 +23,10 @@ struct ItemPreviewView: View {
         } else {
             switch item.kind {
             case .text:
-                VStack(alignment: .leading, spacing: 8) {
-                    // Like a link's hero image: a small visual says what this is at a glance.
-                    if let action = item.primarySmartAction {
-                        SmartCardBanner(item: item, action: action)
-                    }
+                if let action = item.primarySmartAction {
+                    SmartCardContent(item: item, action: action, highlight: highlight)
+                } else {
                     TextPreview(id: item.id, text: item.preview, language: item.codeLanguage, highlight: highlight)
-                    // The text stays as it is; a small pill says what the item's key does.
-                    if let action = item.primarySmartAction, let key = item.key(for: action) {
-                        CardPill(symbol: action.symbol, title: action.pillTitle, key: key, tint: .accentColor)
-                    }
                 }
             case .url: LinkPreview(item: item, heroURL: thumbnailURL, iconURL: iconURL, highlight: highlight)
             case .color: ColorPreview(hex: item.preview)
@@ -56,6 +50,7 @@ private struct TextPreview: View {
             } else {
                 Text(AttributedTextCache.preview(id: id, text: text, language: language, highlight: highlight))
                     .font(language != nil ? .system(size: 11.5, design: .monospaced) : .callout)
+                    .lineSpacing(language != nil ? 1 : 2)
             }
         }
         .multilineTextAlignment(.leading)
@@ -102,124 +97,178 @@ private struct SensitivePreview: View {
     }
 }
 
-/// A 72pt visual band for smart cards, in the spirit of a link's hero image.
-/// Flat gradients and SF Symbols only, so a strip of them scrolls cheaply.
-private struct SmartCardBanner: View {
+/// Smart cards read like a contact row: an app-icon-style tile, the thing itself
+/// as a headline, one quiet line of context — and only where it adds something,
+/// a small visual (a map strip, site avatars). Nothing larger than a headline.
+private struct SmartCardContent: View {
     let item: ClipboardItem
     let action: SmartAction
+    let highlight: String
 
     var body: some View {
-        ZStack {
-            background
-            content
+        VStack(alignment: .leading, spacing: 10) {
+            if case .map = action.kind {
+                MapCard()
+                    .frame(height: 60)
+                    .clipShape(.rect(cornerRadius: 8))
+            }
+            row
+            if let context { contextText(context) }
+            Spacer(minLength: 0)
+            if let key = item.key(for: action) {
+                CardPill(symbol: action.symbol, title: action.pillTitle, key: key, tint: .accentColor)
+            }
         }
-        .frame(height: 72)
-        .frame(maxWidth: .infinity)
-        .clipShape(.rect(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.primary.opacity(0.08), lineWidth: 1))
-        .accessibilityHidden(true)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    @ViewBuilder
-    private var background: some View {
-        switch action.kind {
-        case let .email(address): Hue.gradient(for: String(address.split(separator: "@").last ?? ""))
-        case .call, .message: gradient(.green, .mint)
-        case .map: MapCard()
-        case .addToCalendar: gradient(.red, .orange)
-        case .track: gradient(.brown, .orange)
-        case .flight: gradient(.blue, .cyan)
-        case .openPath, .showPath: gradient(Color(hue: 0.6, saturation: 0.15, brightness: 0.7), .gray)
-        case let .openLinks(urls): Hue.gradient(for: urls.first?.host() ?? "")
-        case let .openLink(url): Hue.gradient(for: url.host() ?? "")
-        case .pasteResult: gradient(.indigo, .purple)
-        }
-    }
+    // MARK: Row
 
     @ViewBuilder
-    private var content: some View {
+    private var row: some View {
         switch action.kind {
         case let .email(address):
-            glyphCircle {
-                Text(String(address.prefix(1)).uppercased())
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-            }
-        case .call, .message:
-            glyphCircle { Image(systemName: "phone.fill").font(.system(size: 16, weight: .semibold)) }
-        case .map:
-            EmptyView()
-        case let .addToCalendar(start, _, allDay, _):
-            HStack(spacing: 10) {
-                VStack(spacing: 0) {
-                    Text(start.formatted(.dateTime.month(.abbreviated)).uppercased())
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 13)
-                        .background(Color.red)
-                    Text(start.formatted(.dateTime.day()))
-                        .font(.system(size: 20, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.black.opacity(0.8))
-                        .frame(maxHeight: .infinity)
-                }
-                .frame(width: 40, height: 46)
-                .background(.white)
-                .clipShape(.rect(cornerRadius: 7))
-                .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
-                Text(allDay ? start.formatted(.dateTime.weekday(.wide)) : start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(.white)
-            }
+            let parts = address.split(separator: "@", maxSplits: 1).map(String.init)
+            line(icon: avatar(parts.first ?? address, key: parts.last ?? address),
+                 title: parts.first ?? address,
+                 subtitle: parts.count > 1 ? "@" + parts[1] : "Email")
+        case let .call(number), let .message(number):
+            line(icon: tile("phone.fill", .green, .mint), title: number, subtitle: number.hasPrefix("+") ? "International" : "Phone number", digits: true)
+        case let .map(address):
+            let lines = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            line(icon: EmptyView?.none, title: lines.first ?? address, subtitle: lines.dropFirst().joined(separator: ", "))
+        case let .addToCalendar(start, _, allDay, title):
+            line(icon: calendarPage(start), title: title,
+                 subtitle: allDay ? start.formatted(.dateTime.weekday(.wide).day().month()) : start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
         case let .track(number):
-            HStack(spacing: 8) {
-                Image(systemName: "shippingbox.fill").font(.system(size: 22))
-                Text(number.hasPrefix("1Z") ? "UPS" : number.hasPrefix("JD") || number.hasPrefix("JJD") ? "DHL" : number.allSatisfy(\.isNumber) ? "Parcel" : "Postal")
-                    .font(.callout.weight(.bold))
-            }
-            .foregroundStyle(.white)
-        case .flight:
-            Image(systemName: "airplane")
-                .font(.system(size: 26, weight: .semibold))
-                .rotationEffect(.degrees(-20))
-                .foregroundStyle(.white)
+            line(icon: tile("shippingbox.fill", .orange, .brown), title: number, subtitle: carrier(number), mono: true)
+        case let .flight(code):
+            line(icon: tile("airplane", .blue, .cyan), title: code, subtitle: "Flight", digits: true)
         case let .openPath(path), let .showPath(path):
-            Image(nsImage: FileTypeIcon.icon(forName: (path as NSString).lastPathComponent))
-                .resizable()
-                .frame(width: 44, height: 44)
+            line(icon: fileIcon(path), title: (path as NSString).lastPathComponent,
+                 subtitle: ((path as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath, middle: true)
         case let .openLinks(urls):
-            HStack(spacing: -8) {
+            VStack(alignment: .leading, spacing: 7) {
                 ForEach(Array(urls.prefix(3).enumerated()), id: \.offset) { _, url in
-                    monogram(url.host() ?? "?")
+                    HStack(spacing: 8) {
+                        monogram(url.host() ?? "?", size: 22)
+                        Text(url.host()?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString)
+                            .font(.subheadline.weight(.medium))
+                            .lineLimit(1)
+                    }
+                }
+                if urls.count > 3 {
+                    Text("+\(urls.count - 3) more").font(.caption).foregroundStyle(.secondary).padding(.leading, 30)
                 }
             }
         case let .openLink(url):
-            monogram(url.host() ?? "?")
+            line(icon: monogram(url.host() ?? "?", size: 40), title: url.host()?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString,
+                 subtitle: url.path().count > 1 ? url.path() : "Link", middle: true)
         case .pasteResult:
-            Image(systemName: "plus.forwardslash.minus")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(.white)
+            line(icon: tile("plus.forwardslash.minus", .indigo, .purple), title: item.preview.trimmingCharacters(in: .whitespacesAndNewlines), subtitle: "Calculation", mono: true)
         }
     }
 
-    private func gradient(_ a: Color, _ b: Color) -> LinearGradient {
-        LinearGradient(colors: [a.opacity(0.75), b.opacity(0.55)], startPoint: .topLeading, endPoint: .bottomTrailing)
+    /// The copied text, when it says more than the row already does.
+    private var context: String? {
+        let text = item.preview.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch action.kind {
+        case let .email(value), let .call(value), let .message(value), let .track(value):
+            return text.count > value.count + 4 ? text : nil
+        default:
+            return nil
+        }
     }
 
-    private func glyphCircle(@ViewBuilder _ label: () -> some View) -> some View {
-        label()
+    private func contextText(_ text: String) -> some View {
+        Text(Highlighter.attributed(text, matching: highlight))
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineSpacing(1.5)
+            .lineLimit(3)
+    }
+
+    // MARK: Pieces
+
+    private func line(icon: (some View)?, title: String, subtitle: String, mono: Bool = false, digits: Bool = false, middle: Bool = false) -> some View {
+        HStack(alignment: .center, spacing: 10) {
+            if let icon { icon }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(Highlighter.attributed(title, matching: highlight))
+                    .font(mono ? .system(.headline, design: .monospaced) : digits ? .headline.monospacedDigit() : .headline)
+                    .lineLimit(2)
+                    .truncationMode(middle ? .middle : .tail)
+                    .minimumScaleFactor(0.85)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(middle ? .head : .tail)
+                }
+            }
+        }
+    }
+
+    /// An app-icon-style tile: rounded square, soft vertical gradient, white glyph.
+    private func tile(_ symbol: String, _ top: Color, _ bottom: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 17, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: 40, height: 40)
-            .background(.white.opacity(0.22), in: .circle)
-            .overlay(Circle().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+            .background(LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom), in: .rect(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
     }
 
-    private func monogram(_ host: String) -> some View {
-        Text(String(host.replacingOccurrences(of: "www.", with: "").prefix(1)).uppercased())
-            .font(.system(size: 15, weight: .bold, design: .rounded))
+    private func avatar(_ name: String, key: String) -> some View {
+        Text(String(name.prefix(1)).uppercased())
+            .font(.system(size: 17, weight: .semibold, design: .rounded))
             .foregroundStyle(.white)
-            .frame(width: 32, height: 32)
-            .background(Hue.gradient(for: host), in: .rect(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
+            .frame(width: 40, height: 40)
+            .background(Hue.gradient(for: key), in: .circle)
+            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+    }
+
+    private func calendarPage(_ date: Date) -> some View {
+        VStack(spacing: 0) {
+            Text(date.formatted(.dateTime.month(.abbreviated)).uppercased())
+                .font(.system(size: 8, weight: .bold))
+                .tracking(0.5)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 13)
+                .background(Color.red)
+            Text(date.formatted(.dateTime.day()))
+                .font(.system(size: 19, weight: .medium))
+                .foregroundStyle(.black.opacity(0.85))
+                .frame(maxHeight: .infinity)
+        }
+        .frame(width: 40, height: 44)
+        .background(.white)
+        .clipShape(.rect(cornerRadius: 9))
+        .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+    }
+
+    private func fileIcon(_ path: String) -> some View {
+        Image(nsImage: FileTypeIcon.icon(forName: (path as NSString).lastPathComponent))
+            .resizable()
+            .frame(width: 40, height: 40)
+    }
+
+    private func monogram(_ host: String, size: CGFloat) -> some View {
+        Text(String(host.replacingOccurrences(of: "www.", with: "").prefix(1)).uppercased())
+            .font(.system(size: size * 0.45, weight: .bold, design: .rounded))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(Hue.gradient(for: host), in: .rect(cornerRadius: size * 0.25))
+    }
+
+    private func carrier(_ number: String) -> String {
+        if number.hasPrefix("1Z") { return "UPS" }
+        if number.hasPrefix("JD") || number.hasPrefix("JJD") { return "DHL" }
+        if number.allSatisfy(\.isNumber) { return "Parcel" }
+        return "Postal · \(number.suffix(2))"
     }
 }
 
