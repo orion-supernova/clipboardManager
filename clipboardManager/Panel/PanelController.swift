@@ -16,6 +16,7 @@ final class PanelController: NSObject, NSWindowDelegate {
     private let panel: FloatingPanel
     private var localKeyMonitor: Any?
     private var globalMouseMonitor: Any?
+    private var heldModifiers = HeldModifiers.none
     private let subscribers = Mutex<[UUID: AsyncStream<PanelEvent>.Continuation]>([:])
 
     override init() {
@@ -116,8 +117,12 @@ final class PanelController: NSObject, NSWindowDelegate {
 
     private func installMonitors() {
         removeMonitors()
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { [weak self] event in
             guard let self, panel.isKeyWindow else { return event }
+            if event.type == .flagsChanged {
+                updateHeldModifiers(event.modifierFlags)
+                return event
+            }
             return handle(event) ? nil : event
         }
         globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
@@ -125,7 +130,23 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
     }
 
+    private func updateHeldModifiers(_ flags: NSEvent.ModifierFlags) {
+        let flags = flags.intersection(.deviceIndependentFlagsMask)
+        let held: HeldModifiers = switch (flags.contains(.command), flags.contains(.option)) {
+        case (true, true): .commandOption
+        case (true, false): .command
+        default: .none
+        }
+        guard held != heldModifiers else { return }
+        heldModifiers = held
+        emit(.modifiers(held))
+    }
+
     private func removeMonitors() {
+        if heldModifiers != .none {
+            heldModifiers = .none
+            emit(.modifiers(.none))
+        }
         if let localKeyMonitor { NSEvent.removeMonitor(localKeyMonitor) }
         if let globalMouseMonitor { NSEvent.removeMonitor(globalMouseMonitor) }
         localKeyMonitor = nil

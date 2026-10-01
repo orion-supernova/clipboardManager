@@ -33,6 +33,8 @@ struct HistoryFeature {
         var flashID: UUID?
         var recentID: UUID?
         var flashHintKey: String?
+        /// Modifiers held long enough to reveal what they unlock.
+        var modifierHint = HeldModifiers.none
         var toast: Toast?
         /// Set by keyboard navigation so the strip centres the selection.
         var scrollTarget: UUID?
@@ -224,6 +226,7 @@ struct HistoryFeature {
         case move(Move)
         case keyCommand(KeyCommand)
         case panelEvent(PanelEvent)
+        case modifierHintRevealed(HeldModifiers)
         case pruneTick
         case pruned([UUID])
         case clearAllTapped
@@ -241,7 +244,7 @@ struct HistoryFeature {
         }
     }
 
-    private enum CancelID { case lifecycle, search, dismissal, toast, preview, previewResize, recent, hintFlash, entrance }
+    private enum CancelID { case lifecycle, search, dismissal, toast, preview, previewResize, recent, hintFlash, entrance, modifierHint }
 
     @Dependency(\.clipboardStore) var clipboardStore
     @Dependency(\.clipboardMonitor) var monitor
@@ -359,6 +362,7 @@ struct HistoryFeature {
                 state.isPresented = false
                 state.isEntering = false
                 state.isSearchFocused = false
+                state.modifierHint = .none
                 state.previewID = nil
                 state.previewPayload = nil
                 state.previewRevealed = false
@@ -988,6 +992,27 @@ struct HistoryFeature {
 
             case let .panelEvent(.key(command)):
                 return .send(.keyCommand(command))
+
+            case let .panelEvent(.modifiers(held)):
+                guard held != .none else {
+                    state.modifierHint = .none
+                    return .cancel(id: CancelID.modifierHint)
+                }
+                // Already showing: ⌘ → ⌥⌘ switches at once.
+                if state.modifierHint != .none {
+                    state.modifierHint = held
+                    return .none
+                }
+                // A beat first, so ⌘C and friends never flash the overlay.
+                return .run { send in
+                    try await clock.sleep(for: .milliseconds(350))
+                    await send(.modifierHintRevealed(held), animation: .easeOut(duration: 0.15))
+                }
+                .cancellable(id: CancelID.modifierHint, cancelInFlight: true)
+
+            case let .modifierHintRevealed(held):
+                state.modifierHint = held
+                return .none
 
             // MARK: Retention
 

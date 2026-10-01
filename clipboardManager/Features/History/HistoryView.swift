@@ -174,6 +174,63 @@ struct HistoryView: View {
     // MARK: - Hint tray
 
     private var hintBar: some View {
+        Group {
+            switch store.modifierHint {
+            case .none: defaultHints
+            case .command: commandHints
+            case .commandOption: folderHints
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 14)
+        .frame(height: PanelMetrics.hintBarHeight)
+        .panelGlass(in: .capsule)
+        .animation(.easeOut(duration: 0.16), value: store.flashHintKey)
+        .animation(.easeOut(duration: 0.15), value: store.modifierHint)
+        .accessibilityHidden(true)
+    }
+
+    /// Holding ⌘ lists everything it unlocks; the longest row that fits wins.
+    private var commandHints: some View {
+        ViewThatFits(in: .horizontal) {
+            commandHintRow(Self.commandHints)
+            commandHintRow(Array(Self.commandHints.prefix(10)))
+            commandHintRow(Array(Self.commandHints.prefix(6)))
+        }
+        .transition(.opacity)
+    }
+
+    private static let commandHints: [(key: String, label: String)] = [
+        ("⌘1–9", "Paste #"), ("⌘C", "Copy"), ("⌘T", "Paste As"), ("⌘P", "Pin"),
+        ("⌘S", "Save to Folder"), ("⌘F", "Search"), ("⌘[ ]", "Folders"), ("⌘O", "Open"),
+        ("⌘E", "Reveal"), ("⌘N", "New Folder"), ("⌥⌘C", "Copy Path"), ("⇧⌘R", "Show in Finder"),
+        ("⇧⌘P", "Pause"), ("⌘,", "Settings"),
+    ]
+
+    private func commandHintRow(_ hints: [(key: String, label: String)]) -> some View {
+        HStack(spacing: 12) {
+            ForEach(hints, id: \.key) { hint($0.key, $0.label) }
+            hint("+⌥", "Folders")
+        }
+        .fixedSize()
+    }
+
+    /// Holding ⌥⌘ lists the folders by number, the current one highlighted.
+    private var folderHints: some View {
+        let scopes = [(HistoryScope.history, "History")]
+            + store.folders.prefix(8).map { (HistoryScope.folder($0.id), $0.name) }
+        return HStack(spacing: 12) {
+            ForEach(Array(scopes.enumerated()), id: \.offset) { index, scope in
+                hint("⌥⌘\(index + 1)", scope.1, active: scope.0 == store.activeScope)
+            }
+            if store.folders.isEmpty { hint("⌘N", "New Folder") }
+        }
+        .lineLimit(1)
+        .transition(.opacity)
+    }
+
+    private var defaultHints: some View {
         HStack(spacing: 12) {
             if store.keyboardNavigation {
                 hint("↩", "Paste")
@@ -186,20 +243,15 @@ struct HistoryView: View {
                 hint("⌘F", "Search")
                 hint("⌥1–6", "Filter")
                 hint("⌘[ ]", "Scope")
+                hint("hold ⌘", "More")
             }
             hint("esc", "Close")
         }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 14)
-        .frame(height: PanelMetrics.hintBarHeight)
-        .panelGlass(in: .capsule)
-        .animation(.easeOut(duration: 0.16), value: store.flashHintKey)
-        .accessibilityHidden(true)
+        .transition(.opacity)
     }
 
-    private func hint(_ key: String, _ label: String) -> some View {
-        let isFlashing = store.flashHintKey == key
+    private func hint(_ key: String, _ label: String, active: Bool = false) -> some View {
+        let isFlashing = store.flashHintKey == key || active
         return HStack(spacing: 4) {
             Text(key)
                 .font(.caption2.weight(.semibold).monospaced())
@@ -543,7 +595,7 @@ struct HistoryView: View {
         let selectedID = store.selectedID
         let flashID = store.flashID
         let recentID = store.recentID
-        let showsHints = store.showShortcutHints && store.keyboardNavigation
+        let showsHints = (store.showShortcutHints && store.keyboardNavigation) || store.modifierHint == .command
         let highlight = store.searchText
         let dragMode = store.dragMode
         let reduceMotion = reduceMotion

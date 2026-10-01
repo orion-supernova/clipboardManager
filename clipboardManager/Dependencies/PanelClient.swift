@@ -44,10 +44,18 @@ enum KeyCommand: Equatable, Sendable {
     case copyPath
 }
 
+/// Modifier keys held down on their own, which reveal the shortcuts they unlock.
+enum HeldModifiers: Equatable, Sendable {
+    case none
+    case command
+    case commandOption
+}
+
 enum PanelEvent: Equatable, Sendable {
     case didResignKey
     case clickedOutside
     case key(KeyCommand)
+    case modifiers(HeldModifiers)
 }
 
 struct PanelClient: Sendable {
