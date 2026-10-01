@@ -21,13 +21,15 @@ struct DialogView: View {
     let symbol: String
     var text: Binding<String>?
     var placeholder = ""
+    /// Rename: select the current name on focus so typing replaces it.
+    var selectsAllOnFocus = false
     var options: [HistoryFeature.DialogOption] = []
     var onOption: @MainActor (Int) -> Void = { _ in }
     var primary: Action?
     var secondary: Action?
     let onCancel: @MainActor () -> Void
 
-    @FocusState private var fieldFocused: Bool
+    @State private var fieldFocused = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -50,14 +52,11 @@ struct DialogView: View {
                 }
             }
             if let text {
-                TextField(placeholder, text: text)
-                    .textFieldStyle(.plain)
-                    .font(.body)
+                PanelTextField(placeholder: placeholder, text: text, isFocused: $fieldFocused, selectsAllOnFocus: selectsAllOnFocus)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
                     .background(.primary.opacity(0.07), in: .rect(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.tint.opacity(fieldFocused ? 0.6 : 0), lineWidth: 1.5))
-                    .focused($fieldFocused)
                     .animation(.easeOut(duration: 0.15), value: fieldFocused)
             }
             if !options.isEmpty {
@@ -84,11 +83,6 @@ struct DialogView: View {
         .frame(width: options.isEmpty ? 420 : 520)
         .panelGlass(prominent: true, in: .rect(cornerRadius: PanelMetrics.cardCornerRadius))
         .shadow(color: .black.opacity(0.22), radius: 24, y: 12)
-        .task {
-            guard text != nil else { return }
-            try? await Task.sleep(for: .milliseconds(60))
-            fieldFocused = true
-        }
     }
 
     private var optionGrid: some View {

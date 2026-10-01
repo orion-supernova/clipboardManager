@@ -7,7 +7,6 @@
 //  card strip. The card strip never moves when the preview opens.
 //
 
-import AppKit
 import ComposableArchitecture
 import SwiftUI
 
@@ -19,7 +18,6 @@ struct HistoryView: View {
     @Environment(\.marketingRender) private var marketingRender
     @Environment(\.marketingSheetProgress) private var marketingSheetProgress
     @Namespace private var filterNamespace
-    @FocusState private var searchFocused: Bool
     @State private var scrollID: UUID?
     @Dependency(\.clipboardStore) private var clipboardStore
 
@@ -82,28 +80,6 @@ struct HistoryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .environment(\.resolvedAppearance, appearance)
         .animation(presentAnimation, value: store.isPresented)
-        .onChange(of: store.isSearchFocused) { _, focused in
-            if focused {
-                Task { @MainActor in
-                    try? await Task.sleep(for: .milliseconds(40))
-                    searchFocused = true
-                }
-            } else {
-                searchFocused = false
-            }
-        }
-        .onChange(of: searchFocused) { _, focused in
-            if focused {
-                // A field that gains focus selects its text, so the next letter typed would
-                // replace the one that opened search. Put the caret at the end instead.
-                DispatchQueue.main.async {
-                    (NSApp.keyWindow?.firstResponder as? NSTextView)?.moveToEndOfDocument(nil)
-                }
-            }
-            if store.isSearchFocused != focused {
-                store.send(.binding(.set(\.isSearchFocused, focused)))
-            }
-        }
         .onChange(of: store.scrollTarget) { _, target in
             guard let target else { return }
             withAnimation(quickAnimation) { scrollID = target }
@@ -558,12 +534,12 @@ struct HistoryView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            TextField(store.activeScope == .history ? "Search history and folders" : "Search \(store.scopeTitle.lowercased())", text: $store.searchText)
-                .textFieldStyle(.plain)
-                .focused($searchFocused)
-                .onSubmit {
-                    if let id = store.selectedID { store.send(.itemTapped(id)) }
-                }
+            // Return never reaches the field: the panel's key monitor turns it into Paste.
+            PanelTextField(
+                placeholder: store.activeScope == .history ? "Search history and folders" : "Search \(store.scopeTitle.lowercased())",
+                text: $store.searchText,
+                isFocused: $store.isSearchFocused
+            )
         }
         if !store.searchText.isEmpty {
             Button {
@@ -754,6 +730,7 @@ struct HistoryView: View {
                 symbol: "pencil",
                 text: $store.dialogText,
                 placeholder: "Folder name",
+                selectsAllOnFocus: store.dialogTextPristine,
                 primary: .init(title: "Rename") { store.send(.dialogConfirmed(.primary)) },
                 onCancel: { store.send(.dialogCancelled) }
             )

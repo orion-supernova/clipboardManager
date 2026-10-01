@@ -137,6 +137,16 @@ struct CalendarPage: View {
     let date: Date
     var width: CGFloat = 40
 
+    /// Sampled from the Calendar app icon (#FF4050 to #F9373B), fixed in sRGB so
+    /// neither appearance nor the glass behind the panel can wash it out. A flat
+    /// `Color.red` came out pale pink on Liquid Glass; gradients keep their colour.
+    private static let band = LinearGradient(
+        colors: [Color(.sRGB, red: 1.0, green: 0.251, blue: 0.314), Color(.sRGB, red: 0.976, green: 0.216, blue: 0.231)],
+        startPoint: .top, endPoint: .bottom
+    )
+    /// The icon's page is a soft off-white, not pure white.
+    private static let page = Color(.sRGB, white: 0.96)
+
     var body: some View {
         let height = width * 1.1
         VStack(spacing: 0) {
@@ -146,14 +156,14 @@ struct CalendarPage: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: height * 0.28)
-                .background(Color.red)
+                .background(Self.band)
             Text(date.formatted(.dateTime.day()))
                 .font(.system(size: width * 0.48, weight: .medium))
                 .foregroundStyle(.black.opacity(0.85))
                 .frame(maxHeight: .infinity)
         }
         .frame(width: width, height: height)
-        .background(.white)
+        .background(Self.page)
         .clipShape(.rect(cornerRadius: width * 0.22))
         .shadow(color: .black.opacity(0.18), radius: width * 0.05, y: width * 0.025)
         .accessibilityHidden(true)
