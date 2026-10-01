@@ -17,7 +17,6 @@ struct HistoryView: View {
     @Environment(\.accessibilityDifferentiateWithoutColor) private var systemDifferentiateWithoutColor
     @Environment(\.marketingRender) private var marketingRender
     @Environment(\.marketingSheetProgress) private var marketingSheetProgress
-    @Namespace private var glassNamespace
     @Namespace private var filterNamespace
     @FocusState private var searchFocused: Bool
     @State private var scrollID: UUID?
@@ -399,57 +398,63 @@ struct HistoryView: View {
         .accessibilityValue(store.capturePaused ? "Paused" : "Recording")
     }
 
-    @ViewBuilder
+    /// One glass capsule that grows from a circle into the field. Don't swap a
+    /// button and the field under a shared `glassEffectID`: once the field is
+    /// focused, AppKit asks for the key-view loop, and SwiftUI's walk of the
+    /// morphing pair never returns, which hangs the app.
     private var searchControl: some View {
-        if store.isSearchExpanded {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                if marketingRender {
-                    // Text fields are AppKit-backed and don't render offline.
-                    HStack(spacing: 1) {
-                        Text(store.searchText)
-                        Rectangle().fill(Color.accentColor).frame(width: 1.5, height: 16)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    TextField("Search \(store.scopeTitle.lowercased())", text: $store.searchText)
-                        .textFieldStyle(.plain)
-                        .focused($searchFocused)
-                        .onSubmit {
-                            if let id = store.selectedID { store.send(.itemTapped(id)) }
-                        }
+        let expanded = store.isSearchExpanded
+        return HStack(spacing: 8) {
+            if expanded {
+                searchField
+            } else {
+                Button {
+                    store.send(.keyCommand(.focusSearch))
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(width: PanelMetrics.toolbarHeight, height: PanelMetrics.toolbarHeight)
+                        .contentShape(.circle)
                 }
-                if !store.searchText.isEmpty {
-                    Button {
-                        store.send(.binding(.set(\.searchText, "")))
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .transition(.opacity)
-                    .help("Clear (esc)")
-                }
+                .buttonStyle(.plain)
+                .help("Search (⌘F)")
             }
-            .padding(.horizontal, 14)
-            .frame(width: 280, height: PanelMetrics.toolbarHeight)
-            .panelGlass(in: .capsule)
-            .glassEffectID("search", in: glassNamespace)
-            .animation(.easeOut(duration: 0.15), value: store.searchText.isEmpty)
+        }
+        .padding(.horizontal, expanded ? 14 : 0)
+        .frame(width: expanded ? 280 : PanelMetrics.toolbarHeight, height: PanelMetrics.toolbarHeight)
+        .panelGlass(interactive: !expanded, in: .capsule)
+        .animation(.easeOut(duration: 0.15), value: store.searchText.isEmpty)
+    }
+
+    @ViewBuilder
+    private var searchField: some View {
+        Image(systemName: "magnifyingglass")
+            .foregroundStyle(.secondary)
+        if marketingRender {
+            // Text fields are AppKit-backed and don't render offline.
+            HStack(spacing: 1) {
+                Text(store.searchText)
+                Rectangle().fill(Color.accentColor).frame(width: 1.5, height: 16)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         } else {
+            TextField("Search \(store.scopeTitle.lowercased())", text: $store.searchText)
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .onSubmit {
+                    if let id = store.selectedID { store.send(.itemTapped(id)) }
+                }
+        }
+        if !store.searchText.isEmpty {
             Button {
-                store.send(.keyCommand(.focusSearch))
+                store.send(.binding(.set(\.searchText, "")))
             } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(width: PanelMetrics.toolbarHeight, height: PanelMetrics.toolbarHeight)
-                    .contentShape(.circle)
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            .panelGlass(interactive: true, in: .circle)
-            .glassEffectID("search", in: glassNamespace)
-            .help("Search (⌘F)")
+            .transition(.opacity)
+            .help("Clear (esc)")
         }
     }
 
