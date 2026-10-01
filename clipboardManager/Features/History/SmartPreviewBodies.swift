@@ -78,7 +78,20 @@ extension SmartAction {
         case .openPath, .showPath: "Path"
         case .track: "Tracking"
         case .flight: "Flight"
-        case .pasteResult: "Sum"
+        case .pasteResult: "Calculation"
+        }
+    }
+
+    /// The card caption's colour: the top of this type's tile gradient.
+    var tint: Color {
+        switch kind {
+        case .pasteResult: .indigo
+        case let .email(address): Hue.color(for: String(address.split(separator: "@").last ?? ""))
+        case .call, .message: .green
+        case .map, .addToCalendar: .red
+        case .openLink, .openLinks, .flight: .blue
+        case .track: .orange
+        case .openPath, .showPath: .secondary
         }
     }
 
@@ -515,6 +528,11 @@ enum FileTypeIcon {
 
 /// A stable, pleasant hue per string (domain or host), for avatar placeholders.
 enum Hue {
+    static func color(for key: String) -> Color {
+        let hash = key.unicodeScalars.reduce(UInt32(5381)) { ($0 &* 33) &+ $1.value }
+        return Color(hue: Double(hash % 360) / 360, saturation: 0.55, brightness: 0.85)
+    }
+
     static func gradient(for key: String) -> LinearGradient {
         let hash = key.unicodeScalars.reduce(UInt32(5381)) { ($0 &* 33) &+ $1.value }
         let hue = Double(hash % 360) / 360

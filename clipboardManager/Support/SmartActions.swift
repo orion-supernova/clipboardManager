@@ -378,3 +378,42 @@ enum Calculator {
         func peek() -> Character? { index < chars.count ? chars[index] : nil }
     }
 }
+
+/// The country an international number dials, from its calling code. Only for
+/// a subtitle: unknown codes and local numbers just get none.
+enum PhoneRegion {
+    private static let codes: [(String, String)] = [
+        ("+90", "Türkiye"), ("+44", "United Kingdom"), ("+49", "Germany"), ("+33", "France"),
+        ("+31", "Netherlands"), ("+34", "Spain"), ("+39", "Italy"), ("+41", "Switzerland"),
+        ("+43", "Austria"), ("+45", "Denmark"), ("+46", "Sweden"), ("+47", "Norway"),
+        ("+353", "Ireland"), ("+351", "Portugal"), ("+48", "Poland"), ("+30", "Greece"),
+        ("+971", "United Arab Emirates"), ("+966", "Saudi Arabia"), ("+974", "Qatar"),
+        ("+91", "India"), ("+86", "China"), ("+81", "Japan"), ("+82", "South Korea"),
+        ("+61", "Australia"), ("+64", "New Zealand"), ("+55", "Brazil"), ("+52", "Mexico"),
+        ("+7", "Russia · Kazakhstan"), ("+1", "US · Canada"),
+    ]
+
+    static func name(for number: String) -> String? {
+        let compact = number.filter { $0.isNumber || $0 == "+" }
+        guard compact.hasPrefix("+") else { return nil }
+        // Longest code first, so +353 wins over +3….
+        return codes.sorted { $0.0.count > $1.0.count }.first { compact.hasPrefix($0.0) }?.1
+    }
+}
+
+/// The airline behind a flight code's IATA prefix, for a subtitle.
+enum Airline {
+    private static let names: [String: String] = [
+        "TK": "Turkish Airlines", "PC": "Pegasus", "VF": "AJet", "XQ": "SunExpress",
+        "LH": "Lufthansa", "BA": "British Airways", "AF": "Air France", "KL": "KLM",
+        "LX": "SWISS", "OS": "Austrian", "IB": "Iberia", "AZ": "ITA Airways", "SK": "SAS",
+        "AY": "Finnair", "EK": "Emirates", "QR": "Qatar Airways", "EY": "Etihad",
+        "AA": "American Airlines", "UA": "United", "DL": "Delta", "AC": "Air Canada",
+        "SQ": "Singapore Airlines", "CX": "Cathay Pacific", "NH": "ANA", "JL": "Japan Airlines",
+        "FR": "Ryanair", "U2": "easyJet", "W6": "Wizz Air",
+    ]
+
+    static func name(for code: String) -> String? {
+        names[String(code.prefix(2)).uppercased()]
+    }
+}

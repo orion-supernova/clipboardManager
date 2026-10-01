@@ -131,9 +131,9 @@ private struct SmartCardContent: View {
             let parts = address.split(separator: "@", maxSplits: 1).map(String.init)
             line(icon: avatar(parts.first ?? address, key: parts.last ?? address),
                  title: parts.first ?? address,
-                 subtitle: parts.count > 1 ? "@" + parts[1] : "Email")
+                 subtitle: parts.count > 1 ? "@" + parts[1] : nil)
         case let .call(number), let .message(number):
-            line(icon: tile("phone.fill", .green, .mint), title: number, subtitle: number.hasPrefix("+") ? "International" : "Phone number", digits: true)
+            line(icon: tile("phone.fill", .green, .mint), title: number, subtitle: PhoneRegion.name(for: number), digits: true)
         case let .map(address):
             let lines = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             line(icon: EmptyView?.none, title: lines.first ?? address, subtitle: lines.dropFirst().joined(separator: ", "))
@@ -143,7 +143,7 @@ private struct SmartCardContent: View {
         case let .track(number):
             line(icon: tile("shippingbox.fill", .orange, .brown), title: number, subtitle: carrier(number), mono: true)
         case let .flight(code):
-            line(icon: tile("airplane", .blue, .cyan), title: code, subtitle: "Flight", digits: true)
+            line(icon: tile("airplane", .blue, .cyan), title: code, subtitle: Airline.name(for: code), digits: true)
         case let .openPath(path), let .showPath(path):
             line(icon: fileIcon(path), title: (path as NSString).lastPathComponent,
                  subtitle: ((path as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath, middle: true)
@@ -163,9 +163,9 @@ private struct SmartCardContent: View {
             }
         case let .openLink(url):
             line(icon: monogram(url.host() ?? "?", size: 40), title: url.host()?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString,
-                 subtitle: url.path().count > 1 ? url.path() : "Link", middle: true)
+                 subtitle: url.path().count > 1 ? url.path() : nil, middle: true)
         case .pasteResult:
-            line(icon: tile("plus.forwardslash.minus", .indigo, .purple), title: item.preview.trimmingCharacters(in: .whitespacesAndNewlines), subtitle: "Calculation", mono: true)
+            line(icon: tile("plus.forwardslash.minus", .indigo, .purple), title: item.preview.trimmingCharacters(in: .whitespacesAndNewlines), subtitle: nil, mono: true)
         }
     }
 
@@ -190,18 +190,20 @@ private struct SmartCardContent: View {
 
     // MARK: Pieces
 
-    private func line(icon: (some View)?, title: String, subtitle: String, mono: Bool = false, digits: Bool = false, middle: Bool = false) -> some View {
-        HStack(alignment: .center, spacing: 10) {
+    /// Content only: the subtitle carries a fact from the content (a domain, a time,
+    /// a carrier, a country) and never the type, which the caption already says.
+    private func line(icon: (some View)?, title: String, subtitle: String?, mono: Bool = false, digits: Bool = false, middle: Bool = false) -> some View {
+        HStack(alignment: .center, spacing: 12) {
             if let icon { icon }
             VStack(alignment: .leading, spacing: 2) {
                 Text(Highlighter.attributed(title, matching: highlight))
-                    .font(mono ? .system(.headline, design: .monospaced) : digits ? .headline.monospacedDigit() : .headline)
+                    .font(mono ? .system(size: 14, weight: .medium, design: .monospaced) : digits ? .system(size: 14, weight: .semibold).monospacedDigit() : .system(size: 14, weight: .semibold))
                     .lineLimit(2)
                     .truncationMode(middle ? .middle : .tail)
                     .minimumScaleFactor(0.85)
-                if !subtitle.isEmpty {
+                if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.subheadline)
+                        .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .truncationMode(middle ? .head : .tail)

@@ -177,13 +177,12 @@ struct ItemCardView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: item.headerSymbol)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(item.isSensitive ? Color.red : Color.secondary)
-                .frame(width: 20, height: 20)
-                .background((item.isSensitive ? Color.red : Color.primary).opacity(0.1), in: .rect(cornerRadius: 6))
-            Text(item.headerTitle)
-                .font(.subheadline.weight(.semibold))
+            // The type, once, as a tinted caption (like a widget's label). The body's
+            // tile or thumbnail is the card's only picture.
+            Text(item.headerTitle.uppercased())
+                .font(.system(size: 10.5, weight: .semibold))
+                .tracking(0.6)
+                .foregroundStyle(headerTint)
                 .lineLimit(1)
             if item.isPinned {
                 Image(systemName: "pin.fill")
@@ -198,7 +197,15 @@ struct ItemCardView: View {
                     .opacity(isHovered ? 0 : 1)
             }
         }
+        .frame(height: 20)
         .animation(.easeOut(duration: 0.18), value: item.isPinned)
+    }
+
+    private var headerTint: Color {
+        if item.isSensitive { return .red }
+        if let action = item.primarySmartAction { return action.tint.opacity(0.9) }
+        if item.kind == .url, MapsLink.isMaps(URL(string: item.preview)) { return .red.opacity(0.9) }
+        return .secondary
     }
 
     private var footer: some View {
