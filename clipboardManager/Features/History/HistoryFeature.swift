@@ -414,6 +414,7 @@ struct HistoryFeature {
                     if let id = state.selectedID {
                         state.previewID = id
                         state.previewRevealed = false
+                        state.previewPayload = nil
                         return loadPreview(id)
                     }
                     return .send(.closePreview)
@@ -783,6 +784,7 @@ struct HistoryFeature {
                 state.selectionAnimated = true
                 state.previewID = id
                 state.previewRevealed = false
+                state.previewPayload = nil
                 return .merge(
                     .cancel(id: CancelID.previewResize),
                     .run { _ in await panel.resize(PanelMetrics.expandedHeight) },
@@ -844,6 +846,7 @@ struct HistoryFeature {
                 if state.isPreviewOpen {
                     state.previewID = id
                     state.previewRevealed = false
+                    state.previewPayload = nil
                     return loadPreview(id)
                 }
                 return .none

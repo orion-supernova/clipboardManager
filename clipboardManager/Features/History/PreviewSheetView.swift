@@ -152,18 +152,49 @@ private struct TextBody: View {
     let language: CodeLanguage?
     let isLoading: Bool
     @Environment(\.marketingRender) private var marketingRender
+    @State private var rendered: Rendered?
+
+    /// SwiftUI lays out a `Text` in full, so a 200k-character clip would stall
+    /// every frame the sheet is on screen. Paste still uses the whole payload.
+    nonisolated private static let displayLimit = 20_000
+
+    private struct Rendered {
+        var id: UUID
+        var text: AttributedString
+        var totalCharacters: Int?
+    }
+
+    private struct RenderKey: Equatable {
+        var id: UUID
+        var isLoading: Bool
+        var language: CodeLanguage?
+    }
+
+    nonisolated private static func render(_ text: String, id: UUID, language: CodeLanguage?) -> Rendered {
+        let truncated = text.utf16.count > displayLimit && text.count > displayLimit
+        let shown = truncated ? String(text.prefix(displayLimit)) : text
+        let attributed = language.map { CodeHighlighter.attributed(shown, language: $0) } ?? AttributedString(shown)
+        return Rendered(id: id, text: attributed, totalCharacters: truncated ? text.count : nil)
+    }
 
     private var content: some View {
-        Group {
-            if let language {
-                Text(CodeHighlighter.attributed(text, language: language))
-                    .font(.system(.body, design: .monospaced))
-            } else {
-                Text(text)
-                    .font(.body)
+        VStack(alignment: .leading, spacing: 12) {
+            Group {
+                if let rendered, rendered.id == id {
+                    Text(rendered.text)
+                } else {
+                    // One frame's worth until the background render lands.
+                    Text(String(text.prefix(2_000)))
+                }
+            }
+            .font(language != nil ? .system(.body, design: .monospaced) : .body)
+            .textSelection(.enabled)
+            if let rendered, rendered.id == id, let total = rendered.totalCharacters {
+                Text("Showing the first \(Self.displayLimit.formatted()) of \(total.formatted()) characters. Paste inserts everything.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
-        .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(16)
     }
@@ -175,7 +206,14 @@ private struct TextBody: View {
                 content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).clipped()
             } else {
                 ScrollView { content }
+                    .id(id) // start each item at the top
             }
+        }
+        .task(id: RenderKey(id: id, isLoading: isLoading, language: language)) {
+            let (text, id, language) = (text, id, language)
+            let result = await Task.detached(priority: .userInitiated) { Self.render(text, id: id, language: language) }.value
+            guard !Task.isCancelled else { return }
+            rendered = result
         }
         .overlay(alignment: .topTrailing) {
             HStack(spacing: 8) {

@@ -128,7 +128,9 @@ struct HistoryView: View {
                 .opacity(marketingRender ? marketingSheetProgress : 1)
                 .offset(y: marketingRender ? (1 - marketingSheetProgress) * 16 : 0)
                 .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 16)))
-                .id(previewID)
+                // No `.id(previewID)`: arrowing through items with the sheet open
+                // must swap its content, not tear down and rebuild a glass sheet
+                // per keypress while the previous ones are still transitioning out.
             }
             hintBar
                 .frame(height: PanelMetrics.hintBarHeight)
@@ -143,7 +145,7 @@ struct HistoryView: View {
         .padding(.top, PanelMetrics.topInset)
         .padding(.bottom, PanelMetrics.bottomInset)
         .padding(.horizontal, 6)
-        .animation(.easeOut(duration: 0.22), value: store.previewID)
+        .animation(.easeOut(duration: 0.22), value: store.previewID != nil)
         .animation(quickAnimation, value: store.dialog)
         // The panel is a transient window with no title bar, so nothing tells a
         // screen reader it opened or what changed inside it. These do.
