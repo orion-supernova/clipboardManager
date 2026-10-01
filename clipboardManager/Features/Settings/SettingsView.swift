@@ -356,7 +356,7 @@ struct SettingsView: View {
                     Text("Version \(AppVersion.current) (\(AppVersion.build))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("Free, private, and fully on-device.")
+                    Text("Private, and fully on-device.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

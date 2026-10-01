@@ -10,7 +10,6 @@ Press ⌘⇧V and a glass panel slides up from the bottom of the screen with eve
 &nbsp;
 ![macOS 26+](https://img.shields.io/badge/macOS-26%2B-1c1c1c?style=for-the-badge)
 ![Swift 6](https://img.shields.io/badge/Swift-6-1c1c1c?style=for-the-badge)
-![Free](https://img.shields.io/badge/Free-no_IAP-1c1c1c?style=for-the-badge)
 ![GPL-3.0](https://img.shields.io/badge/GPL--3.0-1c1c1c?style=for-the-badge)
 
 <br>
@@ -54,14 +53,6 @@ It also reads what you copied. Paste a Swift function and it comes back syntax-c
 <img src="docs/media/search.gif" alt="Typing glass into the search field; the strip narrows from seven cards to the two that match, with the query highlighted in each" width="100%">
 
 ## FAQ
-
-<details>
-<summary><b>Is it actually free, or free-until-it-isn't?</b></summary>
-<br>
-
-Free. There is no StoreKit code left in this repository — no subscription, no unlock, no trial, no "Pro" tier. Earlier versions had all of that; 3.0 deleted it along with everything it gated.
-
-</details>
 
 <details>
 <summary><b>The App Store says "Clipboard Mahmut", version 1.7.1. Is that this?</b></summary>
