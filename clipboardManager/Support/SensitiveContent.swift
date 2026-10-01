@@ -91,7 +91,7 @@ enum SensitiveContent {
     private static func detectPassword(_ text: String) -> SensitiveMatch? {
         let token = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (8...64).contains(token.count),
-              !token.unicodeScalars.contains(where: CharacterSet.whitespacesAndNewlines.contains),
+              !token.unicodeScalars.contains(where: { CharacterSet.whitespacesAndNewlines.contains($0) }),
               !token.contains("://"), !token.contains("="),
               !token.hasPrefix("/"), !token.hasPrefix("~")
         else { return nil }
@@ -99,7 +99,7 @@ enum SensitiveContent {
         guard !isEmail else { return nil }
 
         var lower = false, upper = false, digit = false, symbol = false, realSymbol = false
-        let core = String(String.UnicodeScalarView(token.unicodeScalars.reversed().drop(while: trailingPunctuation.contains).reversed()))
+        let core = String(String.UnicodeScalarView(token.unicodeScalars.reversed().drop(while: { trailingPunctuation.contains($0) }).reversed()))
         for scalar in token.unicodeScalars {
             if CharacterSet.lowercaseLetters.contains(scalar) { lower = true }
             else if CharacterSet.uppercaseLetters.contains(scalar) { upper = true }

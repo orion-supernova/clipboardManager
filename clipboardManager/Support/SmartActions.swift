@@ -259,11 +259,13 @@ enum SmartDetector {
 /// A small, safe arithmetic evaluator: numbers, + − × ÷ ^ %, parentheses.
 /// Deliberately not NSExpression, which can call arbitrary selectors.
 enum Calculator {
-    private static let allowed = CharacterSet(charactersIn: "0123456789.,+-*/×÷x^%() \t")
+    /// A plain character set, not a `CharacterSet` passed as `allowed.contains`: in the
+    /// optimised app build that method reference rejected every character.
+    private static let allowed: Set<Character> = Set("0123456789.,+-*/×÷x^%() \t")
 
     static func evaluate(_ text: String) -> String? {
         guard text.count <= 120,
-              text.unicodeScalars.allSatisfy(allowed.contains),
+              text.allSatisfy({ allowed.contains($0) }),
               text.contains(where: \.isNumber),
               // Dates and version-like strings are not sums.
               text.range(of: #"^\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}$"#, options: .regularExpression) == nil
