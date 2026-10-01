@@ -43,6 +43,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindowController.install(
             SettingsView(store: store.scope(state: \.settings, action: \.settings))
         )
+        settingsWindowController.onVisibilityChange = { [store] visible in
+            store.send(.settings(.windowVisibilityChanged(visible)))
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

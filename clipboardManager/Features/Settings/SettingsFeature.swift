@@ -73,7 +73,9 @@ struct SettingsFeature {
 
     enum Action: BindableAction {
         case binding(BindingAction<State>)
-        case task
+        /// The settings window was shown or closed. The window outlives its
+        /// content, so a view `.task` would keep polling after it closes.
+        case windowVisibilityChanged(Bool)
         case refresh
         case statusLoaded(launchAtLogin: Bool, accessibility: Bool, storage: Int64)
         case launchAtLoginToggled(Bool)
@@ -97,6 +99,8 @@ struct SettingsFeature {
         }
     }
 
+    private enum CancelID { case statusPolling }
+
     @Dependency(\.launchAtLogin) var launchAtLogin
     @Dependency(\.paste) var paste
     @Dependency(\.clipboardStore) var clipboardStore
@@ -111,12 +115,14 @@ struct SettingsFeature {
             case .binding:
                 return .none
 
-            case .task:
+            case let .windowVisibilityChanged(visible):
+                guard visible else { return .cancel(id: CancelID.statusPolling) }
                 return .run { send in
                     await send(.refresh)
                     // Accessibility can be granted in System Settings while this window is open.
                     for await _ in clock.timer(interval: .seconds(2)) { await send(.refresh) }
                 }
+                .cancellable(id: CancelID.statusPolling, cancelInFlight: true)
 
             case .refresh:
                 return .run { send in

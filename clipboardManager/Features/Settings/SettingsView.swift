@@ -41,7 +41,6 @@ struct SettingsView: View {
         .navigationSplitViewStyle(.balanced)
         .animation(.smooth(duration: 0.22), value: store.section)
         .frame(minWidth: 720, minHeight: 480)
-        .task { await store.send(.task).finish() }
     }
 
     // MARK: - General
