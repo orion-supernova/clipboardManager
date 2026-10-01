@@ -31,6 +31,8 @@ enum KeyCommand: Equatable, Sendable {
     case selectScope(Int)
     case commandPalette
     case toggleSensitive
+    /// ↑/↓ and friends: scroll the open preview, or move through items when closed.
+    case vertical(VerticalMove)
     case newFolder
     case renameFolder
     case deleteFolder
@@ -44,6 +46,10 @@ enum KeyCommand: Equatable, Sendable {
     case open
     case revealInFinder
     case copyPath
+}
+
+enum VerticalMove: Equatable, Sendable {
+    case lineUp, lineDown, pageUp, pageDown, top, bottom
 }
 
 /// Modifier keys held down on their own, which reveal the shortcuts they unlock.

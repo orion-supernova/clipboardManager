@@ -20,6 +20,9 @@ struct PreviewSheetView: View {
     /// showing it until theirs arrives, so Quick Look swaps instead of rebuilding.
     var stalePayload: ClipboardPayload? = nil
     var failed = false
+    var scrollRequest: HistoryFeature.PreviewScrollRequest? = nil
+    var zoomed = false
+    var onToggleZoom: @MainActor () -> Void = {}
     let revealed: Bool
     var sensitiveLifetime: TimeInterval? = nil
     let thumbnailURL: URL?
@@ -220,7 +223,7 @@ struct PreviewSheetView: View {
             } else if item.isSensitive, !revealed {
                 MaskedBody(masked: item.preview, kind: item.sensitivity ?? .credential, detail: item.sensitivityDetail)
             } else {
-                TextBody(id: item.id, text: payload?.text ?? item.preview, language: item.codeLanguage, isLoading: payload == nil)
+                TextBody(id: item.id, text: payload?.text ?? item.preview, language: item.codeLanguage, isLoading: payload == nil, scrollRequest: scrollRequest)
             }
         case .url:
             LinkBody(
@@ -236,6 +239,9 @@ struct PreviewSheetView: View {
                 imageURL: imageURL ?? payload?.imageFileURL,
                 fallbackThumbnailURL: thumbnailURL,
                 recognizedText: payload?.text,
+                pixelSize: item.pixelSize,
+                zoomed: zoomed,
+                onToggleZoom: onToggleZoom,
                 onCopyText: onCopyText
             )
         case .file, .video:
@@ -317,8 +323,33 @@ private struct TextBody: View {
     let text: String
     let language: CodeLanguage?
     let isLoading: Bool
+    var scrollRequest: HistoryFeature.PreviewScrollRequest? = nil
     @Environment(\.marketingRender) private var marketingRender
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var rendered: Rendered?
+    @State private var scrollPosition = ScrollPosition(edge: .top)
+    @State private var scrollGeometry: ScrollGeometry?
+
+    private static let lineStep: CGFloat = 60
+
+    /// ↑/↓ a few lines, ⌥↑/⌥↓ a page, ⌘↑/⌘↓ the ends — keys arrive from the reducer.
+    private func scroll(_ move: VerticalMove) {
+        guard let geometry = scrollGeometry else { return }
+        let current = geometry.contentOffset.y
+        let page = max(geometry.containerSize.height - Self.lineStep, Self.lineStep)
+        let maxY = max(geometry.contentSize.height - geometry.containerSize.height, 0)
+        let target: CGFloat = switch move {
+        case .lineUp: current - Self.lineStep
+        case .lineDown: current + Self.lineStep
+        case .pageUp: current - page
+        case .pageDown: current + page
+        case .top: 0
+        case .bottom: maxY
+        }
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) {
+            scrollPosition.scrollTo(y: min(max(target, 0), maxY))
+        }
+    }
 
     /// SwiftUI lays out a `Text` in full, so a 200k-character clip would stall
     /// every frame the sheet is on screen. Paste still uses the whole payload.
@@ -396,6 +427,8 @@ private struct TextBody: View {
                 content.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).clipped()
             } else {
                 ScrollView { content }
+                    .scrollPosition($scrollPosition)
+                    .onScrollGeometryChange(for: ScrollGeometry.self, of: { $0 }) { _, geometry in scrollGeometry = geometry }
                     .id(id) // start each item at the top
             }
         }
@@ -404,6 +437,10 @@ private struct TextBody: View {
         .background(.background.opacity(0.45), in: .rect(cornerRadius: 14))
         .padding(.horizontal, 8)
         .padding(.bottom, 8)
+        .onChange(of: scrollRequest) { _, request in
+            if let request { scroll(request.move) }
+        }
+        .onChange(of: id) { _, _ in scrollPosition = ScrollPosition(edge: .top) }
         .task(id: RenderKey(id: id, isLoading: isLoading, language: language)) {
             let (text, id, language) = (text, id, language)
             let result = await Task.detached(priority: .userInitiated) { Self.render(text, id: id, language: language) }.value
@@ -459,7 +496,6 @@ private struct LinkBody: View {
     let heroURL: URL?
     let iconURL: URL?
 
-    private static let visibleQueryItems = 6
     @Dependency(\.linkMetadata) private var linkMetadata
     @SharedReader(.fetchLinkTitles) private var fetchLinkTitles
     @State private var details: (url: String, value: LinkDetails)?
@@ -523,24 +559,9 @@ private struct LinkBody: View {
                     .truncationMode(.middle)
                 if let url, let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
                    let items = components.queryItems, !items.isEmpty {
-                    Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 3) {
-                        ForEach(Array(items.prefix(Self.visibleQueryItems).enumerated()), id: \.offset) { _, query in
-                            GridRow {
-                                Text(query.name).font(.caption.monospaced().weight(.semibold))
-                                Text(query.value ?? "").font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1)
-                            }
-                        }
-                        if items.count > Self.visibleQueryItems {
-                            GridRow {
-                                Text("+\(items.count - Self.visibleQueryItems) more")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .gridCellColumns(2)
-                            }
-                        }
-                    }
-                    .padding(10)
-                    .background(.primary.opacity(0.05), in: .rect(cornerRadius: 10))
+                    QueryList(items: items)
+                        .padding(10)
+                        .background(.primary.opacity(0.05), in: .rect(cornerRadius: 10))
                 }
                 Spacer(minLength: 0)
             }
@@ -560,6 +581,63 @@ private struct LinkBody: View {
             styled[range].foregroundColor = .primary
         }
         return styled
+    }
+}
+
+/// Every query parameter, with the tracking ones dimmed and labelled: you can
+/// see exactly what a link carries before pasting it anywhere.
+private struct QueryList: View {
+    let items: [URLQueryItem]
+    @Environment(\.marketingRender) private var marketingRender
+
+    private static let trackingNames: Set<String> = ["fbclid", "gclid", "dclid", "msclkid", "mc_cid", "mc_eid", "igshid", "si", "ref", "ref_src", "spm", "_hsenc", "_hsmi", "yclid", "twclid", "ttclid"]
+
+    static func isTracking(_ name: String) -> Bool {
+        let lower = name.lowercased()
+        return lower.hasPrefix("utm_") || trackingNames.contains(lower)
+    }
+
+    var body: some View {
+        let tracked = items.filter { Self.isTracking($0.name) }.count
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("\(items.count) parameter\(items.count == 1 ? "" : "s")").font(.caption.weight(.semibold))
+                if tracked > 0 {
+                    Text("· \(tracked) tracking").font(.caption).foregroundStyle(.orange)
+                }
+            }
+            .foregroundStyle(.secondary)
+            Group {
+                if marketingRender {
+                    grid
+                } else {
+                    ScrollView { grid }.frame(maxHeight: 120)
+                }
+            }
+        }
+    }
+
+    private var grid: some View {
+        Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 3) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, query in
+                let tracking = Self.isTracking(query.name)
+                GridRow {
+                    Text(query.name).font(.caption.monospaced().weight(.semibold))
+                    Text(query.value ?? "").font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                    if tracking {
+                        Text("tracking")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 5)
+                            .background(.orange.opacity(0.14), in: .capsule)
+                    } else {
+                        Color.clear.frame(width: 0, height: 0)
+                    }
+                }
+                .opacity(tracking ? 0.6 : 1)
+            }
+        }
+        .textSelection(.enabled)
     }
 }
 
@@ -638,11 +716,20 @@ private struct ColorFormatRow: View {
     }
 }
 
+private struct ZoomKey: Equatable {
+    var url: URL?
+    var zoomed: Bool
+}
+
 private struct ImageBody: View {
     let imageURL: URL?
     let fallbackThumbnailURL: URL?
     let recognizedText: String?
+    var pixelSize: PixelSize? = nil
+    var zoomed = false
+    var onToggleZoom: @MainActor () -> Void = {}
     let onCopyText: @MainActor (String) -> Void
+    @State private var fullImage: CGImage?
     @Dependency(\.imageLoader) private var loader
     @Environment(\.staticImages) private var staticImages
     @Environment(\.marketingRender) private var marketingRender
@@ -662,7 +749,15 @@ private struct ImageBody: View {
     var body: some View {
         HStack(spacing: 12) {
             ZStack {
-                if let resolved {
+                if zoomed, let full = fullImage ?? resolved {
+                    // Actual size (one image pixel per screen pixel), pannable both ways.
+                    ScrollView([.horizontal, .vertical]) {
+                        Image(decorative: full, scale: NSScreen.main?.backingScaleFactor ?? 2)
+                    }
+                    .defaultScrollAnchor(.center)
+                    .clipShape(.rect(cornerRadius: 8))
+                    .transition(.opacity)
+                } else if let resolved {
                     Image(decorative: resolved, scale: 2)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
@@ -676,6 +771,19 @@ private struct ImageBody: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(.rect)
+            .onTapGesture { onToggleZoom() }
+            .overlay(alignment: .bottomTrailing) {
+                Label(zoomed ? "Fit" : "Actual Size", systemImage: zoomed ? "arrow.down.right.and.arrow.up.left" : "plus.magnifyingglass")
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 8)
+                    .frame(height: 22)
+                    .background(.black.opacity(0.45), in: .capsule)
+                    .foregroundStyle(.white)
+                    .padding(16)
+                    .allowsHitTesting(false)
+            }
+            .help(zoomed ? "Fit to window (Z)" : "Actual size (Z)")
             // A stage, so a small image doesn't float alone in a wide glass field.
             .background(.black.opacity(0.12), in: .rect(cornerRadius: 14))
             if let recognizedText, !recognizedText.isEmpty {
@@ -722,8 +830,15 @@ private struct ImageBody: View {
         .animation(.easeOut(duration: 0.2), value: resolved == nil)
         .animation(.easeOut(duration: 0.2), value: recognizedText)
         .task(id: imageURL) {
+            fullImage = nil
             guard let imageURL, staticImages[imageURL.path] == nil else { return }
             image = await loader.image(imageURL, PanelMetrics.previewImageMaxPixelSize)
+        }
+        // Full resolution only on zoom, capped so a huge capture can't balloon memory.
+        .task(id: ZoomKey(url: imageURL, zoomed: zoomed)) {
+            guard zoomed, fullImage == nil, let imageURL, staticImages[imageURL.path] == nil else { return }
+            let longest = pixelSize.map { max($0.width, $0.height) } ?? 4096
+            fullImage = await loader.image(imageURL, min(longest, 6000))
         }
     }
 }

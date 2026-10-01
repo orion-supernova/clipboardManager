@@ -288,12 +288,14 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         Section("Navigate") {
-            shortcutRow("Move between items", "← →")
+            shortcutRow("Move between items", "← →  or  ↑ ↓")
             shortcutRow("Jump to first / last", "⌘ ← / ⌘ →")
+            shortcutRow("In Quick Look: scroll text · a page · to the ends", "↑ ↓  ·  ⌥ ↑ ↓  ·  ⌘ ↑ ↓")
+            shortcutRow("In Quick Look: zoom an image to actual size", "Z")
+            shortcutRow("In Quick Look: copy the selected text", "⌘ C")
             shortcutRow("Search", "⌘ F  or just type")
             shortcutRow("Switch focus between search and list", "⇥")
             shortcutRow("Filter: all · text · links · images · files · colors", "⌥ 1 … ⌥ 6")
-            shortcutRow("Previous / next folder", "⌘ [  /  ⌘ ]")
             shortcutRow("Close", "esc")
         }
         Section("Act on the selected item") {

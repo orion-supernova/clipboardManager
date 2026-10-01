@@ -117,6 +117,9 @@ struct HistoryView: View {
                     payload: payloadIsCurrent ? store.previewPayload : nil,
                     stalePayload: store.previewPayload,
                     failed: store.previewFailed,
+                    scrollRequest: store.previewScroll,
+                    zoomed: store.previewZoomed,
+                    onToggleZoom: { store.send(.toggleImageZoom, animation: .smooth(duration: 0.25)) },
                     revealed: store.previewRevealed,
                     sensitiveLifetime: store.sensitiveLifetime,
                     thumbnailURL: item.thumbnailPath.map(clipboardStore.thumbnailURL),
@@ -244,10 +247,12 @@ struct HistoryView: View {
     private var previewHints: some View {
         HStack(spacing: 12) {
             hint("← →", "Item")
+            if store.previewScrollsText { hint("↑ ↓", "Scroll") }
             hint("↩", "Paste")
             if let item = store.selectedItem {
                 if item.isSensitive { hint("⌘E", "Reveal") }
                 if item.kind == .color { hint("1–\(ColorFormat.allCases.count)", "Copy format") }
+                if item.kind == .image { hint("Z", store.previewZoomed ? "Fit" : "Zoom") }
                 if let action = item.primarySmartAction { hint("⌘O", action.title) }
                 else if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
                 if item.kind == .text { hint("⌘L", item.isSensitive ? "Not Sensitive" : "Sensitive") }

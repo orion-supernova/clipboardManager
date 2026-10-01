@@ -50,6 +50,16 @@ struct HistoryFeature {
         var previewFailed = false
         /// Links whose missing title or image was already re-fetched this session.
         var linkRetries: Set<UUID> = []
+        /// Bumped per ↑/↓ while a long text preview is open; the sheet scrolls to match.
+        var previewScroll: PreviewScrollRequest?
+        var previewZoomed = false
+
+        /// Long, unmasked plain text: ↑/↓ scroll it instead of changing items.
+        var previewScrollsText: Bool {
+            guard isPreviewOpen, let item = selectedItem, item.kind == .text, item.primarySmartAction == nil else { return false }
+            if item.isSensitive, !previewRevealed { return false }
+            return item.preview.count > 140 || item.preview.contains(where: \.isNewline)
+        }
         var previewRevealed = false
         var dialog: Dialog?
         var dialogText = ""
@@ -155,6 +165,11 @@ struct HistoryFeature {
         var isDisabled = false
     }
 
+    struct PreviewScrollRequest: Equatable, Sendable {
+        var move: VerticalMove
+        var id: Int
+    }
+
     struct PasteOptions: Equatable, Sendable {
         var plainText = false
         var transform: TextTransform?
@@ -213,6 +228,7 @@ struct HistoryFeature {
         case delete(UUID)
         case togglePin(UUID)
         case toggleSensitive(UUID)
+        case toggleImageZoom
         case revealInFinder(UUID)
         case copyPath(UUID)
         case openItem(UUID)
@@ -353,6 +369,7 @@ struct HistoryFeature {
                 state.previewPayload = nil
                 state.previewPayloadID = nil
                 state.previewFailed = false
+                state.previewZoomed = false
                 state.previewRevealed = false
                 state.dialog = nil
                 state.selectionAnimated = false
@@ -392,6 +409,7 @@ struct HistoryFeature {
                 state.previewPayload = nil
                 state.previewPayloadID = nil
                 state.previewFailed = false
+                state.previewZoomed = false
                 state.previewRevealed = false
                 state.dialog = nil
                 let simulate = reason == .pasted && state.autoPaste
@@ -447,6 +465,7 @@ struct HistoryFeature {
                         state.previewID = id
                         state.previewRevealed = false
                         state.previewFailed = false
+                        state.previewZoomed = false
                         return loadPreview(id)
                     }
                     return .send(.closePreview)
@@ -593,6 +612,11 @@ struct HistoryFeature {
                     },
                     animated(.showToast(pinned ? "Pinned" : "Unpinned", symbol: pinned ? "pin.fill" : "pin.slash"), .bouncy)
                 )
+
+            case .toggleImageZoom:
+                guard state.isPreviewOpen else { return .none }
+                state.previewZoomed.toggle()
+                return .none
 
             case let .toggleSensitive(id):
                 // Only text: a password pasted from Slack is text; links and files
@@ -873,6 +897,7 @@ struct HistoryFeature {
                 state.previewID = id
                 state.previewRevealed = false
                 state.previewFailed = false
+                state.previewZoomed = false
                 return .merge(
                     .cancel(id: CancelID.previewResize),
                     .run { _ in await panel.resize(PanelMetrics.expandedHeight) },
@@ -945,6 +970,7 @@ struct HistoryFeature {
                     state.previewID = id
                     state.previewRevealed = false
                     state.previewFailed = false
+                    state.previewZoomed = false
                     return loadPreview(id)
                 }
                 return .none
@@ -973,10 +999,10 @@ struct HistoryFeature {
                         let results = state.paletteResults
                         guard results.indices.contains(state.paletteSelection) else { return .none }
                         return .send(.paletteRun(results[state.paletteSelection]))
-                    case .previous, .next:
+                    case .previous, .next, .vertical(.lineUp), .vertical(.lineDown):
                         let count = state.paletteResults.count
                         guard count > 0 else { return .none }
-                        let step = command == .previous ? -1 : 1
+                        let step = command == .previous || command == .vertical(.lineUp) ? -1 : 1
                         state.paletteSelection = (state.paletteSelection + step + count) % count
                         return .none
                     default:
@@ -1005,6 +1031,17 @@ struct HistoryFeature {
                 case let .confirm(plainText):
                     guard let id = state.selectedID else { return flash }
                     return .merge(flash, .send(.paste(id, plainText ? .plain : .standard)))
+                case let .vertical(move):
+                    if state.previewScrollsText {
+                        state.previewScroll = PreviewScrollRequest(move: move, id: (state.previewScroll?.id ?? 0) + 1)
+                        return .none
+                    }
+                    switch move {
+                    case .lineUp, .pageUp: return .send(.move(.previous))
+                    case .lineDown, .pageDown: return .send(.move(.next))
+                    case .top: return .send(.move(.first))
+                    case .bottom: return .send(.move(.last))
+                    }
                 case .previous: return .send(.move(.previous))
                 case .next: return .send(.move(.next))
                 case .first: return .send(.move(.first))
@@ -1016,6 +1053,9 @@ struct HistoryFeature {
                     state.isSearchFocused = true
                     return flash
                 case let .typeToSearch(text):
+                    if state.isPreviewOpen, state.selectedItem?.kind == .image, text.lowercased() == "z" {
+                        return .send(.toggleImageZoom, animation: .smooth(duration: 0.25))
+                    }
                     if state.isPreviewOpen, let item = state.selectedItem, !item.isSensitive,
                        let digit = Int(text), let action = SmartPreviewKeys.action(forDigit: digit, in: item) {
                         return .send(.performSmartAction(item.id, action))
@@ -1254,6 +1294,7 @@ struct HistoryFeature {
         state.previewPayload = nil
         state.previewPayloadID = nil
         state.previewFailed = false
+        state.previewZoomed = false
         state.previewRevealed = false
         return .merge(
             .cancel(id: CancelID.preview),

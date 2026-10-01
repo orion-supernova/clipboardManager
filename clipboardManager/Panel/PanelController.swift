@@ -130,6 +130,25 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
     }
 
+    /// Sends copy: down the responder chain when something there has a selection.
+    private func copySelectionIfAny() -> Bool {
+        let copy = #selector(NSText.copy(_:))
+        guard let target = NSApp.target(forAction: copy, to: nil, from: panel) as? NSResponder else { return false }
+        let probe = NSMenuItem(title: "Copy", action: copy, keyEquivalent: "c")
+        let enabled: Bool
+        if let textView = target as? NSTextView {
+            enabled = textView.selectedRange().length > 0
+        } else if let validator = target as? NSMenuItemValidation {
+            enabled = validator.validateMenuItem(probe)
+        } else if let validator = target as? NSUserInterfaceValidations {
+            enabled = validator.validateUserInterfaceItem(probe)
+        } else {
+            enabled = false
+        }
+        guard enabled else { return false }
+        return NSApp.sendAction(copy, to: target, from: panel)
+    }
+
     private func updateHeldModifiers(_ flags: NSEvent.ModifierFlags) {
         let flags = flags.intersection(.deviceIndependentFlagsMask)
         let held: HeldModifiers = switch (flags.contains(.command), flags.contains(.option)) {
@@ -176,9 +195,9 @@ final class PanelController: NSObject, NSWindowDelegate {
             if editingText && !command { return false }
             emit(.key(command ? .last : .next)); return true
         case KeyboardLayout.upArrow:
-            emit(.key(.previous)); return true
+            emit(.key(.vertical(option ? .pageUp : command ? .top : .lineUp))); return true
         case KeyboardLayout.downArrow:
-            emit(.key(.next)); return true
+            emit(.key(.vertical(option ? .pageDown : command ? .bottom : .lineDown))); return true
         case KeyboardLayout.home:
             emit(.key(.first)); return true
         case KeyboardLayout.end:
@@ -210,7 +229,10 @@ final class PanelController: NSObject, NSWindowDelegate {
             case ("l", false, false): emit(.key(.toggleSensitive))
             case (",", _, _): emit(.key(.openSettings))
             case ("q", _, _): emit(.key(.quit))
-            case ("c", false, false): emit(.key(.copyOnly))
+            case ("c", false, false):
+                // Text selected in the preview: ⌘C copies that, like everywhere else on the Mac.
+                if copySelectionIfAny() { return true }
+                emit(.key(.copyOnly))
             case ("c", true, false): emit(.key(.secondaryCopy))
             case ("c", false, true): emit(.key(.copyPath))
             case ("p", false, false): emit(.key(.togglePin))
