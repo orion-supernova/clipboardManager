@@ -92,6 +92,10 @@ struct ClipboardItem: Identifiable, Equatable, Hashable, Sendable {
 
     var isSensitive: Bool { sensitivity != nil }
     var primarySmartAction: SmartAction? { smartActions.first(where: \.isPrimary) }
+    /// A copied path answers ⇧⌘R like a copied file does.
+    var showInFinderAction: SmartAction? {
+        smartActions.first { if case .showPath = $0.kind { true } else { false } }
+    }
     /// The answer, when the text is a sum: shown on the card, pasted on request.
     var calculatedResult: String? {
         if case let .pasteResult(result)? = primarySmartAction?.kind { return result }

@@ -1119,40 +1119,40 @@ struct HistoryFeature {
                     return .send(.pasteAsTapped(id))
                 case .secondaryCopy:
                     // ⇧⌘C is always "copy as text": the text form of whatever this is.
-                    guard let item = state.selectedItem else { return .none }
+                    guard let item = state.selectedItem else { return flash }
                     switch item.kind {
                     case .color:
-                        return .send(.copyText(item.preview, toast: "Hex copied"))
+                        return .merge(flash, .send(.copyText(item.preview, toast: "Hex copied")))
                     case .file, .video:
-                        return .send(.copyPath(item.id))
+                        return .merge(flash, .send(.copyPath(item.id)))
                     default:
                         let id = item.id
                         let toast = item.kind == .image ? "Image text copied" : "Plain text copied"
-                        return .run { send in
+                        return .merge(flash, .run { send in
                             guard let text = try await clipboardStore.payload(id)?.text, !text.isEmpty else { return }
                             await send(.copyText(text, toast: toast))
-                        }
+                        })
                     }
                 case .reveal:
                     if state.isPreviewOpen { return .send(.toggleReveal) }
                     guard let item = state.selectedItem else { return .none }
                     return .concatenate(.send(.previewItem(item.id)), item.isSensitive ? .send(.toggleReveal) : .none)
                 case .open:
-                    guard let item = state.selectedItem else { return .none }
+                    guard let item = state.selectedItem else { return flash }
                     // ⌘O is "do the obvious thing": the smart action when the text has one.
-                    if let action = item.primarySmartAction { return .send(.performSmartAction(item.id, action)) }
-                    return .send(.openItem(item.id))
+                    if let action = item.primarySmartAction { return .merge(flash, .send(.performSmartAction(item.id, action))) }
+                    return .merge(flash, .send(.openItem(item.id)))
                 case .revealInFinder:
-                    guard let item = state.selectedItem else { return .none }
+                    guard let item = state.selectedItem else { return flash }
                     // ⇧⌘R means Show in Finder for a copied path too, not just a copied file.
-                    if let show = item.smartActions.first(where: { if case .showPath = $0.kind { true } else { false } }) {
-                        return .send(.performSmartAction(item.id, show))
+                    if let show = item.showInFinderAction {
+                        return .merge(flash, .send(.performSmartAction(item.id, show)))
                     }
-                    guard item.kind.isFileBacked || item.kind == .image else { return .none }
-                    return .send(.revealInFinder(item.id))
+                    guard item.kind.isFileBacked || item.kind == .image else { return flash }
+                    return .merge(flash, .send(.revealInFinder(item.id)))
                 case .copyPath:
-                    guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return .none }
-                    return .send(.copyPath(item.id))
+                    guard let item = state.selectedItem, item.kind.isFileBacked || item.kind == .image else { return flash }
+                    return .merge(flash, .send(.copyPath(item.id)))
                 }
 
             case .panelEvent(.didResignKey), .panelEvent(.clickedOutside):
@@ -1358,6 +1358,10 @@ struct HistoryFeature {
         case .saveToFolder: "⌘S"
         case .commandPalette: "⌘K"
         case .toggleSensitive: "⌘L"
+        case .open: "⌘O"
+        case .revealInFinder: "⇧⌘R"
+        case .copyPath: "⌥⌘C"
+        case .secondaryCopy: "⇧⌘C"
         case .previousScope, .nextScope, .selectScope: KeyboardLayout.scopeKeysLabel
         case .setFilter: "⌥1–6"
         default: nil

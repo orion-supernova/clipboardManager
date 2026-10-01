@@ -255,6 +255,9 @@ struct HistoryView: View {
                 if item.kind == .image { hint("Z", store.previewZoomed ? "Fit" : "Zoom") }
                 if let action = item.primarySmartAction { hint("⌘O", action.title) }
                 else if item.kind.isFileBacked || item.kind == .url || item.kind == .image { hint("⌘O", "Open") }
+                if item.kind.isFileBacked || item.kind == .image || item.showInFinderAction != nil {
+                    hint("⇧⌘R", "Show in Finder")
+                }
                 if item.kind == .text { hint("⌘L", item.isSensitive ? "Not Sensitive" : "Sensitive") }
             }
             hint("⌘K", "Commands")
