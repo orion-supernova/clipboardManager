@@ -189,7 +189,7 @@ struct HistoryView: View {
         .frame(height: PanelMetrics.hintBarHeight)
         .panelGlass(in: .capsule)
         .animation(.easeOut(duration: 0.16), value: store.flashHintKey)
-        .animation(.easeOut(duration: 0.15), value: store.modifierHint)
+        .animation(.easeOut(duration: 0.1), value: store.modifierHint)
         .accessibilityHidden(true)
     }
 

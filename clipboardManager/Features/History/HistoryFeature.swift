@@ -33,7 +33,7 @@ struct HistoryFeature {
         var flashID: UUID?
         var recentID: UUID?
         var flashHintKey: String?
-        /// Modifiers held long enough to reveal what they unlock.
+        /// Modifiers held right now; the hint bar shows what they unlock.
         var modifierHint = HeldModifiers.none
         var isPaletteOpen = false
         var paletteQuery = ""
@@ -232,7 +232,6 @@ struct HistoryFeature {
         case move(Move)
         case keyCommand(KeyCommand)
         case panelEvent(PanelEvent)
-        case modifierHintRevealed(HeldModifiers)
         case paletteRun(PaletteCommand)
         case paletteClosed
         case pruneTick
@@ -252,7 +251,7 @@ struct HistoryFeature {
         }
     }
 
-    private enum CancelID { case lifecycle, search, dismissal, toast, preview, previewResize, recent, hintFlash, entrance, modifierHint }
+    private enum CancelID { case lifecycle, search, dismissal, toast, preview, previewResize, recent, hintFlash, entrance }
 
     @Dependency(\.clipboardStore) var clipboardStore
     @Dependency(\.clipboardMonitor) var monitor
@@ -1029,29 +1028,9 @@ struct HistoryFeature {
                 return state.isPresented ? .send(.dismiss(.lostFocus)) : .none
 
             case let .panelEvent(.key(command)):
-                // A chord, not a hold: drop a pending reveal so ⌘C never flashes it.
-                guard state.modifierHint == .none else { return .send(.keyCommand(command)) }
-                return .merge(.cancel(id: CancelID.modifierHint), .send(.keyCommand(command)))
+                return .send(.keyCommand(command))
 
             case let .panelEvent(.modifiers(held)):
-                guard held != .none else {
-                    state.modifierHint = .none
-                    return .cancel(id: CancelID.modifierHint)
-                }
-                // Already showing: ⌘ → ⌥⌘ switches at once.
-                if state.modifierHint != .none {
-                    state.modifierHint = held
-                    return .none
-                }
-                // A short beat, cancelled by any shortcut key below, so ⌘C and
-                // friends never flash the overlay but a deliberate hold feels instant.
-                return .run { send in
-                    try await clock.sleep(for: .milliseconds(150))
-                    await send(.modifierHintRevealed(held), animation: .easeOut(duration: 0.15))
-                }
-                .cancellable(id: CancelID.modifierHint, cancelInFlight: true)
-
-            case let .modifierHintRevealed(held):
                 state.modifierHint = held
                 return .none
 
