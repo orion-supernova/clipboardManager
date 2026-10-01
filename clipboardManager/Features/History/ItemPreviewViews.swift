@@ -129,21 +129,21 @@ private struct SmartCardContent: View {
         switch action.kind {
         case let .email(address):
             let parts = address.split(separator: "@", maxSplits: 1).map(String.init)
-            line(icon: avatar(parts.first ?? address, key: parts.last ?? address),
+            line(icon: EmailAvatar(address: address),
                  title: parts.first ?? address,
                  subtitle: parts.count > 1 ? "@" + parts[1] : nil)
         case let .call(number), let .message(number):
-            line(icon: tile("phone.fill", .green, .mint), title: number, subtitle: PhoneRegion.name(for: number), digits: true)
+            line(icon: TypeTile(style: action.style), title: number, subtitle: PhoneRegion.name(for: number), digits: true)
         case let .map(address):
             let lines = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             line(icon: EmptyView?.none, title: lines.first ?? address, subtitle: lines.dropFirst().joined(separator: ", "))
         case let .addToCalendar(start, _, allDay, title):
-            line(icon: calendarPage(start), title: title,
+            line(icon: CalendarPage(date: start), title: title,
                  subtitle: allDay ? start.formatted(.dateTime.weekday(.wide).day().month()) : start.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
         case let .track(number):
-            line(icon: tile("shippingbox.fill", .orange, .brown), title: number, subtitle: carrier(number), mono: true)
+            line(icon: TypeTile(style: action.style), title: number, subtitle: carrier(number), mono: true)
         case let .flight(code):
-            line(icon: tile("airplane", .blue, .cyan), title: code, subtitle: Airline.name(for: code), digits: true)
+            line(icon: TypeTile(style: action.style), title: code, subtitle: Airline.name(for: code), digits: true)
         case let .openPath(path), let .showPath(path):
             line(icon: fileIcon(path), title: (path as NSString).lastPathComponent,
                  subtitle: ((path as NSString).deletingLastPathComponent as NSString).abbreviatingWithTildeInPath, middle: true)
@@ -165,7 +165,7 @@ private struct SmartCardContent: View {
             line(icon: monogram(url.host() ?? "?", size: 40), title: url.host()?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString,
                  subtitle: url.path().count > 1 ? url.path() : nil, middle: true)
         case .pasteResult:
-            line(icon: tile("plus.forwardslash.minus", .indigo, .purple), title: item.preview.trimmingCharacters(in: .whitespacesAndNewlines), subtitle: nil, mono: true)
+            line(icon: TypeTile(style: action.style), title: item.preview.trimmingCharacters(in: .whitespacesAndNewlines), subtitle: nil, mono: true)
         }
     }
 
@@ -210,46 +210,6 @@ private struct SmartCardContent: View {
                 }
             }
         }
-    }
-
-    /// An app-icon-style tile: rounded square, soft vertical gradient, white glyph.
-    private func tile(_ symbol: String, _ top: Color, _ bottom: Color) -> some View {
-        Image(systemName: symbol)
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 40, height: 40)
-            .background(LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom), in: .rect(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.22), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-    }
-
-    private func avatar(_ name: String, key: String) -> some View {
-        Text(String(name.prefix(1)).uppercased())
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .frame(width: 40, height: 40)
-            .background(Hue.gradient(for: key), in: .circle)
-            .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-    }
-
-    private func calendarPage(_ date: Date) -> some View {
-        VStack(spacing: 0) {
-            Text(date.formatted(.dateTime.month(.abbreviated)).uppercased())
-                .font(.system(size: 8, weight: .bold))
-                .tracking(0.5)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 13)
-                .background(Color.red)
-            Text(date.formatted(.dateTime.day()))
-                .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(.black.opacity(0.85))
-                .frame(maxHeight: .infinity)
-        }
-        .frame(width: 40, height: 44)
-        .background(.white)
-        .clipShape(.rect(cornerRadius: 9))
-        .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
     }
 
     private func fileIcon(_ path: String) -> some View {

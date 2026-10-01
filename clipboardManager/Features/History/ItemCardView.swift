@@ -179,12 +179,8 @@ struct ItemCardView: View {
         HStack(spacing: 7) {
             // The type: a small tinted icon tile and caption, like an app's icon and
             // name on a notification.
-            Image(systemName: item.headerSymbol)
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(headerTint)
-                .frame(width: 20, height: 20)
-                .background(headerTint.opacity(0.16), in: .rect(cornerRadius: 6))
-            Text(item.headerTitle.uppercased())
+            TypeBadge(style: item.style)
+            Text(item.style.title.uppercased())
                 .font(.system(size: 10.5, weight: .semibold))
                 .tracking(0.6)
                 .foregroundStyle(headerTint)
@@ -206,19 +202,7 @@ struct ItemCardView: View {
         .animation(.easeOut(duration: 0.18), value: item.isPinned)
     }
 
-    private var headerTint: Color {
-        if item.isSensitive { return .red }
-        if let action = item.primarySmartAction { return action.tint }
-        if item.kind == .url, MapsLink.isMaps(URL(string: item.preview)) { return .red }
-        if item.codeLanguage != nil { return .purple }
-        switch item.kind {
-        case .url: return .blue
-        case .image: return .teal
-        case .color: return .pink
-        case .file, .video: return .orange
-        case .text: return .secondary
-        }
-    }
+    private var headerTint: Color { item.style.tint }
 
     private var footer: some View {
         HStack(spacing: 6) {

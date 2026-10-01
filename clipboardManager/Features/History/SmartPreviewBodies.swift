@@ -82,18 +82,6 @@ extension SmartAction {
         }
     }
 
-    /// The card caption's colour: the top of this type's tile gradient.
-    var tint: Color {
-        switch kind {
-        case .pasteResult: .indigo
-        case let .email(address): Hue.color(for: String(address.split(separator: "@").last ?? ""))
-        case .call, .message: .green
-        case .map, .addToCalendar: .red
-        case .openLink, .openLinks, .flight: .blue
-        case .track: .orange
-        case .openPath, .showPath: .secondary
-        }
-    }
 
     /// The thing itself, as opposed to `symbol` (what the action does).
     var subjectSymbol: String {
@@ -138,19 +126,13 @@ private struct EmailHero: View {
         let local = parts.first ?? address
         let domain = parts.count > 1 ? "@" + parts[1] : ""
         HStack(spacing: 18) {
-            Text(String(local.prefix(1)).uppercased())
-                .font(.system(size: 32, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .frame(width: 72, height: 72)
-                .background(Hue.gradient(for: domain), in: .circle)
-                .accessibilityHidden(true)
+            EmailAvatar(address: address, size: 72)
             VStack(alignment: .leading, spacing: 4) {
                 (Text(local).foregroundStyle(.primary) + Text(domain).foregroundStyle(.secondary))
                     .font(.system(size: 28, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .textSelection(.enabled)
-                Text("Email address").font(.callout).foregroundStyle(.secondary)
             }
         }
     }
@@ -161,21 +143,16 @@ private struct PhoneHero: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            Image(systemName: "phone.fill")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 72, height: 72)
-                .background(Color.green.gradient, in: .circle)
-                .accessibilityHidden(true)
+            TypeTile(style: SmartAction(kind: .call("")).style, size: 72)
             VStack(alignment: .leading, spacing: 4) {
                 Text(number)
                     .font(.system(size: 40, weight: .semibold, design: .rounded).monospacedDigit())
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .textSelection(.enabled)
-                Text(number.hasPrefix("+") ? "Phone number · international" : "Phone number")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                if let region = PhoneRegion.name(for: number) {
+                    Text(region).font(.callout).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -249,27 +226,7 @@ private struct DateHero: View {
 
     var body: some View {
         HStack(spacing: 22) {
-            VStack(spacing: 0) {
-                Text(start.formatted(.dateTime.month(.abbreviated)).uppercased())
-                    .font(.caption.weight(.bold))
-                    .tracking(1)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 28)
-                    .background(Color.red)
-                Text(start.formatted(.dateTime.day()))
-                    .font(.system(size: 52, weight: .semibold, design: .rounded))
-                    .frame(maxHeight: .infinity)
-                Text(start.formatted(.dateTime.weekday(.wide)))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 10)
-            }
-            .frame(width: 120, height: 136)
-            .background(Color.primary.opacity(0.06))
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.primary.opacity(0.08)))
-            .accessibilityHidden(true)
+            CalendarPage(date: start, width: 112)
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
                     .font(.title2.weight(.semibold))
@@ -311,12 +268,7 @@ private struct TrackingHero: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 72, height: 72)
-                .background(Color.brown.gradient, in: .circle)
-                .accessibilityHidden(true)
+            TypeTile(style: SmartAction(kind: .track("")).style, size: 72)
             VStack(alignment: .leading, spacing: 6) {
                 Text(carrier)
                     .font(.caption.weight(.bold))
@@ -362,17 +314,14 @@ private struct FlightHero: View {
 
     var body: some View {
         HStack(spacing: 18) {
-            Image(systemName: "airplane")
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 72, height: 72)
-                .background(Color.blue.gradient, in: .circle)
-                .accessibilityHidden(true)
+            TypeTile(style: SmartAction(kind: .flight("")).style, size: 72)
             VStack(alignment: .leading, spacing: 4) {
                 Text(spaced)
                     .font(.system(size: 40, weight: .semibold, design: .rounded))
                     .textSelection(.enabled)
-                Text("Flight number").font(.callout).foregroundStyle(.secondary)
+                if let airline = Airline.name(for: code) {
+                    Text(airline).font(.callout).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -528,6 +477,13 @@ enum FileTypeIcon {
 
 /// A stable, pleasant hue per string (domain or host), for avatar placeholders.
 enum Hue {
+    /// Top and bottom of the same hue's gradient, for tiles.
+    static func pair(for key: String) -> (Color, Color) {
+        let hash = key.unicodeScalars.reduce(UInt32(5381)) { ($0 &* 33) &+ $1.value }
+        let hue = Double(hash % 360) / 360
+        return (Color(hue: hue, saturation: 0.55, brightness: 0.85), Color(hue: hue, saturation: 0.7, brightness: 0.6))
+    }
+
     static func color(for key: String) -> Color {
         let hash = key.unicodeScalars.reduce(UInt32(5381)) { ($0 &* 33) &+ $1.value }
         return Color(hue: Double(hash % 360) / 360, saturation: 0.55, brightness: 0.85)

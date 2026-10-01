@@ -64,12 +64,7 @@ struct PreviewSheetView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: item.headerSymbol)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(item.isSensitive ? Color.red : Color.accentColor)
-                .frame(width: 28, height: 28)
-                .background((item.isSensitive ? Color.red : Color.accentColor).opacity(0.14), in: .rect(cornerRadius: 8))
-                .accessibilityHidden(true)
+            TypeBadge(style: item.style, size: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(headerTitle)
                     .font(.headline)
